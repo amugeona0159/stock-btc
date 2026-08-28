@@ -1,0 +1,54 @@
+name: daily-learn
+
+# 매일 한 번 스스로 학습한다. 챔피언을 새 데이터로 다시 굽고, 설정을 하나 흔든
+# 도전자와 겨루고, 마진 이상 이길 때만 갈아끼운다 — 판정 규칙은 scripts/daily.py.
+#
+# 토스(국내주식)는 IP 허용 목록 때문에 여기서 못 돈다. 암호화폐·미국주식만 학습되고,
+# 국내주식은 PC 쪽 작업 스케줄러가 맡는다.
+
+on:
+  schedule:
+    - cron: "0 20 * * *"      # UTC 20:00 = KST 05:00
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "오늘 돌릴 대상 수"
+        required: false
+        default: "8"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-learn
+  cancel-in-progress: false
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -e ".[ml]"
+
+      - name: 학습
+        env:
+          # 위키미디어는 연락처 없는 User-Agent 를 403 으로 막는다.
+          MARKET_LENS_CONTACT: https://github.com/${{ github.repository }}
+        run: python scripts/daily.py --budget ${{ inputs.budget || 8 }}
+
+      - name: 기록만 커밋
+        run: |
+          # 모델(.pkl)은 커밋하지 않는다. 무겁고, 설정만 있으면 어디서든 다시 만든다.
+          git config user.name "daily-learn"
+          git config user.email "actions@github.com"
+          git add learning docs/LEARNING.md
+          git diff --cached --quiet && echo "바뀐 게 없다" && exit 0
+          git commit -m "chore: 자동 학습 $(date -u +%Y-%m-%d)"
+          git push
