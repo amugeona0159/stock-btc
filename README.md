@@ -55,7 +55,7 @@ cd web && npm install && npm run dev          # http://localhost:5173
 | 암호화폐 | Binance kline WS · Upbit trade WS | Binance `/klines` · Upbit `/candles` | 불필요 |
 | 미국주식 | Finnhub trade WS | 야후 chart API (분봉~주봉) | Finnhub 무료 가입 |
 | 전 세계 (야후) | 없음 | 야후 chart API. `005930.KS` · `^GSPC` · `BTC-USD` | **불필요** |
-| 국내·미국 (토스) | 토스 `trade:kr`·`trade:us` WS | 토스 `/api/v1/candles` (1분·일봉) | 토스증권 계좌 + Open API 키 |
+| 국내·미국 (토스) | 토스 `trade:kr`·`trade:us` WS | 토스 `/api/v1/candles` (1분·일봉) | 토스증권 계좌 + Open API 키 · **연결 확인됨** |
 | 국내주식 | KIS `H0STCNT0` | KIS 일봉 TR + 분봉 TR | 증권계좌 + 앱키 |
 | 사건 | — | GDELT 보도량 · FRED 매크로 | **불필요** |
 
@@ -85,10 +85,25 @@ cd web && npm install && npm run dev          # http://localhost:5173
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 251개
+.venv/Scripts/python -m pytest server/tests -q      # 260개
 cd web && npx tsc -b                                # 타입체크
 cd web && npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
+
+.venv/Scripts/python scripts/sweep.py               # 학습 기법 실험
+.venv/Scripts/python scripts/asof.py --tf 1d        # 그날 서서 예측하고 실제와 맞춰 보기
 ```
+
+**as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):
+
+| 종목 | 방향적중 | 경로상관 | 오차% (학습 / 기준선) |
+|---|---|---|---|
+| ^GSPC | 80.0% | +0.384 | 1.40% / 1.71% |
+| AAPL | 72.2% | +0.311 | 2.92% / 2.79% |
+| BTCUSDT | 54.1% | +0.016 | 4.64% / 4.97% |
+| ETHUSDT | 51.4% | +0.016 | 6.77% / 6.75% |
+
+**주식·지수는 맞고 암호화폐는 거의 동전던지기다.** 표본이 종목당 35~40개라
+소수점까지 믿을 숫자는 아니다.
 
 `screenshots/` 의 PNG 를 눈으로 확인할 것. 일목 구름이 마지막 봉보다 26봉 앞까지
 뻗는지, 원화 위의 글자가 읽히는지는 테스트로 안 잡힌다.
@@ -99,8 +114,11 @@ cd web && npm run shot                              # 실제 화면 PNG (서버 
 - 구름대의 면적 채우기 — lightweight-charts v4 는 두 선 사이를 칠하지 못해
   선 두 개로 그린다
 - 학습층은 `pip install -e ".[ml]"` 로 scikit-learn 을 깔아야 켜진다
-- **학습은 일봉 5~20봉 지평에서만 기준선을 넘는다.** 시간봉은 종목을 여섯 개로 늘리고
-  지평을 168봉까지 늘려도 못 넘었다. `scripts/sweep.py` 로 직접 재 볼 수 있다
+- **학습이 되는 자리는 봉과 지평이 정한다** — 시간봉 3~12봉, 일봉 5~20봉.
+  시간봉은 **표본이 커야 한다**(12종목 × 1.2만봉). 6종목 4천봉에서는 같은 코드가
+  −0.11 이었다. `scripts/sweep.py` 로 직접 재 볼 수 있다
+- **알파(시장 대비 초과수익)는 가격보다 세 배 잘 예측된다**(+0.030 vs +0.010).
+  다만 가격 밴드로 바꾸려면 예측 불가한 시장 성분을 도로 더해야 해서 이득이 사라진다
 - **학습이 늘 이기지는 않는다.** BTC 1시간봉·1일봉과 ETH 4시간봉에서 재 보면 학습 모델이
   변동성 기준선을 못 넘는다(skill −0.04 ~ −0.11). 짧은 지평의 방향 예측은 원래 잡음에
   가깝다는 문헌과 맞는 결과다. 도구는 그럴 때 기준선을 쓰고 그렇게 말한다 —

@@ -86,10 +86,27 @@ def _classifier():
     return HistGradientBoostingClassifier(**TREE)
 
 
-def volatility_scale(closed: pd.DataFrame) -> pd.Series:
-    """목표값을 나눌 변동성 자. 0 이나 NaN 이면 그 행은 학습에서 빠진다."""
+def volatility_scale(closed: pd.DataFrame, hourly: bool = False) -> pd.Series:
+    """목표값을 나눌 변동성 자. 0 이나 NaN 이면 그 행은 학습에서 빠진다.
+
+    `hourly=True` 면 **시각별 형태**까지 나눈다. 인트라데이 변동성은 세션
+    (아시아·유럽·미국)마다 크기가 다른데, ATR 하나로는 그걸 못 담는다.
+    시각별 평균은 **그 시점까지의 과거로만** 낸다 — 전 구간 평균을 쓰면 미래를 본다.
+    """
     scale = indicator_math.atr(closed, ATR_PERIOD) / closed["close"].astype("float64")
-    return scale.replace(0.0, np.nan)
+    scale = scale.replace(0.0, np.nan)
+    if not hourly or len(closed) < 200:
+        return scale
+
+    hour = pd.to_datetime(closed["ts"], unit="ms", utc=True).dt.hour
+    # 시각별 누적 평균(직전까지). shift 로 자기 자신을 빼야 그 봉의 값이 안 샌다.
+    per_hour = scale.groupby(hour).transform(
+        lambda s: s.shift(1).expanding(min_periods=20).mean()
+    )
+    overall = scale.shift(1).expanding(min_periods=20).mean()
+    shape = (per_hour / overall).replace(0.0, np.nan)
+    # 자료가 모자란 앞부분은 형태를 1로 둔다(=시각 보정 없음).
+    return scale / shape.fillna(1.0).clip(0.4, 2.5)
 
 
 def horizon_steps(horizon: int, steps: int = 4) -> list[int]:

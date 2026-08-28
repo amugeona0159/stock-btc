@@ -24,6 +24,7 @@ from ...context import features as ctx
 from ...core.candle import closed_only  # noqa: F401  (model.py 가 여기서 가져다 쓴다)
 from ...events.schema import Event
 from ...events.sources import attention
+from . import market
 
 # 한 번에 계산할 질의 수. 전체를 한 행렬로 만들면 5000봉에서 200MB 를 넘긴다.
 CHUNK = 512
@@ -40,6 +41,9 @@ EVENT_COLUMNS = (
 # 관심도(위키백과 조회수). 문서를 못 찾는 종목이 있으므로 '있는지' 도 같이 낸다 —
 # 없는 걸 NaN 으로 두면 그 종목이 학습 표에서 통째로 빠진다.
 ATTENTION_COLUMNS = tuple(attention.COLUMNS) + ("attention_available",)
+# 미시구조 대용. 캔들만으로 뽑을 수 있는 몇 안 되는 주문흐름 정보다 —
+# 봉 안에서 종가가 어디에 붙었는지가 그 봉의 매수/매도 우위를 말해 준다.
+MICRO_COLUMNS = ("clv", "signed_volume", "pressure", "wick_bias")
 
 
 def analog_features(
@@ -72,42 +76,76 @@ def analog_features(
     # 질의 창과 겹치는 후보는 뺀다. 겹친 창은 거의 같은 그림이라 '사례'가 아니다.
     gap = max(horizon, window // 2)
 
+    # 후보 인덱스와 결과를 미리 준비해 둔다. 행마다 파이썬 반복을 돌면
+    # 2만 봉에서 못 끝난다 — 청크 단위로 한 번에 자른다.
+    columns = np.arange(m)
+    known = np.isfinite(outcome)
+
     for start in range(0, m, CHUNK):
         stop = min(m, start + CHUNK)
         # z 는 표준화돼 있어 각 행의 제곱합이 window 다. 그래서 내적/window 가 곧 상관계수고,
         # 거리는 sqrt(2-2*corr) 로 단조 감소한다 — 상관계수만 크게 잡으면 된다.
         corr = (z[start:stop] @ z.T) / float(window)
 
-        for row in range(stop - start):
-            q = start + row
-            limit = q - gap
-            if limit < k:
-                continue
-            candidates = corr[row, : limit + 1]
-            values = outcome[: limit + 1]
-            usable = np.isfinite(values) & np.isfinite(candidates)
-            if usable.sum() < k:
-                continue
+        # 행 q 가 쓸 수 있는 후보는 j <= q-gap 이면서 결과를 아는 자리뿐이다.
+        limits = np.arange(start, stop)[:, None] - gap
+        usable = (columns[None, :] <= limits) & known[None, :]
+        if not usable.any():
+            continue
+        # 못 쓰는 자리는 -inf 로 눌러 argpartition 이 절대 안 고르게 한다.
+        scores = np.where(usable, corr, -np.inf)
+        enough = usable.sum(axis=1) >= k
+        if not enough.any():
+            continue
 
-            index = np.flatnonzero(usable)
-            scores = candidates[index]
-            top = index[np.argpartition(-scores, k - 1)[:k]]
-            picked = values[top]
-            picked_corr = candidates[top]
+        top = np.argpartition(-scores, k - 1, axis=1)[:, :k]
+        rows = np.arange(stop - start)[:, None]
+        picked = outcome[top]
+        picked_corr = scores[rows, top]
 
-            bar = q + window - 1
-            out.iloc[bar, 0] = float(np.median(picked))
-            out.iloc[bar, 1] = float(picked.mean())
-            out.iloc[bar, 2] = float((picked > 0).mean())
-            out.iloc[bar, 3] = float(picked.std(ddof=1)) if k > 1 else 0.0
-            out.iloc[bar, 4] = float(picked_corr.max())
-            out.iloc[bar, 5] = float(picked_corr.mean())
+        bars = np.arange(start, stop) + window - 1
+        for column, values in (
+            (0, np.median(picked, axis=1)),
+            (1, picked.mean(axis=1)),
+            (2, (picked > 0).mean(axis=1)),
+            (3, picked.std(axis=1, ddof=1) if k > 1 else np.zeros(stop - start)),
+            (4, picked_corr.max(axis=1)),
+            (5, picked_corr.mean(axis=1)),
+        ):
+            out.iloc[bars[enough], column] = values[enough]
 
     # 수익률 계열은 tanh 로 눌러 다른 축과 크기를 맞춘다.
     for column in ("analog_median", "analog_mean", "analog_spread"):
         out[column] = np.tanh(out[column] / 0.05)
     out["analog_prob_up"] = out["analog_prob_up"] * 2.0 - 1.0
     return out
+
+
+def micro_features(df: pd.DataFrame) -> pd.DataFrame:
+    """봉 안의 매수/매도 압력 대용.
+
+    체결 단위 주문흐름은 캔들에 없다. 대신 종가가 봉의 어디에 붙었는지(CLV)와
+    그걸 거래량으로 가중한 값을 쓴다 — 있는 것 중에서는 이게 제일 가깝다.
+    """
+    out = pd.DataFrame(index=df.index, dtype="float64")
+    high, low, close, open_ = df["high"], df["low"], df["close"], df["open"]
+    span = (high - low).replace(0.0, np.nan)
+
+    # -1(저가 마감) ~ +1(고가 마감)
+    clv = ((close - low) - (high - close)) / span
+    out["clv"] = clv.fillna(0.0)
+
+    volume = df["volume"].astype("float64")
+    average = volume.rolling(20, min_periods=5).mean().replace(0.0, np.nan)
+    out["signed_volume"] = np.tanh(clv.fillna(0.0) * (volume / average))
+    # 최근 압력의 누적. 한 봉의 CLV 는 잡음이 크다.
+    out["pressure"] = np.tanh(out["signed_volume"].rolling(10, min_periods=3).mean() * 3.0)
+
+    # 위꼬리와 아래꼬리 중 어느 쪽이 긴가. 되돌림의 방향을 말해 준다.
+    body_top = close.combine(open_, max)
+    body_bottom = close.combine(open_, min)
+    out["wick_bias"] = (((body_bottom - low) - (high - body_top)) / span).fillna(0.0)
+    return out.replace([np.inf, -np.inf], np.nan)
 
 
 def event_features(df: pd.DataFrame, events: list[Event]) -> pd.DataFrame:
@@ -192,8 +230,13 @@ def build(
     horizon: int = 24,
     neighbours: int = NEIGHBOURS,
     attention_frame: pd.DataFrame | None = None,
+    market_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """상황 + 유사구간 + 이벤트 + 관심도를 한 표로. 라벨은 붙이지 않는다."""
+    """상황 + 유사구간 + 이벤트 + 관심도 + 미시구조 + 시장요인을 한 표로.
+
+    `market_frame` 은 여러 종목이 있어야 만들어지므로 밖에서 넣어 준다
+    (`market.market_series` → `market.features`).
+    """
     closed = closed_only(df).reset_index(drop=True)
     if len(closed) < window + horizon + 60:
         return pd.DataFrame()
@@ -202,10 +245,24 @@ def build(
     frame = frame.join(analog_features(closed, window, horizon, neighbours))
     frame = frame.join(event_features(closed, events or []))
     frame = frame.join(attention_columns(closed, attention_frame))
+    frame = frame.join(micro_features(closed))
+    if market_frame is not None and not market_frame.empty:
+        for column in market.COLUMNS:
+            frame[column] = market_frame.get(column, np.nan).to_numpy()
+    else:
+        # 시장 요인은 여러 종목이 있어야 만들어진다. 없으면 0(중립)으로 두되
+        # 없다는 사실을 축 하나로 남긴다 — NaN 으로 두면 그 종목이 학습에서 빠진다.
+        for column in market.COLUMNS:
+            frame[column] = 0.0
+    frame["market_available"] = 1.0 if (market_frame is not None
+                                        and not market_frame.empty) else -1.0
     frame.insert(0, "ts", closed["ts"])
     return frame.replace([np.inf, -np.inf], np.nan)
 
 
+MARKET_COLUMNS: tuple[str, ...] = tuple(market.COLUMNS) + ("market_available",)
+
 FEATURE_COLUMNS: tuple[str, ...] = (
     tuple(ctx.AXES) + ANALOG_COLUMNS + EVENT_COLUMNS + ATTENTION_COLUMNS
+    + MICRO_COLUMNS + MARKET_COLUMNS
 )

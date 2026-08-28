@@ -38,6 +38,9 @@ WS = "wss://openapi-ws.tossinvest.com/ws/v1"
 # 토스가 직접 주는 봉. 나머지는 여기서 접어 만든다.
 NATIVE = {"1m": "1m", "1d": "1d"}
 DERIVED = {"1w": "1d"}          # 주봉은 일봉을 접는다
+# 일봉의 시각을 어느 지역의 하루로 읽을지. 토스는 일봉을 **현지 자정**으로 준다 —
+# KST 자정은 UTC 로 전날 15:00 이라, 그냥 UTC 격자로 내리면 한국 일봉이 하루씩 밀린다.
+MARKET_TZ = {"kr": "Asia/Seoul", "us": "America/New_York"}
 MAX_PER_CALL = 200
 # 페이지 사이에 두는 간격. 한도가 문서에 있으니 몰아치지 않는다.
 PAGE_PAUSE = 0.12
@@ -125,6 +128,12 @@ def _to_ms(stamp: str) -> int:
     return int(pd.Timestamp(stamp).tz_convert("UTC").timestamp() * 1000)
 
 
+def _local_day_ms(ts_ms: int, tz: str) -> int:
+    """그 시각이 속한 **현지 달력 날짜**를 UTC 자정으로. 일봉 라벨을 여기서 정한다."""
+    local = pd.Timestamp(ts_ms, unit="ms", tz="UTC").tz_convert(tz)
+    return int(pd.Timestamp(local.date(), tz="UTC").timestamp() * 1000)
+
+
 class TossProvider(Provider):
     """국내·미국을 각각 하나씩 등록한다.
 
@@ -134,6 +143,7 @@ class TossProvider(Provider):
     def __init__(self, info: ProviderInfo, stream_type: str) -> None:
         self.info = info
         self._stream_type = stream_type      # trade:kr | trade:us
+        self._tz = MARKET_TZ[info.market]
 
     @property
     def available(self) -> bool:
@@ -177,7 +187,8 @@ class TossProvider(Provider):
             if not page:
                 break
             # 응답은 최신부터 온다. 앞에 붙여 시간순으로 쌓는다.
-            rows = [self._row(c, step, now) for c in page] + rows
+            daily = interval == "1d"
+            rows = [self._row(c, step, now, self._tz if daily else None) for c in page] + rows
             before = result.get("nextBefore")
             if not before or len(rows) >= native_limit:
                 break
@@ -191,9 +202,13 @@ class TossProvider(Provider):
         return frame.tail(limit).reset_index(drop=True)
 
     @staticmethod
-    def _row(candle: dict, step: int, now: int) -> dict:
+    def _row(candle: dict, step: int, now: int, tz: str | None = None) -> dict:
         # 가격이 문자열로 온다(소수 손실을 막으려는 것). float 로 바꾸는 건 여기 한 번뿐이다.
         ts = _to_ms(candle["timestamp"])
+        if tz is not None:
+            # 일봉은 **현지 달력의 그날**을 UTC 자정으로 표시한다. 야후도 결과적으로
+            # 그렇게 들어오고, 화면에 찍히는 날짜가 사람이 읽는 그 날짜가 된다.
+            ts = _local_day_ms(ts, tz)
         return {
             "ts": ts,
             "open": float(candle["openPrice"]),

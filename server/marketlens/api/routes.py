@@ -355,7 +355,9 @@ def research_library() -> dict:
 # 함께 학습할 기본 동료 종목. 한 종목 몇천 행으로는 표본이 모자란다 —
 # 축이 전부 무차원이라 다른 종목을 섞어도 같은 표에 들어간다.
 PEERS = {
-    "binance": ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"),
+    # 많을수록 좋다. 축이 전부 무차원이라 종목이 늘수록 표본만 커진다.
+    "binance": ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT",
+                "ADAUSDT", "AVAXUSDT", "LINKUSDT", "DOTUSDT", "LTCUSDT"),
     "upbit": ("KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-SOL", "KRW-DOGE"),
     "yahoo": ("AAPL", "MSFT", "NVDA", "AMZN", "^GSPC"),
     "us_stock": ("AAPL", "MSFT", "NVDA", "AMZN", "TSLA"),
@@ -363,16 +365,32 @@ PEERS = {
     "toss_kr": ("005930", "000660", "035720", "005380", "051910"),
     "kis": ("005930", "000660", "035720", "005380"),
 }
-# 스윕(scripts/sweep.py)에서 잰 결과: 시간봉은 어떤 조합으로도 기준선을 못 넘었고,
-# 일봉 5~20봉에서만 넘었다. 화면이 이 사실을 미리 알려 준다.
-LEARNABLE = {"1d": (5, 20), "1w": (2, 8)}
+# `scripts/sweep.py` 로 잰 결과. 봉과 지평에 따라 학습이 되는 자리가 정해져 있다.
+# (지평 하한, 지평 상한). 이 밖에서는 대개 변동성 기준선이 그대로 쓰인다.
+LEARNABLE = {
+    "1h": (3, 12),      # 12종목 × 1.2만봉(14만 행) 에서 +0.002~+0.008
+    "1d": (5, 20),      # 6종목 × 3천봉 에서 +0.005
+    "1w": (2, 8),       # 미측정 — 일봉에서 유추
+}
+# 학습이 되려면 표본이 커야 한다. 시간봉은 한 종목 몇천 행으로는 절대 안 넘는다 —
+# 실제로 4천봉 6종목에서는 −0.11 이었고, 1.2만봉 12종목에서 +0.010 이 됐다.
+TRAIN_BARS = {"1m": 20000, "5m": 20000, "15m": 15000, "30m": 12000,
+              "1h": 12000, "4h": 6000, "1d": 3000, "1w": 1200}
+# as-of 검증(scripts/asof.py)에서 잰 '실제로 맞은 정도'. 종목 성격에 따라 크게 다르다.
+ASOF_NOTE = {
+    "us": "주식·지수에서는 잘 맞는다 — S&P500 일봉 10봉 지평에서 방향 80%, 경로상관 +0.38.",
+    "kr": "국내주식은 아직 as-of 로 재 보지 않았다.",
+    "crypto": "암호화폐 일봉은 방향이 거의 동전던지기였다(BTC 54%, ETH 51%). "
+              "밴드 폭은 쓸 만하지만 방향은 믿지 말 것.",
+}
 
 
 class TrainBody(BaseModel):
     provider: str
     symbol: str
     timeframe: str = "1d"
-    limit: int = Field(3000, ge=600, le=MAX_LIMIT)
+    # 비우면 봉 단위에 맞춰 정한다. 시간봉은 몇천 행으로는 절대 안 넘는다.
+    limit: int | None = Field(None, ge=600, le=MAX_LIMIT)
     horizon: int = Field(10, ge=2, le=200)
     window: int = Field(48, ge=8, le=400)
     folds: int = Field(4, ge=2, le=8)
@@ -386,16 +404,20 @@ def model_name(provider: str, symbol: str, timeframe: str) -> str:
     return f"{provider}-{symbol}-{timeframe}".lower()
 
 
-def learnable_note(timeframe: str, horizon: int) -> str | None:
+def learnable_note(timeframe: str, horizon: int, market: str = "") -> str | None:
     """이 봉·지평에서 학습이 통할 가능성. 재 본 결과를 미리 알려 준다."""
+    parts: list[str] = []
     band = LEARNABLE.get(timeframe)
     if band is None:
-        return (f"{timeframe} 봉에서는 학습이 변동성 기준선을 넘은 적이 없다"
-                " — 재 봐도 대개 기준선이 그대로 쓰인다.")
-    if not band[0] <= horizon <= band[1]:
-        return (f"{timeframe} 봉은 {band[0]}~{band[1]}봉 지평에서만 기준선을 넘었다."
-                f" {horizon}봉은 그 밖이다.")
-    return None
+        parts.append(f"{timeframe} 봉에서는 학습이 기준선을 넘은 적이 없다 — "
+                     "재 봐도 대개 기준선이 그대로 쓰인다.")
+    elif not band[0] <= horizon <= band[1]:
+        parts.append(f"{timeframe} 봉은 {band[0]}~{band[1]}봉 지평에서만 기준선을 넘었다. "
+                     f"{horizon}봉은 그 밖이다.")
+    note = ASOF_NOTE.get(market)
+    if note:
+        parts.append(note)
+    return " ".join(parts) or None
 
 
 async def _symbol_data(provider: str, symbol: str, timeframe: str, limit: int,
@@ -421,13 +443,14 @@ async def train(body: TrainBody) -> dict:
     provider_info = _provider(body.provider).info
     sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
     peers = body.peers if body.peers is not None else list(PEERS.get(body.provider, ()))
+    limit = body.limit or min(MAX_LIMIT, TRAIN_BARS.get(body.timeframe, 3000))
 
     wanted = [body.symbol] + [p for p in peers if p.upper() != body.symbol.upper()]
     datasets, status, skipped = [], {}, []
-    for symbol in wanted[:8]:
+    for symbol in wanted[:12]:
         try:
             data, source_status = await _symbol_data(
-                body.provider, symbol, body.timeframe, body.limit,
+                body.provider, symbol, body.timeframe, limit,
                 provider_info.market, sources, body.use_attention,
             )
         except HTTPException as exc:
@@ -451,7 +474,8 @@ async def train(body: TrainBody) -> dict:
         raise HTTPException(400, str(exc)) from exc
     return {
         "model": name, "report": report, "eventSources": status,
-        "skipped": skipped, "note": learnable_note(body.timeframe, body.horizon),
+        "skipped": skipped, "bars": limit,
+        "note": learnable_note(body.timeframe, body.horizon, provider_info.market),
     }
 
 
