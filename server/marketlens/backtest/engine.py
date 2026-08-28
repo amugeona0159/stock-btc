@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.candle import closed_only
-from ..signals.engine import evaluate
+from ..signals.engine import evaluate, prepared_signal_strategy
 from .metrics import summarize
 
 # 기본 비용. 암호화폐 현물 기준으로 잡았다 — 시장이 다르면 넘겨서 바꾼다.
@@ -67,12 +67,12 @@ Strategy = Callable[[pd.DataFrame], int]
 
 
 def signal_strategy(threshold: float = 0.15) -> Strategy:
-    """기본 전략 — 시그널 엔진의 판단을 그대로 포지션으로."""
+    """기본 전략 — 시그널 엔진의 판단을 그대로 포지션으로.
 
-    def decide(window: pd.DataFrame) -> int:
-        return evaluate(window, threshold).direction
-
-    return decide
+    `run()` 은 이 전략을 알아보고 전 구간 지표를 한 번만 계산하는 빠른 길로 간다.
+    다른 전략(직접 만든 함수)은 그대로 봉마다 창을 받는다.
+    """
+    return prepared_signal_strategy(threshold)
 
 
 def run(
@@ -88,6 +88,12 @@ def run(
         return Result()
 
     decide = strategy or signal_strategy()
+    # 전 구간을 미리 계산할 수 있는 전략이면 그렇게 한다. 봉마다 전체를 다시 계산하면
+    # 봉 수의 제곱으로 늘어나 600봉에 10초, 5000봉이면 몇 분이 걸린다.
+    prepare = getattr(decide, "prepare", None)
+    if prepare is not None:
+        prepare(closed)
+
     open_px = closed["open"].to_numpy(dtype="float64")
     close_px = closed["close"].to_numpy(dtype="float64")
     ts = closed["ts"].to_numpy()
@@ -103,7 +109,8 @@ def run(
 
     for i in range(warmup, len(closed) - 1):
         # 봉 i 까지만 보고 정한 뒤, 체결은 봉 i+1 의 시가에서.
-        wanted = decide(closed.iloc[: i + 1])
+        at = getattr(decide, "at", None)
+        wanted = at(i) if at is not None else decide(closed.iloc[: i + 1])
         if not allow_short and wanted < 0:
             wanted = 0
 

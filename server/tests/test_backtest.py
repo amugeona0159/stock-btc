@@ -80,3 +80,32 @@ def test_signal_strategy_runs_end_to_end(short_candles):
     result = engine.run(short_candles, engine.signal_strategy(), warmup=90)
     assert len(result.equity) == len(short_candles)
     assert result.to_dict()["metrics"]["trades"] >= 0
+
+
+def test_fast_path_matches_slow_path(short_candles):
+    """전 구간을 미리 계산한 판단과, 봉마다 다시 계산한 판단이 같아야 한다.
+
+    여기가 깨지면 빠른 길이 미래를 보고 있거나 값이 달라진 것이다. 백테스트 속도를
+    위해 정확성을 판 셈이 되므로, 속도 최적화를 되돌리는 게 맞다.
+    """
+    from marketlens.signals.engine import evaluate, prepared_signal_strategy
+
+    closed = short_candles.reset_index(drop=True)
+    fast = prepared_signal_strategy()
+    fast.prepare(closed)
+
+    for i in range(90, len(closed)):
+        slow = evaluate(closed.iloc[: i + 1]).direction
+        assert fast.at(i) == slow, f"{i}번째 봉에서 갈렸다"
+
+
+def test_custom_strategies_still_get_a_window(candles):
+    """전략이 창을 받는 계약은 그대로여야 한다. 빠른 길은 기본 전략에만 적용된다."""
+    seen: list[int] = []
+
+    def spy(window):
+        seen.append(len(window))
+        return 0
+
+    engine.run(candles, spy, warmup=120)
+    assert seen and seen[0] == 121 and seen[-1] == len(candles) - 1

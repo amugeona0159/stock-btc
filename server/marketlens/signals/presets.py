@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..indicators.patterns import PATTERN_META, detect
+from ..indicators.levels import retracement_levels
+from ..indicators.patterns import PATTERN_META
+from ..indicators.structure import last_leg
 from .rules import RuleContext, RuleHit, rule
 
 
@@ -109,9 +111,7 @@ def _rsi_divergence(ctx: RuleContext) -> RuleHit | None:
     스윙을 다시 찾지 않고 `swings` 지표가 잡은 것을 그대로 쓴다 — 화면에 찍히는
     고점과 시그널이 보는 고점이 달라지면 사람이 검증할 수 없다.
     """
-    from ..indicators.structure import find_swings
-
-    swings = find_swings(ctx.df, 5, 5)
+    swings = ctx.swings(5, 5)
     rsi = ctx.series("rsi", "value")
     highs = [s for s in swings if s.kind == "high"][-2:]
     lows = [s for s in swings if s.kind == "low"][-2:]
@@ -235,9 +235,8 @@ def _money_flow(ctx: RuleContext) -> RuleHit | None:
 
 @rule("candle_pattern")
 def _candle_pattern(ctx: RuleContext) -> RuleHit | None:
-    hits = detect(ctx.df)
-    for name, series in hits.items():
-        if not bool(series.iloc[-1]):
+    for name, matched in ctx.pattern_hits().items():
+        if not matched:
             continue
         label, direction = PATTERN_META[name]
         if direction == 0:
@@ -249,15 +248,20 @@ def _candle_pattern(ctx: RuleContext) -> RuleHit | None:
 
 @rule("fib_level")
 def _fib_level(ctx: RuleContext) -> RuleHit | None:
-    """되돌림 레벨에 가격이 붙어 있으면 그 자리를 알린다. 방향은 다리가 정한다."""
-    ind = ctx.ind("fibonacci")
+    """되돌림 레벨에 가격이 붙어 있으면 그 자리를 알린다. 방향은 다리가 정한다.
+
+    지표를 다시 계산하지 않고 스윙에서 바로 뽑는다 — 봉마다 전 구간 스윙을 다시
+    찾으면 백테스트가 봉 수의 제곱으로 늘어난다.
+    """
+    leg = last_leg(ctx.swings(5, 5))
     price = ctx.last(ctx.close)
-    start, end = ctx.last(ind["start"]), ctx.last(ind["end"])
-    if not all(np.isfinite(v) for v in (price, start, end)) or price == 0:
+    if leg is None or not np.isfinite(price) or price == 0:
         return None
+    start, end = leg[0].price, leg[1].price
+    levels = retracement_levels(start, end)
     rising_leg = end > start
     for column, ratio in (("r0382", 0.382), ("r0500", 0.5), ("r0618", 0.618)):
-        level = ctx.last(ind[column])
+        level = levels.get(column, float("nan"))
         if np.isfinite(level) and abs(price - level) / price < 0.005:
             direction = 1 if rising_leg else -1
             return RuleHit("fib_level", "피보나치", direction, 0.6,

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import io
+import time
 
 import numpy as np
 import pandas as pd
@@ -31,8 +32,20 @@ SERIES = {
 }
 
 
+# 매크로 지표는 하루에 한 번 갱신되면 많이 갱신되는 것이다. 질문할 때마다 일곱 개
+# 시리즈를 다시 받으면 그 왕복이 응답 시간의 대부분을 차지한다.
+_CACHE: dict[tuple, tuple[float, pd.DataFrame]] = {}
+CACHE_TTL = 3600.0
+
+
 async def series(series_id: str, start_ts: int, end_ts: int) -> pd.DataFrame:
     import httpx
+
+    # 요청 범위는 날짜 단위로만 의미가 있다. 밀리초까지 키에 넣으면 캐시가 절대 안 맞는다.
+    cache_key = (series_id, start_ts // 86_400_000, end_ts // 86_400_000)
+    hit = _CACHE.get(cache_key)
+    if hit and time.time() - hit[0] < CACHE_TTL:
+        return hit[1].copy()
 
     params = {
         "id": series_id,
@@ -55,7 +68,9 @@ async def series(series_id: str, start_ts: int, end_ts: int) -> pd.DataFrame:
     frame["ts"] = (pd.to_datetime(frame[date_column], utc=True)
                    .astype("datetime64[ms, UTC]").astype("int64"))
     frame["value"] = pd.to_numeric(frame[value_column], errors="coerce")
-    return frame[["ts", "value"]].dropna().reset_index(drop=True)
+    result = frame[["ts", "value"]].dropna().reset_index(drop=True)
+    _CACHE[cache_key] = (time.time(), result)
+    return result.copy()
 
 
 async def changes(series_id: str, start_ts: int, end_ts: int) -> list[Event]:

@@ -25,6 +25,17 @@ _EXTENSION_OUTPUTS = tuple(
 )
 
 
+def retracement_levels(start_price: float, end_price: float) -> dict[str, float]:
+    """다리 하나에서 나오는 되돌림·확장 레벨. 지표와 시그널이 같은 식을 써야
+    화면에 그린 선과 근거 문장이 어긋나지 않는다."""
+    span = end_price - start_price
+    if span == 0:
+        return {}
+    levels = {f"r{int(r * 1000):04d}": end_price - r * span for r in RETRACEMENTS}
+    levels.update({f"e{int(e * 1000):04d}": start_price + e * span for e in EXTENSIONS})
+    return levels
+
+
 @indicator(IndicatorSpec(
     key="fibonacci",
     name="피보나치 되돌림",
@@ -63,11 +74,8 @@ def _fibonacci(df: pd.DataFrame, p: dict) -> pd.DataFrame:
 
     out.loc[live, "start"] = start.price
     out.loc[live, "end"] = end.price
-    for ratio, spec in zip(RETRACEMENTS, _RETRACEMENT_OUTPUTS):
-        out.loc[live, spec.key] = end.price - ratio * span
-    for ratio, spec in zip(EXTENSIONS, _EXTENSION_OUTPUTS):
-        # 확장은 다리가 간 방향으로 더 나간다 - 되돌림과 부호가 반대다.
-        out.loc[live, spec.key] = start.price + ratio * span
+    for key, value in retracement_levels(start.price, end.price).items():
+        out.loc[live, key] = value
     return out
 
 
