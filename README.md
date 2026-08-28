@@ -47,6 +47,9 @@ cd web && npm install && npm run dev          # http://localhost:5173
 - **예측 3층** — 규칙 / 통계적 구간(ATR·부트스트랩) / ML 방향성 분류
 - **백테스트** — 확정봉 이벤트 기반, 수수료·슬리피지, 승률·PF·MDD·샤프
 - **실시간** — 웹소켓 팬아웃. 브라우저 탭이 열 개여도 거래소 연결은 하나
+- **매일 스스로 학습** — 챔피언을 새 데이터로 다시 굽고, 설정을 하나만 흔든 도전자와
+  겨뤄 **마진 이상 이길 때만** 갈아끼운다. 결과는 [docs/LEARNING.md](docs/LEARNING.md)
+  에 매일 쌓인다 — 진 날도 그대로 남는다
 
 ## 데이터 소스
 
@@ -85,12 +88,13 @@ cd web && npm install && npm run dev          # http://localhost:5173
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 260개
+.venv/Scripts/python -m pytest server/tests -q      # 279개
 cd web && npx tsc -b                                # 타입체크
 cd web && npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
 .venv/Scripts/python scripts/sweep.py               # 학습 기법 실험
 .venv/Scripts/python scripts/asof.py --tf 1d        # 그날 서서 예측하고 실제와 맞춰 보기
+.venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 자동 학습 한 바퀴 (승격 없이)
 ```
 
 **as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):
@@ -107,6 +111,25 @@ cd web && npm run shot                              # 실제 화면 PNG (서버 
 
 `screenshots/` 의 PNG 를 눈으로 확인할 것. 일목 구름이 마지막 봉보다 26봉 앞까지
 뻗는지, 원화 위의 글자가 읽히는지는 테스트로 안 잡힌다.
+
+## 매일 스스로 학습
+
+매일 한 번, 사람이 시키지 않아도 스스로 학습하고 더 나은 설정을 찾는다.
+
+```
+챔피언을 새 데이터로 재학습 → 설정을 하나만 흔든 도전자도 학습
+→ 같은 검증으로 재고 → +0.002 이상 이길 때만 갈아끼운다
+```
+
+- **GitHub Actions** — 매일 05:00 KST. `learning/` 과 `docs/LEARNING.md` 만 커밋한다
+- **내 PC** — 매일 06:00 (작업 스케줄러 `market-lens-daily`). 여기는 토스 키가 있어
+  국내주식까지 학습한다 (Actions 는 IP 제한으로 못 한다)
+
+자동 탐색은 놔두면 과최적화 기계가 된다. 그래서 세 가지를 박아 뒀다:
+**승격에 마진을 두고**(없으면 잡음으로 매일 모델이 바뀐다), **시험 횟수를 기록에 남기고**
+(같은 데이터로 수백 번 시험하면 그중 하나는 반드시 이긴다), **승격 판정은 퍼징
+워크포워드로만 한다**(as-of 는 따로 재서 기록만 한다 — 승격 기준에 넣으면 그것도
+학습 구간이 된다).
 
 ## 아직 없는 것 · 한계
 

@@ -8,3 +8,8 @@ node_modules/
 dist/
 .cache/
 store_data/
+logs/
+# 내 PC 가 쓰는 기록. 저장소의 learning/ 은 Actions 가 쓴다 — 나눠 두지 않으면 충돌한다.
+learning-local/
+# learning/ 은 일부러 추적한다 — 매일 학습이 뭘 배웠는지가 이 저장소의 내용이다.
+# 모델(.pkl)은 store_data/ 아래라 안 올라간다. 무겁고, 설정만 있으면 다시 만든다.

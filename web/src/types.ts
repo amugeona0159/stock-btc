@@ -368,3 +368,40 @@ export interface TrainResult {
   /** 이 봉·지평에서 학습이 통한 적이 있는지에 대한 사전 안내. */
   note: string | null;
 }
+
+/** `scripts/daily.py` 가 매일 남기는 기록. `GET /api/learning`. */
+export interface Champion {
+  target: string;
+  config: { horizon: number; window: number; neighbours: number; folds: number; peer_count: number };
+  skill: number | null;
+  learned: boolean;
+  rows: number;
+  symbols: string[];
+  updated: string;
+  /** 이 대상에 지금까지 시험한 횟수. 클수록 '이겼다'를 덜 믿어야 한다. */
+  trials: number;
+  promotions: number;
+}
+
+export interface LearningTrial {
+  at: string;
+  target: string;
+  championSkill: number;
+  challengerSkill: number | null;
+  change: string;
+  promoted: boolean;
+  trials: number;
+}
+
+export interface LearningState {
+  available: boolean;
+  updated: string | null;
+  promoteMargin: number | null;
+  tracked: number;
+  learned: number;
+  trials: number;
+  promotions: number;
+  champions: Champion[];
+  recent: LearningTrial[];
+  note: string;
+}

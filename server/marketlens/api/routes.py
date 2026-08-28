@@ -22,6 +22,7 @@ from ..indicators import catalog, patterns
 from ..providers import (ProviderError, ProviderUnavailable, SymbolNotFound,
                          describe, get as get_provider)
 from ..signals.engine import evaluate
+from . import learning
 from ..store.cache import cache
 
 router = APIRouter(prefix="/api")
@@ -377,6 +378,10 @@ LEARNABLE = {
 # 실제로 4천봉 6종목에서는 −0.11 이었고, 1.2만봉 12종목에서 +0.010 이 됐다.
 TRAIN_BARS = {"1m": 20000, "5m": 20000, "15m": 15000, "30m": 12000,
               "1h": 12000, "4h": 6000, "1d": 3000, "1w": 1200}
+# 학습은 차트보다 훨씬 긴 구간을 본다. `MAX_LIMIT`(차트 한 번에 그릴 봉 수)로 막으면
+# 시간봉이 5천봉에 잘려 스윕에서 이겼던 자리를 화면에서 재현할 수 없다 — 실제로
+# 그렇게 잘려 있었고, +0.010 이 나와야 할 자리가 +0.000 으로 보였다.
+TRAIN_MAX = 20000
 # as-of 검증(scripts/asof.py)에서 잰 '실제로 맞은 정도'. 종목 성격에 따라 크게 다르다.
 ASOF_NOTE = {
     "us": "주식·지수에서는 잘 맞는다 — S&P500 일봉 10봉 지평에서 방향 80%, 경로상관 +0.38.",
@@ -391,7 +396,7 @@ class TrainBody(BaseModel):
     symbol: str
     timeframe: str = "1d"
     # 비우면 봉 단위에 맞춰 정한다. 시간봉은 몇천 행으로는 절대 안 넘는다.
-    limit: int | None = Field(None, ge=600, le=MAX_LIMIT)
+    limit: int | None = Field(None, ge=600, le=TRAIN_MAX)
     horizon: int = Field(10, ge=2, le=200)
     window: int = Field(48, ge=8, le=400)
     folds: int = Field(4, ge=2, le=8)
@@ -405,9 +410,16 @@ def model_name(provider: str, symbol: str, timeframe: str) -> str:
     return f"{provider}-{symbol}-{timeframe}".lower()
 
 
-def learnable_note(timeframe: str, horizon: int, market: str = "") -> str | None:
-    """이 봉·지평에서 학습이 통할 가능성. 재 본 결과를 미리 알려 준다."""
+def learnable_note(timeframe: str, horizon: int, market: str = "",
+                   provider: str = "", symbol: str = "") -> str | None:
+    """이 봉·지평에서 학습이 통할 가능성. 재 본 결과를 미리 알려 준다.
+
+    자동 학습이 **이 종목을** 직접 재 놨으면 그 값이 봉 단위 일반론보다 낫다.
+    """
     parts: list[str] = []
+    measured = learning.note(provider, symbol, timeframe) if provider and symbol else None
+    if measured:
+        parts.append(measured)
     band = LEARNABLE.get(timeframe)
     if band is None:
         parts.append(f"{timeframe} 봉에서는 학습이 기준선을 넘은 적이 없다 — "
@@ -444,7 +456,7 @@ async def train(body: TrainBody) -> dict:
     provider_info = _provider(body.provider).info
     sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
     peers = body.peers if body.peers is not None else list(PEERS.get(body.provider, ()))
-    limit = body.limit or min(MAX_LIMIT, TRAIN_BARS.get(body.timeframe, 3000))
+    limit = body.limit or min(TRAIN_MAX, TRAIN_BARS.get(body.timeframe, 3000))
 
     wanted = [body.symbol] + [p for p in peers if p.upper() != body.symbol.upper()]
     datasets, status, skipped = [], {}, []
@@ -476,7 +488,8 @@ async def train(body: TrainBody) -> dict:
     return {
         "model": name, "report": report, "eventSources": status,
         "skipped": skipped, "bars": limit,
-        "note": learnable_note(body.timeframe, body.horizon, provider_info.market),
+        "note": learnable_note(body.timeframe, body.horizon, provider_info.market,
+                               body.provider, body.symbol),
     }
 
 
@@ -485,6 +498,22 @@ def models() -> dict:
     from ..forecast.ml import model as ml_model
 
     return {"models": ml_model.available()}
+
+
+@router.get("/learning")
+def learning_state() -> dict:
+    """매일 도는 자동 학습이 지금까지 알아낸 것.
+
+    서버는 학습을 돌리지 않는다 — `scripts/daily.py` 가 남긴 기록을 읽기만 한다.
+    """
+    return learning.summary()
+
+
+@router.get("/learning/defaults")
+def learning_defaults(provider: str, symbol: str, timeframe: str = "1d") -> dict:
+    """수동 학습 출발점. 자동 학습이 찾아 둔 설정이 있으면 거기서 시작한다."""
+    found = learning.defaults(provider, symbol, timeframe)
+    return {"config": found, "source": "champion" if found else "default"}
 
 
 class LearnedBody(BaseModel):

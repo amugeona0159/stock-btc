@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import type { Learned, TrainReport } from "../types";
+import { learn } from "../api";
+import type { Learned, LearningState, TrainReport } from "../types";
 
 const HORIZONS = [
   { label: "5봉", value: 5 },
@@ -123,8 +124,91 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
         </section>
       )}
 
+      <AutoLearnCard />
+
       {report && <ReportCard report={report} />}
     </>
+  );
+}
+
+function AutoLearnCard() {
+  const [state, setState] = useState<LearningState | null>(null);
+
+  useEffect(() => {
+    // 기록 파일 하나를 읽는 것뿐이라 실패해도 화면이 막힐 이유가 없다.
+    learn.state().then(setState).catch(() => setState(null));
+  }, []);
+
+  if (!state?.available) return null;
+  const top = state.champions.slice(0, 6);
+  // 옆 띠는 좁다. 프로바이더 이름은 여섯 줄 내내 같으니 떼고 종목·봉만 남긴다.
+  const short = (target: string) => target.split(":").slice(1).join(" ");
+
+  return (
+    <section className="card">
+      <h2>매일 도는 자동 학습</h2>
+      <p className="formula" style={{ marginTop: 0 }}>
+        매일 한 번, 챔피언을 새 데이터로 다시 굽고 설정을 <b>하나만</b> 흔든 도전자와
+        겨룬다. 도전자가 {signed(state.promoteMargin ?? 0.002)} 이상 이길 때만 갈아끼운다 —
+        마진이 없으면 잡음으로 매일 모델이 바뀐다.
+      </p>
+      <div className="rows">
+        <div className="row">
+          <span>마지막 실행</span>
+          <b>{state.updated?.slice(0, 16).replace("T", " ") ?? "—"}</b>
+        </div>
+        <div className="row">
+          <span>추적 대상</span>
+          <b>
+            {state.tracked}개{" "}
+            <span style={{ color: "var(--text-dim)" }}>· 기준선 넘음 {state.learned}개</span>
+          </b>
+        </div>
+        <div className="row">
+          <span>누적 시험 / 승격</span>
+          <b>
+            {state.trials}번 <span style={{ color: "var(--text-dim)" }}>/ {state.promotions}번</span>
+          </b>
+        </div>
+      </div>
+
+      <div className="group-label">지금의 챔피언</div>
+      <div className="rows">
+        {top.map((item) => (
+          <div className="row" key={item.target}>
+            <span>
+              {short(item.target)}
+              <span style={{ color: "var(--text-dim)" }}> 지평 {item.config.horizon}</span>
+            </span>
+            <b style={{ color: item.learned ? "var(--up)" : "var(--text-dim)" }}>
+              {signed(item.skill ?? undefined, 4)}
+              <span style={{ color: "var(--text-dim)" }}> · {item.trials}회</span>
+            </b>
+          </div>
+        ))}
+      </div>
+
+      {state.recent.length > 0 && (
+        <>
+          <div className="group-label">최근 겨룬 기록</div>
+          <div className="rows">
+            {state.recent.slice(0, 6).map((trial, i) => (
+              <div className="row" key={`${trial.at}-${i}`}>
+                <span>
+                  {trial.at.slice(5, 10)} {short(trial.target)}
+                </span>
+                <b style={{ color: trial.promoted ? "var(--up)" : "var(--text-dim)" }}>
+                  {trial.promoted ? "승격" : "유지"}
+                  <span style={{ color: "var(--text-dim)" }}> · {trial.change}</span>
+                </b>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <p className="formula" style={{ marginTop: 10 }}>{state.note}</p>
+    </section>
   );
 }
 

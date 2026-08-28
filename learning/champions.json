@@ -1,0 +1,174 @@
+{
+  "updated": "2026-08-28T14:32:38+00:00",
+  "promoteMargin": 0.002,
+  "champions": {
+    "binance:BTCUSDT:15m": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0022,
+      "learned": true,
+      "rows": 162102,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:32:38+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "binance:BTCUSDT:1d": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0041,
+      "learned": true,
+      "rows": 28706,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:26:01+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "binance:BTCUSDT:1h": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0014,
+      "learned": false,
+      "rows": 129923,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:24:35+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "binance:ETHUSDT:1d": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0041,
+      "learned": true,
+      "rows": 28706,
+      "symbols": [
+        "ETHUSDT",
+        "BTCUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:28:25+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "binance:ETHUSDT:1h": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0017,
+      "learned": false,
+      "rows": 129923,
+      "symbols": [
+        "ETHUSDT",
+        "BTCUSDT",
+        "SOLUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:27:50+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "binance:SOLUSDT:1h": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0013,
+      "learned": false,
+      "rows": 129923,
+      "symbols": [
+        "SOLUSDT",
+        "BTCUSDT",
+        "ETHUSDT",
+        "XRPUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "ADAUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "DOTUSDT",
+        "LTCUSDT"
+      ],
+      "updated": "2026-08-28T14:30:08+00:00",
+      "trials": 2,
+      "promotions": 0
+    }
+  }
+}

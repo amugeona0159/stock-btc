@@ -80,6 +80,9 @@ export const predict = {
 export const learn = {
   models: () => get<{ models: import("./types").ModelInfo[] }>("/api/models"),
 
+  /** 매일 도는 자동 학습이 남긴 기록. 서버는 읽기만 한다. */
+  state: () => get<import("./types").LearningState>("/api/learning"),
+
   train: (body: {
     provider: string;
     symbol: string;

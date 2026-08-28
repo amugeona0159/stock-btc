@@ -211,14 +211,15 @@ class Report:
 
 
 def assemble(datasets: list[SymbolData], window: int, horizon: int,
-             steps: list[int]) -> tuple[pd.DataFrame, list[str]]:
+             steps: list[int],
+             neighbours: int = dataset.NEIGHBOURS) -> tuple[pd.DataFrame, list[str]]:
     """여러 종목을 한 표로. 시각과 종목을 남겨 시간 기준으로 접을 수 있게 한다."""
     columns = list(dataset.FEATURE_COLUMNS)
     frames = []
     for item in datasets:
         closed = closed_only(item.df).reset_index(drop=True)
         panel = dataset.build(item.df, item.events, window=window, horizon=horizon,
-                              attention_frame=item.attention)
+                              neighbours=neighbours, attention_frame=item.attention)
         if panel.empty or len(panel) != len(closed):
             continue
         scale = volatility_scale(closed).to_numpy()
@@ -245,10 +246,11 @@ def train(
     window: int = 48,
     folds: int = 4,
     timeframe: str = "1h",
+    neighbours: int = dataset.NEIGHBOURS,
 ) -> dict:
     """학습하고, 두 기준선과 견주고, 섞을 비중을 정하고, 저장한다."""
     steps = horizon_steps(horizon)
-    raw, columns = assemble(datasets, window, horizon, steps)
+    raw, columns = assemble(datasets, window, horizon, steps, neighbours)
     frame = raw.drop(columns=["label"]).dropna().reset_index(drop=True)
     if len(frame) < MIN_ROWS:
         raise ValueError(f"학습 표가 {len(frame)}행뿐이다 — 최소 {MIN_ROWS}행은 필요하다")
