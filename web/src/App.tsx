@@ -68,6 +68,8 @@ export default function App() {
   const [learned, setLearned] = useState<Learned | null>(null);
   const [training, setTraining] = useState(false);
   const [trainError, setTrainError] = useState<string | null>(null);
+  const [trainNote, setTrainNote] = useState<string | null>(null);
+  const [skipped, setSkipped] = useState<Array<{ symbol: string; reason: string }>>([]);
 
   const [events, setEvents] = useState<EventMark[]>([]);
   const [eventSources, setEventSources] = useState<
@@ -162,6 +164,8 @@ export default function App() {
     setAskError(null);
     setLearned(null);
     setTrainError(null);
+    setTrainNote(null);
+    setSkipped([]);
   }, [provider, symbol, timeframe]);
 
   // 이 종목·봉으로 학습된 모델이 이미 있으면 바로 불러온다.
@@ -185,8 +189,12 @@ export default function App() {
       setTraining(true);
       setTrainError(null);
       learn
-        .train({ provider, symbol, timeframe, horizon, limit: 4000 })
-        .then(() => learn.predict({ provider, symbol, timeframe }))
+        .train({ provider, symbol, timeframe, horizon, limit: 3000 })
+        .then((res) => {
+          setTrainNote(res.note);
+          setSkipped(res.skipped ?? []);
+          return learn.predict({ provider, symbol, timeframe });
+        })
         .then(setLearned)
         .catch((err) => setTrainError(String(err.message ?? err)))
         .finally(() => setTraining(false));
@@ -326,6 +334,8 @@ export default function App() {
             learned={learned}
             busy={training}
             error={trainError}
+            note={trainNote}
+            skipped={skipped}
             onTrain={runTrain}
           />
         )}

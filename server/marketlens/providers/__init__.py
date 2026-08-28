@@ -12,6 +12,7 @@ from . import binance as _binance  # noqa: F401
 from . import upbit as _upbit  # noqa: F401
 from . import composite as _composite  # noqa: F401  (미국주식 = 야후 + Finnhub)
 from . import yahoo as _yahoo  # noqa: F401
+from . import toss as _toss  # noqa: F401  (국내·미국을 한 키로)
 from . import kis as _kis  # noqa: F401
 from . import csv_file as _csv  # noqa: F401
 

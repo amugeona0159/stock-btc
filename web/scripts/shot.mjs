@@ -18,7 +18,8 @@ const SHOTS = [
     ask: "급락 나온 뒤 3일 동안 어떻게 움직였어?" },
   { name: "research", width: 1600, height: 950, indicators: [], tab: "근거" },
   // 학습 성적표는 "이 도구가 자기 한계를 말하는가" 를 보는 화면이다.
-  { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습" },
+  { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습",
+    timeframe: "1d" },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -35,6 +36,11 @@ for (const shot of SHOTS) {
 
   await page.goto(URL, { waitUntil: "networkidle" });
   await page.waitForSelector(".pane.main canvas", { timeout: 20000 });
+  if (shot.timeframe) {
+    await page.locator(".topbar button", { hasText: new RegExp(`^${shot.timeframe}$`) })
+      .first().click();
+    await page.waitForTimeout(2500);
+  }
   // 첫 스냅샷이 와서 값이 찍힐 때까지. 실시간이라 고정 대기로는 못 맞춘다.
   // 탭에 따라 사이드 내용이 달라지므로 항상 있는 상단 가격을 본다.
   await page.waitForFunction(

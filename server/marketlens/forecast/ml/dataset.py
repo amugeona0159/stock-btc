@@ -23,6 +23,7 @@ from ...analog.matcher import znorm
 from ...context import features as ctx
 from ...core.candle import closed_only  # noqa: F401  (model.py 가 여기서 가져다 쓴다)
 from ...events.schema import Event
+from ...events.sources import attention
 
 # 한 번에 계산할 질의 수. 전체를 한 행렬로 만들면 5000봉에서 200MB 를 넘긴다.
 CHUNK = 512
@@ -36,6 +37,9 @@ ANALOG_COLUMNS = (
 EVENT_COLUMNS = (
     "event_recency", "event_severity", "event_chart", "event_macro", "event_scheduled",
 )
+# 관심도(위키백과 조회수). 문서를 못 찾는 종목이 있으므로 '있는지' 도 같이 낸다 —
+# 없는 걸 NaN 으로 두면 그 종목이 학습 표에서 통째로 빠진다.
+ATTENTION_COLUMNS = tuple(attention.COLUMNS) + ("attention_available",)
 
 
 def analog_features(
@@ -166,14 +170,30 @@ def forward_return(df: pd.DataFrame, horizon: int) -> pd.Series:
     return log_close.shift(-horizon) - log_close
 
 
+def attention_columns(df: pd.DataFrame, frame: pd.DataFrame | None) -> pd.DataFrame:
+    """관심도 축을 학습 표에 넣을 수 있는 형태로.
+
+    자료가 없으면 0(중립)으로 채우고 `attention_available` 을 -1 로 둔다. NaN 으로
+    두면 그 행이 통째로 빠져, 위키백과 문서가 없는 종목은 학습에서 사라진다.
+    """
+    out = pd.DataFrame(index=df.index, dtype="float64")
+    available = frame is not None and not frame.empty and frame["attention_z"].notna().any()
+    for column in attention.COLUMNS:
+        values = frame[column] if available and column in frame else pd.Series(np.nan, index=df.index)
+        out[column] = values.reindex(df.index).fillna(0.0)
+    out["attention_available"] = 1.0 if available else -1.0
+    return out
+
+
 def build(
     df: pd.DataFrame,
     events: list[Event] | None = None,
     window: int = 48,
     horizon: int = 24,
     neighbours: int = NEIGHBOURS,
+    attention_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """상황 + 유사구간 + 이벤트를 한 표로. 라벨은 붙이지 않는다."""
+    """상황 + 유사구간 + 이벤트 + 관심도를 한 표로. 라벨은 붙이지 않는다."""
     closed = closed_only(df).reset_index(drop=True)
     if len(closed) < window + horizon + 60:
         return pd.DataFrame()
@@ -181,8 +201,11 @@ def build(
     frame = ctx.build(closed)
     frame = frame.join(analog_features(closed, window, horizon, neighbours))
     frame = frame.join(event_features(closed, events or []))
+    frame = frame.join(attention_columns(closed, attention_frame))
     frame.insert(0, "ts", closed["ts"])
     return frame.replace([np.inf, -np.inf], np.nan)
 
 
-FEATURE_COLUMNS: tuple[str, ...] = tuple(ctx.AXES) + ANALOG_COLUMNS + EVENT_COLUMNS
+FEATURE_COLUMNS: tuple[str, ...] = (
+    tuple(ctx.AXES) + ANALOG_COLUMNS + EVENT_COLUMNS + ATTENTION_COLUMNS
+)

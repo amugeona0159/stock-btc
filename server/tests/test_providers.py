@@ -161,3 +161,58 @@ def test_aggregator_drops_late_ticks():
     agg = CandleAggregator("1m")
     agg.add(1_700_000_060_000, 110.0, 1.0)
     assert agg.add(1_700_000_000_000, 999.0, 1.0) == []
+
+
+# --- 토스증권 --------------------------------------------------------------
+
+def test_toss_is_unavailable_without_keys(monkeypatch):
+    from marketlens.providers import toss
+
+    monkeypatch.delenv("TOSS_CLIENT_ID", raising=False)
+    monkeypatch.delenv("TOSS_CLIENT_SECRET", raising=False)
+    provider = base.get("toss_kr")
+    assert not provider.available
+    assert "TOSS_CLIENT_ID" in provider.unavailable_reason
+    assert not toss.client.configured
+
+
+def test_toss_registers_kr_and_us_separately():
+    """사건 범위(market:kr / market:us)가 갈려야 이벤트 스터디가 섞이지 않는다."""
+    assert base.get("toss_kr").info.market == "kr"
+    assert base.get("toss_us").info.market == "us"
+
+
+def test_toss_refuses_timeframes_it_cannot_serve():
+    """토스는 1m 과 1d 만 준다. 1h 를 받아 주면 화면이 빈 차트를 본다."""
+    provider = base.get("toss_kr")
+    assert provider.supports("1m") and provider.supports("1d") and provider.supports("1w")
+    assert not provider.supports("1h")
+    with pytest.raises(base.ProviderError):
+        provider._native("1h")
+
+
+def test_toss_row_parses_strings_and_offsets():
+    """가격이 문자열로, 시각이 오프셋 붙은 ISO 로 온다. 그 변환이 여기서 끝나야 한다."""
+    from marketlens.providers.toss import TossProvider
+
+    row = TossProvider._row({
+        "timestamp": "2026-03-25T09:30:00.000+09:00",
+        "openPrice": "72000", "highPrice": "72500",
+        "lowPrice": "71800", "closePrice": "72300", "volume": "1200",
+    }, step=60_000, now=1_800_000_000_000)
+    # +09:00 09:30 = UTC 00:30
+    assert pd.Timestamp(row["ts"], unit="ms", tz="UTC").hour == 0
+    assert row["open"] == 72000.0 and row["close"] == 72300.0
+    assert row["volume"] == 1200.0 and row["closed"] is True
+
+
+def test_toss_marks_the_forming_bar():
+    from marketlens.providers.toss import TossProvider
+
+    stamp = "2026-03-25T09:30:00.000+09:00"
+    ts = int(pd.Timestamp(stamp).tz_convert("UTC").timestamp() * 1000)
+    forming = TossProvider._row({
+        "timestamp": stamp, "openPrice": "1", "highPrice": "1",
+        "lowPrice": "1", "closePrice": "1", "volume": "0",
+    }, step=86_400_000, now=ts + 1000)
+    assert forming["closed"] is False

@@ -87,8 +87,8 @@ export const learn = {
     limit?: number;
     horizon?: number;
     window?: number;
-  }) =>
-    post<{ model: string; report: import("./types").TrainReport }>("/api/train", body),
+    peers?: string[];
+  }) => post<import("./types").TrainResult>("/api/train", body),
 
   predict: (body: { provider: string; symbol: string; timeframe: string }) =>
     post<import("./types").Learned>("/api/learned", body),

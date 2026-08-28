@@ -3,9 +3,10 @@ import { useState } from "react";
 import type { Learned, TrainReport } from "../types";
 
 const HORIZONS = [
-  { label: "12봉", value: 12 },
-  { label: "24봉", value: 24 },
-  { label: "48봉", value: 48 },
+  { label: "5봉", value: 5 },
+  { label: "10봉", value: 10 },
+  { label: "20봉", value: 20 },
+  { label: "60봉", value: 60 },
 ];
 
 function pct(value: number | null | undefined, digits = 1): string {
@@ -24,11 +25,13 @@ interface Props {
   learned: Learned | null;
   busy: boolean;
   error: string | null;
+  note: string | null;
+  skipped: Array<{ symbol: string; reason: string }>;
   onTrain: (horizon: number) => void;
 }
 
-export function LearnPanel({ learned, busy, error, onTrain }: Props) {
-  const [horizon, setHorizon] = useState(24);
+export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Props) {
+  const [horizon, setHorizon] = useState(10);
   const report = learned?.report;
 
   return (
@@ -36,8 +39,10 @@ export function LearnPanel({ learned, busy, error, onTrain }: Props) {
       <section className="card">
         <h2>학습</h2>
         <p className="formula" style={{ marginTop: 0 }}>
-          상황 28축 + 유사구간 요약 + 사건 이력을 입력으로 넣고, 실제로 무슨 일이 났는지를
-          학습한다. 사례를 답으로 쓰는 대신 <b>사례를 얼마나 믿을지</b>까지 배우게 하는 것이다.
+          상황 28축 + 유사구간 요약 + 사건 이력 + 관심도(위키백과 조회수)를 입력으로 넣고,
+          실제로 무슨 일이 났는지를 학습한다. 사례를 답으로 쓰는 대신 <b>사례를 얼마나
+          믿을지</b>까지 배우게 하는 것이다. 여러 종목을 모아 학습하고, 결과는 변동성
+          기준선과 섞어 쓴다.
         </p>
         <div className="chips">
           {HORIZONS.map((item) => (
@@ -57,8 +62,14 @@ export function LearnPanel({ learned, busy, error, onTrain }: Props) {
           disabled={busy}
           onClick={() => onTrain(horizon)}
         >
-          {busy ? "학습 중 (20초쯤 걸린다)" : "이 종목·봉으로 학습"}
+          {busy ? "학습 중 (1~2분 걸린다)" : "여러 종목을 모아 학습"}
         </button>
+        {note && <p className="note warn">{note}</p>}
+        {skipped.length > 0 && (
+          <p className="note">
+            빠진 종목: {skipped.map((item) => item.symbol).join(", ")}
+          </p>
+        )}
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
       </section>
 
@@ -75,7 +86,7 @@ export function LearnPanel({ learned, busy, error, onTrain }: Props) {
           <div className="rows">
             <div className="row">
               <span>쓰고 있는 것</span>
-              <b style={{ color: learned.source === "model" ? "var(--up)" : "var(--warn)" }}>
+              <b style={{ color: learned.source === "blend" ? "var(--up)" : "var(--warn)" }}>
                 {learned.sourceLabel}
               </b>
             </div>
@@ -120,7 +131,9 @@ export function LearnPanel({ learned, busy, error, onTrain }: Props) {
 function ReportCard({ report }: { report: TrainReport }) {
   const h = String(report.horizon);
   const skill = report.skill[h];
+  const blendSkill = report.blendSkill?.[h];
   const volSkill = report.volSkill?.[h];
+  const weight = report.weights?.[h];
   const coverage = report.coverage[`${h}:80`];
 
   return (
@@ -134,14 +147,27 @@ function ReportCard({ report }: { report: TrainReport }) {
           </b>
         </div>
         <div className="row">
+          <span>모은 종목</span>
+          <b>{report.symbols?.join(", ") ?? "—"}</b>
+        </div>
+        <div className="row">
           <span>변동성 스케일링이 준 것</span>
           <b style={{ color: (volSkill ?? 0) > 0 ? "var(--up)" : "var(--text-dim)" }}>
             {signed(volSkill)}
           </b>
         </div>
         <div className="row">
-          <span>학습이 그 위에 더한 것</span>
+          <span>모델 단독</span>
           <b style={{ color: skill > 0 ? "var(--up)" : "var(--down)" }}>{signed(skill)}</b>
+        </div>
+        <div className="row">
+          <span>기준선과 섞은 결과</span>
+          <b style={{ color: (blendSkill ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+            {signed(blendSkill)}
+            {weight !== undefined && (
+              <span style={{ color: "var(--text-dim)" }}> (모델 {Math.round(weight * 100)}%)</span>
+            )}
+          </b>
         </div>
         <div className="row">
           <span>80% 밴드 실제 적중</span>
@@ -160,9 +186,12 @@ function ReportCard({ report }: { report: TrainReport }) {
       </div>
 
       <p className="formula" style={{ marginTop: 10 }}>
-        점수는 <b>기준선 대비 개선율</b>이다. 0이면 기준선과 같고, 음수면 기준선보다 나쁘다.
-        기준선이 둘인 이유는, 변동성으로 폭을 잡는 것만으로 이미 상당히 맞기 때문이다 —
-        학습이 의미가 있으려면 <b>그 위에</b> 무언가를 더해야 한다.
+        점수는 <b>기준선 대비 개선율</b>이다. 0이면 기준선과 같고, 음수면 더 나쁘다.
+        모델 단독이 지더라도 기준선과 섞으면 이기는 일이 흔하다 — 섞는 비중은 앞 구간에서
+        고른 뒤 다음 구간에 쓰므로, 이 점수는 실제로 배포 가능한 절차의 성적이다.
+        <br />
+        <b>수치는 작다.</b> +0.005 는 "변동성으로 폭을 잡는 것보다 0.5% 낫다" 는 뜻이지
+        방향을 맞힌다는 뜻이 아니다. 짧은 지평의 방향 예측은 문헌에서도 잡음에 가깝다.
       </p>
 
       {report.importance.length > 0 && (

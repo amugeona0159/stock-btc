@@ -72,18 +72,11 @@ def test_forward_return_leaves_the_tail_unknown():
 
 # --- 검증 장치 --------------------------------------------------------------
 
-def test_purged_folds_leave_a_gap():
-    """학습 끝과 검증 시작 사이에 지평만큼 틈이 있어야 한다."""
-    folds = ml.purged_folds(1000, horizon=24, count=4)
-    assert folds
-    for fold in folds:
-        assert fold.test_start - fold.train_end == 24
-        assert fold.train_end < fold.test_start < fold.test_end
-
-
 def test_folds_only_ever_train_on_the_past():
-    for fold in ml.purged_folds(2000, horizon=10, count=4):
-        assert fold.train_end <= fold.test_start
+    """검증 구간은 항상 학습 구간보다 뒤에 있어야 한다."""
+    ts = np.arange(2000) * 3_600_000
+    for train, test in ml.time_folds(ts, horizon_ms=10 * 3_600_000, count=4):
+        assert ts[train].max() < ts[test].min()
 
 
 def test_pinball_is_zero_for_a_perfect_prediction():
@@ -119,20 +112,44 @@ def test_volatility_scale_is_dimensionless():
 
 @pytest.fixture(scope="module")
 def trained(tmp_path_factory):
-    """합성 데이터로 실제 학습을 한 번 돌린다. 느리므로 모듈에서 한 번만."""
+    """합성 데이터 세 종목을 모아 실제로 학습한다. 느리므로 모듈에서 한 번만."""
     import marketlens.forecast.ml.model as module
 
     module.MODEL_DIR = tmp_path_factory.mktemp("models")
-    df = make_candles(count=1600, seed=21)
-    report = module.train(df, "unit-test", [], horizon=12, window=32, folds=3)
-    return df, report, module
+    datasets = [
+        module.SymbolData(f"SYN{i}", make_candles(count=1400, seed=21 + i), [], None)
+        for i in range(3)
+    ]
+    report = module.train(datasets, "unit-test", horizon=12, window=32, folds=3,
+                          timeframe="1h")
+    return datasets[0].df, report, module
 
 
-def test_training_reports_both_baselines(trained):
+def test_training_reports_all_three_baselines(trained):
+    """모델 단독 · 섞은 결과 · 변동성 기준선. 셋을 다 보여야 무엇이 이겼는지 안다."""
     _, report, _ = trained
     h = str(report["horizon"])
-    assert h in report["skill"] and h in report["volSkill"]
+    assert h in report["skill"] and h in report["blendSkill"] and h in report["volSkill"]
     assert report["rows"] > 400 and report["folds"] >= 2
+
+
+def test_pooling_actually_pools(trained):
+    """여러 종목이 한 표에 들어갔어야 한다. 하나만 들어가면 풀링이 안 된 것이다."""
+    _, report, _ = trained
+    assert len(report["symbols"]) == 3
+
+
+def test_blend_is_never_worse_than_the_model_alone_by_much(trained):
+    """섞기는 기준선 쪽으로 당기는 것이라, 모델 단독보다 크게 나쁠 수 없다."""
+    _, report, _ = trained
+    h = str(report["horizon"])
+    assert report["blendSkill"][h] >= report["skill"][h] - 0.02
+
+
+def test_blend_weight_is_a_fraction(trained):
+    _, report, _ = trained
+    for weight in report["weights"].values():
+        assert 0.0 <= weight <= 1.0
 
 
 def test_training_says_plainly_whether_it_learned(trained):
@@ -140,7 +157,7 @@ def test_training_says_plainly_whether_it_learned(trained):
     _, report, _ = trained
     assert isinstance(report["learnedSomething"], bool)
     if report["learnedSomething"]:
-        assert "넘었다" in report["verdict"]
+        assert "넘었다" in report["verdict"] and "못 넘었다" not in report["verdict"]
     else:
         assert "못 넘었다" in report["verdict"]
 
@@ -169,8 +186,11 @@ def test_prediction_says_which_source_it_used(trained):
     """기준선을 쓰면서 '학습 모델' 이라고 하면 안 된다."""
     df, report, module = trained
     out = module.predict(df, "unit-test", [], "1h")
-    expected = "model" if report["learnedSomething"] else "volatility-baseline"
+    expected = "blend" if report["learnedSomething"] else "volatility-baseline"
     assert out["source"] == expected
+    if expected == "blend":
+        # 화면에 적힌 비중과 리포트의 비중이 어긋나면 사용자가 잘못 읽는다.
+        assert out["weight"] == pytest.approx(report["weights"][str(report["horizon"])])
 
 
 def test_missing_model_is_reported_not_crashed(trained):
@@ -181,7 +201,27 @@ def test_missing_model_is_reported_not_crashed(trained):
 
 def test_too_little_data_is_refused():
     with pytest.raises(ValueError):
-        ml.train(make_candles(count=200), "tiny", [], horizon=12, window=32)
+        ml.train([ml.SymbolData("TINY", make_candles(count=200))], "tiny",
+                 horizon=12, window=32)
+
+
+def test_time_folds_split_by_time_not_row():
+    """여러 종목을 섞으면 같은 시각의 다른 종목이 학습과 검증에 나뉘면 안 된다."""
+    ts = np.repeat(np.arange(1000) * 86_400_000, 3)   # 세 종목이 같은 날짜를 공유
+    folds = ml.time_folds(ts, horizon_ms=10 * 86_400_000, count=3)
+    assert folds
+    for train, test in folds:
+        assert ts[train].max() < ts[test].min()
+        # 경계에서 지평만큼 비어 있어야 한다.
+        assert ts[test].min() - ts[train].max() >= 10 * 86_400_000
+
+
+def test_attention_columns_never_drop_a_symbol():
+    """위키백과 문서가 없는 종목도 학습 표에 남아야 한다."""
+    df = make_candles(count=300)
+    frame = dataset.attention_columns(df, None)
+    assert frame.notna().all().all()
+    assert (frame["attention_available"] == -1.0).all()
 
 
 def test_prob_up_reads_the_quantile_curve():

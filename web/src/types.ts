@@ -309,14 +309,19 @@ export interface AskResult {
 
 export interface TrainReport {
   rows: number;
+  symbols: string[];
   horizon: number;
   window: number;
   horizons: number[];
   folds: number;
-  /** 변동성 기준선 대비. 0 이하면 학습이 아무것도 못 더한 것이다. */
+  /** 모델 단독이 변동성 기준선 대비. */
   skill: Record<string, number>;
-  /** 아무것도 모를 때 대비. 변동성 스케일링만으로 여기까지 간다. */
+  /** 기준선과 섞은 결과가 변동성 기준선 대비. 실제로 쓰는 건 이쪽이다. */
+  blendSkill: Record<string, number>;
+  /** 변동성 기준선이 단순 기준선 대비. 변동성 스케일링만으로 여기까지 간다. */
   volSkill: Record<string, number>;
+  /** 지평별로 모델을 얼마나 섞는지. */
+  weights: Record<string, number>;
   coverage: Record<string, number>;
   directionAccuracy: number | null;
   directionBaseline: number | null;
@@ -330,8 +335,9 @@ export interface Learned {
   available: boolean;
   reason?: string;
   model?: string;
-  source?: "model" | "volatility-baseline";
+  source?: "blend" | "volatility-baseline";
   sourceLabel?: string;
+  weight?: number;
   horizon?: number;
   last?: number;
   atrPct?: number;
@@ -350,6 +356,15 @@ export interface ModelInfo {
   name: string;
   horizon: number;
   rows: number;
+  symbols: string[];
   learnedSomething: boolean;
   skill: number | null;
+}
+
+export interface TrainResult {
+  model: string;
+  report: TrainReport;
+  skipped: Array<{ symbol: string; reason: string }>;
+  /** 이 봉·지평에서 학습이 통한 적이 있는지에 대한 사전 안내. */
+  note: string | null;
 }

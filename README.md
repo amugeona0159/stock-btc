@@ -55,6 +55,7 @@ cd web && npm install && npm run dev          # http://localhost:5173
 | 암호화폐 | Binance kline WS · Upbit trade WS | Binance `/klines` · Upbit `/candles` | 불필요 |
 | 미국주식 | Finnhub trade WS | 야후 chart API (분봉~주봉) | Finnhub 무료 가입 |
 | 전 세계 (야후) | 없음 | 야후 chart API. `005930.KS` · `^GSPC` · `BTC-USD` | **불필요** |
+| 국내·미국 (토스) | 토스 `trade:kr`·`trade:us` WS | 토스 `/api/v1/candles` (1분·일봉) | 토스증권 계좌 + Open API 키 |
 | 국내주식 | KIS `H0STCNT0` | KIS 일봉 TR + 분봉 TR | 증권계좌 + 앱키 |
 | 사건 | — | GDELT 보도량 · FRED 매크로 | **불필요** |
 
@@ -65,7 +66,10 @@ cd web && npm install && npm run dev          # http://localhost:5173
 - **국내주식은 증권계좌 없이도 과거 차트를 볼 수 있다** — 야후에서 `005930.KS`.
   실시간 체결은 KIS 키가 있어야 한다.
 - GDELT 는 키가 필요 없지만 응답이 느리고 막히는 망이 있다. 기본 소스에서 빠져 있고,
-  켜면 실패해도 나머지 소스로 계속 돈다.
+  켜면 실패해도 나머지 소스로 계속 돈다. 관심도 축은 위키백과 조회수로 대신한다.
+- **토스증권 키 하나로 국내와 미국을 다 본다.** OAuth2 client_credentials 한 번이면
+  되고, 과거 캔들과 실시간 체결이 같은 키로 열린다 — KIS 보다 훨씬 단순하다.
+  다만 캔들 단위가 1분·일봉뿐이라 그 사이 봉은 야후 쪽이 낫다.
 
 ## 설계 규칙
 
@@ -81,7 +85,7 @@ cd web && npm install && npm run dev          # http://localhost:5173
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 242개
+.venv/Scripts/python -m pytest server/tests -q      # 251개
 cd web && npx tsc -b                                # 타입체크
 cd web && npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 ```
@@ -95,6 +99,8 @@ cd web && npm run shot                              # 실제 화면 PNG (서버 
 - 구름대의 면적 채우기 — lightweight-charts v4 는 두 선 사이를 칠하지 못해
   선 두 개로 그린다
 - 학습층은 `pip install -e ".[ml]"` 로 scikit-learn 을 깔아야 켜진다
+- **학습은 일봉 5~20봉 지평에서만 기준선을 넘는다.** 시간봉은 종목을 여섯 개로 늘리고
+  지평을 168봉까지 늘려도 못 넘었다. `scripts/sweep.py` 로 직접 재 볼 수 있다
 - **학습이 늘 이기지는 않는다.** BTC 1시간봉·1일봉과 ETH 4시간봉에서 재 보면 학습 모델이
   변동성 기준선을 못 넘는다(skill −0.04 ~ −0.11). 짧은 지평의 방향 예측은 원래 잡음에
   가깝다는 문헌과 맞는 결과다. 도구는 그럴 때 기준선을 쓰고 그렇게 말한다 —

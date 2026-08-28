@@ -30,6 +30,7 @@ SOURCES = {
     "calendar": "캘린더 계산",
     "detector": "차트 탐지",
     "gdelt": "GDELT",
+    "attention": "위키백과 관심도",
     "finnhub": "Finnhub 뉴스",
     "fred": "FRED",
     "user": "직접 등록",

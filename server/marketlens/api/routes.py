@@ -278,7 +278,9 @@ async def _learned_layer(df, provider: str, symbol: str, timeframe: str,
         return {"available": False,
                 "reason": f"{symbol} {timeframe} 로 학습된 모델이 없다 — '학습' 에서 만들 수 있다"}
     try:
-        return await asyncio.to_thread(ml_model.predict, df, name, relevant, timeframe)
+        from ..events.sources import attention as attention_source
+        frame, _ = await attention_source.collect(closed_only(df).reset_index(drop=True), symbol)
+        return await asyncio.to_thread(ml_model.predict, df, name, relevant, timeframe, frame)
     except Exception as exc:  # noqa: BLE001 - 학습층이 없다고 답 전체가 막히면 안 된다
         return {"available": False, "reason": str(exc)}
 
@@ -350,19 +352,65 @@ def research_library() -> dict:
     return {"entries": [e.to_dict() for e in research.all_entries()]}
 
 
+# 함께 학습할 기본 동료 종목. 한 종목 몇천 행으로는 표본이 모자란다 —
+# 축이 전부 무차원이라 다른 종목을 섞어도 같은 표에 들어간다.
+PEERS = {
+    "binance": ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT"),
+    "upbit": ("KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-SOL", "KRW-DOGE"),
+    "yahoo": ("AAPL", "MSFT", "NVDA", "AMZN", "^GSPC"),
+    "us_stock": ("AAPL", "MSFT", "NVDA", "AMZN", "TSLA"),
+    "toss_us": ("AAPL", "MSFT", "NVDA", "AMZN", "TSLA"),
+    "toss_kr": ("005930", "000660", "035720", "005380", "051910"),
+    "kis": ("005930", "000660", "035720", "005380"),
+}
+# 스윕(scripts/sweep.py)에서 잰 결과: 시간봉은 어떤 조합으로도 기준선을 못 넘었고,
+# 일봉 5~20봉에서만 넘었다. 화면이 이 사실을 미리 알려 준다.
+LEARNABLE = {"1d": (5, 20), "1w": (2, 8)}
+
+
 class TrainBody(BaseModel):
     provider: str
     symbol: str
     timeframe: str = "1d"
     limit: int = Field(3000, ge=600, le=MAX_LIMIT)
-    horizon: int = Field(24, ge=2, le=200)
+    horizon: int = Field(10, ge=2, le=200)
     window: int = Field(48, ge=8, le=400)
     folds: int = Field(4, ge=2, le=8)
+    # 함께 학습할 종목. 비우면 프로바이더별 기본 목록을 쓴다. []는 단일 종목 학습.
+    peers: list[str] | None = None
+    use_attention: bool = True
     event_sources: list[str] | None = None
 
 
 def model_name(provider: str, symbol: str, timeframe: str) -> str:
     return f"{provider}-{symbol}-{timeframe}".lower()
+
+
+def learnable_note(timeframe: str, horizon: int) -> str | None:
+    """이 봉·지평에서 학습이 통할 가능성. 재 본 결과를 미리 알려 준다."""
+    band = LEARNABLE.get(timeframe)
+    if band is None:
+        return (f"{timeframe} 봉에서는 학습이 변동성 기준선을 넘은 적이 없다"
+                " — 재 봐도 대개 기준선이 그대로 쓰인다.")
+    if not band[0] <= horizon <= band[1]:
+        return (f"{timeframe} 봉은 {band[0]}~{band[1]}봉 지평에서만 기준선을 넘었다."
+                f" {horizon}봉은 그 밖이다.")
+    return None
+
+
+async def _symbol_data(provider: str, symbol: str, timeframe: str, limit: int,
+                       market: str, sources: tuple, use_attention: bool):
+    """학습에 넣을 한 종목 — 시세 + 사건 + 관심도."""
+    from ..events.sources import attention as attention_source
+    from ..forecast.ml.model import SymbolData
+
+    df = await load_candles(provider, symbol, timeframe, limit)
+    found, status = await events.collect(df, symbol, market, sources)
+    relevant = events.relevant(found, symbol, market)
+    frame = None
+    if use_attention:
+        frame, _ = await attention_source.collect(closed_only(df).reset_index(drop=True), symbol)
+    return SymbolData(symbol, df, relevant, frame), status
 
 
 @router.post("/train")
@@ -371,21 +419,40 @@ async def train(body: TrainBody) -> dict:
     from ..forecast.ml import model as ml_model
 
     provider_info = _provider(body.provider).info
-    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
     sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
-    found, status = await events.collect(df, body.symbol, provider_info.market, sources)
-    relevant = events.relevant(found, body.symbol, provider_info.market)
+    peers = body.peers if body.peers is not None else list(PEERS.get(body.provider, ()))
+
+    wanted = [body.symbol] + [p for p in peers if p.upper() != body.symbol.upper()]
+    datasets, status, skipped = [], {}, []
+    for symbol in wanted[:8]:
+        try:
+            data, source_status = await _symbol_data(
+                body.provider, symbol, body.timeframe, body.limit,
+                provider_info.market, sources, body.use_attention,
+            )
+        except HTTPException as exc:
+            # 동료 종목 하나가 없다고 학습 전체를 막지 않는다. 다만 조용히 넘어가지도 않는다.
+            skipped.append({"symbol": symbol, "reason": str(exc.detail)})
+            if symbol.upper() == body.symbol.upper():
+                raise
+            continue
+        datasets.append(data)
+        status = status or source_status
 
     name = model_name(body.provider, body.symbol, body.timeframe)
     try:
         report = await asyncio.to_thread(
-            ml_model.train, df, name, relevant, body.horizon, body.window, body.folds
+            ml_model.train, datasets, name, body.horizon, body.window,
+            body.folds, body.timeframe,
         )
     except ml_model.MissingDependency as exc:
         raise HTTPException(501, str(exc)) from exc
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
-    return {"model": name, "report": report, "eventSources": status}
+    return {
+        "model": name, "report": report, "eventSources": status,
+        "skipped": skipped, "note": learnable_note(body.timeframe, body.horizon),
+    }
 
 
 @router.get("/models")
@@ -415,13 +482,11 @@ async def learned(body: LearnedBody) -> dict:
             f"{body.symbol} {body.timeframe} 로 학습된 모델이 없다 — 먼저 학습해야 한다",
         )
     provider_info = _provider(body.provider).info
-    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
     sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
-    found, _ = await events.collect(df, body.symbol, provider_info.market, sources)
-    relevant = events.relevant(found, body.symbol, provider_info.market)
-
+    data, _ = await _symbol_data(body.provider, body.symbol, body.timeframe, body.limit,
+                                 provider_info.market, sources, True)
     result = await asyncio.to_thread(
-        ml_model.predict, df, name, relevant, body.timeframe
+        ml_model.predict, data.df, name, data.events, body.timeframe, data.attention
     )
     result["symbol"] = body.symbol
     return result
