@@ -43,6 +43,13 @@ jobs:
           MARKET_LENS_CONTACT: https://github.com/${{ github.repository }}
         run: python scripts/daily.py --budget ${{ inputs.budget || 8 }}
 
+      - name: 추천 팩터 재측정
+        env:
+          MARKET_LENS_CONTACT: https://github.com/${{ github.repository }}
+        # 순위를 매기는 축의 부호와 쓸모는 시장에 따라 변한다. 학습과 같은 주기로
+        # 다시 잰다 — 안 재면 화면이 옛 부호로 종목을 줄 세운다.
+        run: python scripts/screen.py --horizons 1 2 3
+
       - name: 기록만 커밋
         run: |
           # 모델(.pkl)은 커밋하지 않는다. 무겁고, 설정만 있으면 어디서든 다시 만든다.

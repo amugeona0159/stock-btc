@@ -405,3 +405,38 @@ export interface LearningState {
   recent: LearningTrial[];
   note: string;
 }
+
+/** 오늘의 추천. `POST /api/screen`. */
+export interface ScreenItem {
+  symbol: string;
+  move: number | null;
+  direction: number | null;
+  why: Array<{ factor: string; label: string; z: number }>;
+  last: number | null;
+  changePct: number | null;
+}
+
+export interface ScreenQuality {
+  factors: number;
+  meanIc: number;
+  /** 점수 상위 묶음 평균 − 하위 묶음 평균. 수수료 전. */
+  topMinusBottomPct: number | null;
+  buckets: number[] | null;
+  used: Array<{ factor: string; label: string; ic: number }>;
+}
+
+export interface ScreenResult {
+  available: boolean;
+  reason?: string;
+  horizon?: number;
+  sortedBy?: "move" | "direction";
+  family?: string;
+  quality?: { move: ScreenQuality; direction: ScreenQuality };
+  items: ScreenItem[];
+  breadth?: number;
+  note?: string;
+  provider?: string;
+  timeframe?: string;
+  measuredAt?: string | null;
+  skipped?: Array<{ symbol: string; reason: string }>;
+}

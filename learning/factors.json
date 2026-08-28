@@ -1,0 +1,2939 @@
+{
+  "updated": "2026-08-28T15:09:21+00:00",
+  "timeframe": "1d",
+  "minIc": 0.01,
+  "providers": {
+    "binance": {
+      "horizons": {
+        "1": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.33113182200294794,
+              "fold_ic": [
+                0.28089,
+                0.33429,
+                0.35843,
+                0.35091
+              ],
+              "t_stat": 53.935,
+              "coverage": 2985,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.2999712424015038,
+              "fold_ic": [
+                0.21103,
+                0.29914,
+                0.3407,
+                0.34902
+              ],
+              "t_stat": 47.898,
+              "coverage": 2938,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.29065722761818347,
+              "fold_ic": [
+                0.27036,
+                0.281,
+                0.29442,
+                0.31685
+              ],
+              "t_stat": 46.617,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "move",
+              "ic": -0.2474670284769744,
+              "fold_ic": [
+                -0.16548,
+                -0.23349,
+                -0.31372,
+                -0.27717
+              ],
+              "t_stat": -29.955,
+              "coverage": 1770,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.16005051133764192,
+              "fold_ic": [
+                0.16253,
+                0.14691,
+                0.18225,
+                0.14851
+              ],
+              "t_stat": 26.853,
+              "coverage": 2908,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_5",
+              "kind": "move",
+              "ic": 0.13325921181573339,
+              "fold_ic": [
+                0.27612,
+                0.09947
+              ],
+              "t_stat": 0.0,
+              "coverage": 390,
+              "usable": false,
+              "reason": "폴드가 2개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "move",
+              "ic": 0.11309617813865716,
+              "fold_ic": [
+                0.11931,
+                0.12524,
+                0.11473,
+                0.0931
+              ],
+              "t_stat": 19.007,
+              "coverage": 2998,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.11023314767960038,
+              "fold_ic": [
+                0.12773,
+                0.12692,
+                0.09854,
+                0.08775
+              ],
+              "t_stat": 17.423,
+              "coverage": 2952,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "squeeze",
+              "kind": "move",
+              "ic": -0.09430162043267476,
+              "fold_ic": [
+                -0.12618,
+                -0.11161,
+                -0.10111,
+                -0.03832
+              ],
+              "t_stat": -12.456,
+              "coverage": 1966,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "move",
+              "ic": 0.08508294669730757,
+              "fold_ic": [
+                0.07161,
+                0.11742,
+                0.10647,
+                0.04483
+              ],
+              "t_stat": 13.748,
+              "coverage": 2879,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "px_over_ema20__rel",
+              "kind": "move",
+              "ic": 0.08405347458748212,
+              "fold_ic": [
+                0.12699,
+                0.06092,
+                0.09307,
+                0.05524
+              ],
+              "t_stat": 12.735,
+              "coverage": 2920,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b__rel",
+              "kind": "move",
+              "ic": 0.08275420937609869,
+              "fold_ic": [
+                0.11416,
+                0.06404,
+                0.09415,
+                0.05867
+              ],
+              "t_stat": 12.524,
+              "coverage": 2920,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "px_over_ema60__rel",
+              "kind": "move",
+              "ic": 0.07533896587121369,
+              "fold_ic": [
+                0.13764,
+                0.03899,
+                0.0758,
+                0.04892
+              ],
+              "t_stat": 11.425,
+              "coverage": 2880,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "event_recency",
+              "kind": "move",
+              "ic": 0.07346765711320133,
+              "fold_ic": [
+                0.143,
+                0.02743,
+                0.0522,
+                0.07125
+              ],
+              "t_stat": 7.223,
+              "coverage": 1181,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                2.7036,
+                3.1489,
+                3.6347
+              ],
+              "topMinusBottomPct": 0.9311,
+              "rows": 32948
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                2.4869,
+                3.0907,
+                3.8103
+              ],
+              "topMinusBottomPct": 1.3234,
+              "rows": 32948
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                2.8991,
+                3.1522,
+                3.4729
+              ],
+              "topMinusBottomPct": 0.5738,
+              "rows": 32240
+            }
+          },
+          "direction": [
+            {
+              "factor": "atr_pct",
+              "kind": "direction",
+              "ic": -0.07032779212272511,
+              "fold_ic": [
+                -0.06266,
+                -0.08446,
+                -0.04404,
+                -0.09015
+              ],
+              "t_stat": -8.508,
+              "coverage": 2985,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "direction",
+              "ic": 0.06343666321198468,
+              "fold_ic": [
+                0.07069,
+                0.06418,
+                0.04651,
+                0.07237
+              ],
+              "t_stat": 6.482,
+              "coverage": 1770,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": -0.057903089431677414,
+              "fold_ic": [
+                -0.02551,
+                -0.07473,
+                -0.0398,
+                -0.09156
+              ],
+              "t_stat": -7.119,
+              "coverage": 2938,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "direction",
+              "ic": -0.046563770669229156,
+              "fold_ic": [
+                -0.03222,
+                -0.06063,
+                -0.02035,
+                -0.07306
+              ],
+              "t_stat": -5.974,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_5",
+              "kind": "direction",
+              "ic": -0.034456570400390275,
+              "fold_ic": [
+                -0.06511,
+                -0.01312
+              ],
+              "t_stat": 0.0,
+              "coverage": 390,
+              "usable": false,
+              "reason": "폴드가 2개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            },
+            {
+              "factor": "rel_strength_5__rel",
+              "kind": "direction",
+              "ic": -0.0321278341392446,
+              "fold_ic": [
+                -0.01439,
+                -0.03611,
+                -0.04312,
+                -0.03489
+              ],
+              "t_stat": -4.541,
+              "coverage": 2934,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.02740756900793892,
+              "fold_ic": [
+                -0.01882,
+                -0.01613,
+                -0.05398,
+                -0.02071
+              ],
+              "t_stat": -4.368,
+              "coverage": 2998,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "direction",
+              "ic": 0.02707376069991651,
+              "fold_ic": [
+                0.04262,
+                0.02206,
+                0.02039,
+                0.02322
+              ],
+              "t_stat": 4.255,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rel_strength_5",
+              "kind": "direction",
+              "ic": -0.024900342623954942,
+              "fold_ic": [
+                -0.01207,
+                -0.02913,
+                -0.02679,
+                -0.03162
+              ],
+              "t_stat": -3.483,
+              "coverage": 2993,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "direction",
+              "ic": -0.02360504672873611,
+              "fold_ic": [
+                0.00544,
+                -0.05857,
+                -0.02275,
+                -0.01854
+              ],
+              "t_stat": -3.578,
+              "coverage": 2908,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.005440278112691912, -0.058567938086010386, -0.022751513348183552, -0.01854101359344241])"
+            },
+            {
+              "factor": "event_macro",
+              "kind": "direction",
+              "ic": 0.021575930135351917,
+              "fold_ic": [
+                -0.00337,
+                0.0577,
+                0.01039
+              ],
+              "t_stat": 1.639,
+              "coverage": 931,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.003369108283351808, 0.057702049233705546, 0.010394849455702014])"
+            },
+            {
+              "factor": "attention_spike__rel",
+              "kind": "direction",
+              "ic": -0.01955354348592333,
+              "fold_ic": [
+                -0.05656,
+                -0.04191,
+                0.01404,
+                0.00621
+              ],
+              "t_stat": -1.764,
+              "coverage": 1780,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.05656243131759186, -0.04190527935387733, 0.014038792731620394, 0.0062147439961554715])"
+            },
+            {
+              "factor": "market_ret_20__rel",
+              "kind": "direction",
+              "ic": 0.019507844823933942,
+              "fold_ic": [
+                0.01844,
+                0.0371,
+                0.0183,
+                0.00418
+              ],
+              "t_stat": 2.665,
+              "coverage": 2702,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_vol",
+              "kind": "direction",
+              "ic": -0.019420285452994242,
+              "fold_ic": [
+                0.02252
+              ],
+              "t_stat": 0.0,
+              "coverage": 434,
+              "usable": false,
+              "reason": "폴드가 1개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                -0.0073,
+                0.0437,
+                0.1111
+              ],
+              "topMinusBottomPct": 0.1183,
+              "rows": 32948
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                -0.0185,
+                0.0666,
+                0.0995
+              ],
+              "topMinusBottomPct": 0.118,
+              "rows": 32948
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                0.045,
+                0.0918,
+                0.0775
+              ],
+              "topMinusBottomPct": 0.0325,
+              "rows": 32197
+            }
+          }
+        },
+        "2": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.3191639525673086,
+              "fold_ic": [
+                0.26516,
+                0.31495,
+                0.33899,
+                0.35755
+              ],
+              "t_stat": 52.273,
+              "coverage": 2984,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.2919606959034156,
+              "fold_ic": [
+                0.19823,
+                0.28199,
+                0.33216,
+                0.35547
+              ],
+              "t_stat": 45.55,
+              "coverage": 2937,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.27575963878968923,
+              "fold_ic": [
+                0.23817,
+                0.2693,
+                0.27083,
+                0.32473
+              ],
+              "t_stat": 44.134,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "move",
+              "ic": -0.2440550771775614,
+              "fold_ic": [
+                -0.18623,
+                -0.22453,
+                -0.30008,
+                -0.26537
+              ],
+              "t_stat": -29.293,
+              "coverage": 1770,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.15194379564452523,
+              "fold_ic": [
+                0.13927,
+                0.13999,
+                0.167,
+                0.16151
+              ],
+              "t_stat": 25.029,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_5",
+              "kind": "move",
+              "ic": 0.1435266643065101,
+              "fold_ic": [
+                0.26625,
+                0.10549
+              ],
+              "t_stat": 0.0,
+              "coverage": 390,
+              "usable": false,
+              "reason": "폴드가 2개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.10462446942227953,
+              "fold_ic": [
+                0.12043,
+                0.12459,
+                0.0837,
+                0.08978
+              ],
+              "t_stat": 16.339,
+              "coverage": 2951,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "move",
+              "ic": 0.10442061412052574,
+              "fold_ic": [
+                0.11918,
+                0.11572,
+                0.09993,
+                0.08285
+              ],
+              "t_stat": 17.323,
+              "coverage": 2997,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b__rel",
+              "kind": "move",
+              "ic": 0.09089272533890186,
+              "fold_ic": [
+                0.10861,
+                0.07142,
+                0.10364,
+                0.07991
+              ],
+              "t_stat": 13.875,
+              "coverage": 2919,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "px_over_ema20__rel",
+              "kind": "move",
+              "ic": 0.08828803295160763,
+              "fold_ic": [
+                0.10185,
+                0.07308,
+                0.10112,
+                0.0771
+              ],
+              "t_stat": 13.391,
+              "coverage": 2919,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "squeeze",
+              "kind": "move",
+              "ic": -0.08529691834587227,
+              "fold_ic": [
+                -0.10415,
+                -0.11225,
+                -0.08726,
+                -0.03753
+              ],
+              "t_stat": -11.425,
+              "coverage": 1966,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "move",
+              "ic": 0.08346464095415322,
+              "fold_ic": [
+                0.05812,
+                0.10999,
+                0.10295,
+                0.0628
+              ],
+              "t_stat": 13.272,
+              "coverage": 2878,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position__rel",
+              "kind": "move",
+              "ic": 0.07663446080745201,
+              "fold_ic": [
+                0.08243,
+                0.06891,
+                0.09061,
+                0.06458
+              ],
+              "t_stat": 12.02,
+              "coverage": 2919,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "px_over_ema60__rel",
+              "kind": "move",
+              "ic": 0.07553029223601508,
+              "fold_ic": [
+                0.11419,
+                0.04396,
+                0.08423,
+                0.05973
+              ],
+              "t_stat": 11.473,
+              "coverage": 2879,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                3.8485,
+                4.437,
+                5.0852
+              ],
+              "topMinusBottomPct": 1.2367,
+              "rows": 32936
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                3.5471,
+                4.3867,
+                5.3049
+              ],
+              "topMinusBottomPct": 1.7578,
+              "rows": 32936
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                4.1242,
+                4.4409,
+                4.8773
+              ],
+              "topMinusBottomPct": 0.753,
+              "rows": 32228
+            }
+          },
+          "direction": [
+            {
+              "factor": "atr_pct",
+              "kind": "direction",
+              "ic": -0.07689913672150098,
+              "fold_ic": [
+                -0.067,
+                -0.10105,
+                -0.03437,
+                -0.10518
+              ],
+              "t_stat": -9.502,
+              "coverage": 2984,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "direction",
+              "ic": 0.06919017484512054,
+              "fold_ic": [
+                0.06639,
+                0.08429,
+                0.04609,
+                0.07999
+              ],
+              "t_stat": 7.105,
+              "coverage": 1770,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": -0.06705204520670109,
+              "fold_ic": [
+                -0.02508,
+                -0.10237,
+                -0.03835,
+                -0.1024
+              ],
+              "t_stat": -8.25,
+              "coverage": 2937,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "direction",
+              "ic": -0.042045484576002476,
+              "fold_ic": [
+                -0.02027,
+                -0.06627,
+                -0.00676,
+                -0.07488
+              ],
+              "t_stat": -5.463,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "direction",
+              "ic": 0.039993097973627836,
+              "fold_ic": [
+                0.07496,
+                0.02678,
+                0.03058,
+                0.02765
+              ],
+              "t_stat": 6.323,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "event_macro",
+              "kind": "direction",
+              "ic": 0.03470517622926499,
+              "fold_ic": [
+                0.01571,
+                0.07197,
+                0.01644
+              ],
+              "t_stat": 2.621,
+              "coverage": 931,
+              "usable": true,
+              "reason": "폴드 3개 모두 같은 방향"
+            },
+            {
+              "factor": "rel_strength_5__rel",
+              "kind": "direction",
+              "ic": -0.03325646726058478,
+              "fold_ic": [
+                -0.01177,
+                -0.03581,
+                -0.04868,
+                -0.03677
+              ],
+              "t_stat": -4.824,
+              "coverage": 2933,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "event_scheduled",
+              "kind": "direction",
+              "ic": 0.032054202138866734,
+              "fold_ic": [
+                0.00913,
+                0.0787,
+                0.00833
+              ],
+              "t_stat": 2.431,
+              "coverage": 943,
+              "usable": true,
+              "reason": "폴드 3개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.030013228606795665,
+              "fold_ic": [
+                -0.01202,
+                -0.0212,
+                -0.06112,
+                -0.02572
+              ],
+              "t_stat": -4.814,
+              "coverage": 2997,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_5",
+              "kind": "direction",
+              "ic": -0.027013379472738207,
+              "fold_ic": [
+                -0.11429,
+                -0.02077
+              ],
+              "t_stat": 0.0,
+              "coverage": 390,
+              "usable": false,
+              "reason": "폴드가 2개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            },
+            {
+              "factor": "market_ret_20__rel",
+              "kind": "direction",
+              "ic": 0.025666059994249226,
+              "fold_ic": [
+                0.02883,
+                0.05729,
+                0.01383,
+                0.00272
+              ],
+              "t_stat": 3.501,
+              "coverage": 2701,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike__rel",
+              "kind": "direction",
+              "ic": -0.02551866298526829,
+              "fold_ic": [
+                -0.08178,
+                -0.03548,
+                -0.00201,
+                0.01719
+              ],
+              "t_stat": -2.281,
+              "coverage": 1779,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.08177579097647486, -0.035477427131421, -0.0020101577172546643, 0.01718872388407736])"
+            },
+            {
+              "factor": "cloud_position",
+              "kind": "direction",
+              "ic": 0.02527848535513669,
+              "fold_ic": [
+                0.03374,
+                0.01544,
+                0.03391,
+                0.01802
+              ],
+              "t_stat": 3.783,
+              "coverage": 2915,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_corr_mean",
+              "kind": "direction",
+              "ic": 0.025044747298151045,
+              "fold_ic": [
+                0.01693,
+                0.04186,
+                0.00478,
+                0.03661
+              ],
+              "t_stat": 3.788,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                -0.1282,
+                0.126,
+                0.2636
+              ],
+              "topMinusBottomPct": 0.3918,
+              "rows": 32936
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                -0.0078,
+                0.0832,
+                0.226
+              ],
+              "topMinusBottomPct": 0.2339,
+              "rows": 32936
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                -0.0624,
+                0.172,
+                0.2571
+              ],
+              "topMinusBottomPct": 0.3196,
+              "rows": 32168
+            }
+          }
+        },
+        "3": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.31599623363343693,
+              "fold_ic": [
+                0.2565,
+                0.30821,
+                0.3304,
+                0.36888
+              ],
+              "t_stat": 50.777,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.2939207887809228,
+              "fold_ic": [
+                0.20027,
+                0.27442,
+                0.3226,
+                0.3784
+              ],
+              "t_stat": 45.488,
+              "coverage": 2936,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.2691081684082013,
+              "fold_ic": [
+                0.23127,
+                0.25253,
+                0.26119,
+                0.33144
+              ],
+              "t_stat": 42.19,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "move",
+              "ic": -0.24066500621012998,
+              "fold_ic": [
+                -0.16566,
+                -0.22933,
+                -0.30645,
+                -0.26122
+              ],
+              "t_stat": -28.945,
+              "coverage": 1769,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.13328833469040396,
+              "fold_ic": [
+                0.10088,
+                0.10715,
+                0.17374,
+                0.15139
+              ],
+              "t_stat": 22.304,
+              "coverage": 2906,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_5",
+              "kind": "move",
+              "ic": 0.1315333053216803,
+              "fold_ic": [
+                0.22267,
+                0.12243
+              ],
+              "t_stat": 0.0,
+              "coverage": 390,
+              "usable": false,
+              "reason": "폴드가 2개뿐이라 부호 안정성을 못 본다 (최소 3개)"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "move",
+              "ic": 0.10661538918429246,
+              "fold_ic": [
+                0.11681,
+                0.11305,
+                0.10299,
+                0.09361
+              ],
+              "t_stat": 17.725,
+              "coverage": 2996,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.10051839554003975,
+              "fold_ic": [
+                0.11908,
+                0.12969,
+                0.08737,
+                0.06593
+              ],
+              "t_stat": 15.672,
+              "coverage": 2950,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b__rel",
+              "kind": "move",
+              "ic": 0.08859825321370253,
+              "fold_ic": [
+                0.10842,
+                0.07285,
+                0.0999,
+                0.07322
+              ],
+              "t_stat": 13.468,
+              "coverage": 2918,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "squeeze",
+              "kind": "move",
+              "ic": -0.08702960503363462,
+              "fold_ic": [
+                -0.1112,
+                -0.10497,
+                -0.07975,
+                -0.0522
+              ],
+              "t_stat": -11.354,
+              "coverage": 1966,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "px_over_ema20__rel",
+              "kind": "move",
+              "ic": 0.07978071344192371,
+              "fold_ic": [
+                0.11676,
+                0.04938,
+                0.0884,
+                0.06459
+              ],
+              "t_stat": 12.062,
+              "coverage": 2918,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "move",
+              "ic": 0.07717622976974506,
+              "fold_ic": [
+                0.05495,
+                0.12229,
+                0.08079,
+                0.05067
+              ],
+              "t_stat": 12.225,
+              "coverage": 2877,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position__rel",
+              "kind": "move",
+              "ic": 0.07452780820147605,
+              "fold_ic": [
+                0.10143,
+                0.04976,
+                0.07808,
+                0.06885
+              ],
+              "t_stat": 11.808,
+              "coverage": 2918,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rsi__rel",
+              "kind": "move",
+              "ic": 0.07429943741141791,
+              "fold_ic": [
+                0.12113,
+                0.04074,
+                0.09273,
+                0.04259
+              ],
+              "t_stat": 11.332,
+              "coverage": 2923,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                4.7939,
+                5.5433,
+                6.3027
+              ],
+              "topMinusBottomPct": 1.5088,
+              "rows": 32924
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                4.4462,
+                5.4615,
+                6.5751
+              ],
+              "topMinusBottomPct": 2.1288,
+              "rows": 32924
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                5.1318,
+                5.5152,
+                6.0702
+              ],
+              "topMinusBottomPct": 0.9384,
+              "rows": 32216
+            }
+          },
+          "direction": [
+            {
+              "factor": "atr_pct",
+              "kind": "direction",
+              "ic": -0.08659390600727898,
+              "fold_ic": [
+                -0.05973,
+                -0.11116,
+                -0.03843,
+                -0.13706
+              ],
+              "t_stat": -10.77,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20",
+              "kind": "direction",
+              "ic": 0.08314093652441022,
+              "fold_ic": [
+                0.07518,
+                0.09068,
+                0.06432,
+                0.10239
+              ],
+              "t_stat": 8.603,
+              "coverage": 1769,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": -0.07774468878801256,
+              "fold_ic": [
+                -0.02071,
+                -0.11465,
+                -0.04739,
+                -0.12822
+              ],
+              "t_stat": -9.545,
+              "coverage": 2936,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "direction",
+              "ic": 0.047947507514855756,
+              "fold_ic": [
+                0.0784,
+                0.04112,
+                0.03737,
+                0.03489
+              ],
+              "t_stat": 7.496,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "direction",
+              "ic": -0.04658932156368302,
+              "fold_ic": [
+                -0.0122,
+                -0.07108,
+                -0.00315,
+                -0.09993
+              ],
+              "t_stat": -6.089,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.032770761433971285,
+              "fold_ic": [
+                -0.01126,
+                -0.01932,
+                -0.0613,
+                -0.0392
+              ],
+              "t_stat": -5.245,
+              "coverage": 2996,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_corr_mean",
+              "kind": "direction",
+              "ic": 0.03268048179640655,
+              "fold_ic": [
+                0.02123,
+                0.05506,
+                0.00431,
+                0.05012
+              ],
+              "t_stat": 4.858,
+              "coverage": 2906,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position",
+              "kind": "direction",
+              "ic": 0.031055192305709956,
+              "fold_ic": [
+                0.04303,
+                0.02234,
+                0.02084,
+                0.03802
+              ],
+              "t_stat": 4.747,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cloud_position",
+              "kind": "direction",
+              "ic": 0.0299572936140129,
+              "fold_ic": [
+                0.04478,
+                0.01624,
+                0.03761,
+                0.0212
+              ],
+              "t_stat": 4.495,
+              "coverage": 2914,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile__rel",
+              "kind": "direction",
+              "ic": 0.029186775506163422,
+              "fold_ic": [
+                0.04759,
+                0.01992,
+                0.04455,
+                0.00469
+              ],
+              "t_stat": 4.33,
+              "coverage": 2895,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf__rel",
+              "kind": "direction",
+              "ic": 0.028312879459228904,
+              "fold_ic": [
+                0.06209,
+                0.00572,
+                0.03106,
+                0.01438
+              ],
+              "t_stat": 4.482,
+              "coverage": 2918,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rel_strength_5__rel",
+              "kind": "direction",
+              "ic": -0.028305519927177974,
+              "fold_ic": [
+                -0.00896,
+                -0.02479,
+                -0.04994,
+                -0.02953
+              ],
+              "t_stat": -4.117,
+              "coverage": 2932,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_z__rel",
+              "kind": "direction",
+              "ic": -0.02812014899177079,
+              "fold_ic": [
+                -0.00466,
+                -0.00859,
+                -0.07866,
+                -0.02057
+              ],
+              "t_stat": -3.318,
+              "coverage": 2549,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "market_ret_20__rel",
+              "kind": "direction",
+              "ic": 0.02708440415271564,
+              "fold_ic": [
+                0.02901,
+                0.06317,
+                0.0229,
+                -0.00674
+              ],
+              "t_stat": 3.668,
+              "coverage": 2700,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.029007273538904255, 0.06317296497249689, 0.022898144887438576, -0.006740766787977145])"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                -0.2281,
+                0.1558,
+                0.4385
+              ],
+              "topMinusBottomPct": 0.6665,
+              "rows": 32924
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                -0.1677,
+                0.2508,
+                0.3268
+              ],
+              "topMinusBottomPct": 0.4945,
+              "rows": 32924
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                -0.1102,
+                0.0624,
+                0.5397
+              ],
+              "topMinusBottomPct": 0.6499,
+              "rows": 32181
+            }
+          }
+        }
+      }
+    },
+    "yahoo": {
+      "horizons": {
+        "1": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.38975488044917,
+              "fold_ic": [
+                0.40173,
+                0.36739,
+                0.3896,
+                0.4003
+              ],
+              "t_stat": 76.677,
+              "coverage": 2985,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.30558039422630057,
+              "fold_ic": [
+                0.31285,
+                0.24652,
+                0.33603,
+                0.32691
+              ],
+              "t_stat": 52.305,
+              "coverage": 2938,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.2924457829571014,
+              "fold_ic": [
+                0.30282,
+                0.27427,
+                0.29575,
+                0.29693
+              ],
+              "t_stat": 54.01,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.278897233477692,
+              "fold_ic": [
+                0.31313,
+                0.24462,
+                0.25616,
+                0.30168
+              ],
+              "t_stat": 51.829,
+              "coverage": 2908,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "move",
+              "ic": -0.0847498579576792,
+              "fold_ic": [
+                -0.09117,
+                -0.09814,
+                -0.06379,
+                -0.08591
+              ],
+              "t_stat": -14.24,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position",
+              "kind": "move",
+              "ic": -0.08437888175922187,
+              "fold_ic": [
+                -0.12169,
+                -0.08445,
+                -0.05595,
+                -0.07542
+              ],
+              "t_stat": -13.99,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "stoch_k",
+              "kind": "move",
+              "ic": -0.08081766935724405,
+              "fold_ic": [
+                -0.10371,
+                -0.08351,
+                -0.05184,
+                -0.08421
+              ],
+              "t_stat": -13.457,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "pressure",
+              "kind": "move",
+              "ic": -0.06716092373770613,
+              "fold_ic": [
+                -0.08355,
+                -0.08503,
+                -0.03331,
+                -0.06674
+              ],
+              "t_stat": -11.407,
+              "coverage": 2992,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.06661348676644575,
+              "fold_ic": [
+                0.09088,
+                0.07842,
+                0.06643,
+                0.03073
+              ],
+              "t_stat": 11.045,
+              "coverage": 2953,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "fisher",
+              "kind": "move",
+              "ic": -0.06255544008173869,
+              "fold_ic": [
+                -0.07284,
+                -0.06764,
+                -0.0442,
+                -0.06555
+              ],
+              "t_stat": -10.422,
+              "coverage": 2990,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rsi",
+              "kind": "move",
+              "ic": -0.05404088322254936,
+              "fold_ic": [
+                -0.10629,
+                -0.03282,
+                -0.0201,
+                -0.05696
+              ],
+              "t_stat": -8.895,
+              "coverage": 2984,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_mean",
+              "kind": "move",
+              "ic": 0.0471922424260299,
+              "fold_ic": [
+                0.05621,
+                0.04258,
+                0.04029,
+                0.04969
+              ],
+              "t_stat": 8.137,
+              "coverage": 2908,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b",
+              "kind": "move",
+              "ic": -0.04648447524070394,
+              "fold_ic": [
+                -0.08847,
+                -0.03185,
+                -0.02839,
+                -0.03724
+              ],
+              "t_stat": -7.729,
+              "coverage": 2979,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "ema_spread",
+              "kind": "move",
+              "ic": 0.036533138222597746,
+              "fold_ic": [
+                0.016,
+                0.09438,
+                0.00983,
+                0.02593
+              ],
+              "t_stat": 5.675,
+              "coverage": 2939,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                1.146,
+                1.3503,
+                1.6397
+              ],
+              "topMinusBottomPct": 0.4936,
+              "rows": 35976
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                1.1056,
+                1.3612,
+                1.6553
+              ],
+              "topMinusBottomPct": 0.5496,
+              "rows": 35976
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                1.3506,
+                1.3828,
+                1.5002
+              ],
+              "topMinusBottomPct": 0.1496,
+              "rows": 35232
+            }
+          },
+          "direction": [
+            {
+              "factor": "atr_pct__rel",
+              "kind": "direction",
+              "ic": -0.018274569234386813,
+              "fold_ic": [
+                0.00187,
+                -0.02901,
+                -0.03501,
+                -0.01095
+              ],
+              "t_stat": -2.791,
+              "coverage": 2926,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.0018679950186799516, -0.029008470235046054, -0.03500648888307585, -0.010951312838105296])"
+            },
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": 0.01703998201737488,
+              "fold_ic": [
+                0.03353,
+                0.03206,
+                0.00045,
+                0.00213
+              ],
+              "t_stat": 2.104,
+              "coverage": 2938,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx",
+              "kind": "direction",
+              "ic": 0.014524779164606403,
+              "fold_ic": [
+                0.00247,
+                0.01476,
+                0.02753,
+                0.01334
+              ],
+              "t_stat": 2.38,
+              "coverage": 2972,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx__rel",
+              "kind": "direction",
+              "ic": 0.01439764051707627,
+              "fold_ic": [
+                0.01081,
+                0.01645,
+                0.01687,
+                0.01345
+              ],
+              "t_stat": 2.422,
+              "coverage": 2913,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "ema_spread",
+              "kind": "direction",
+              "ic": 0.013974122850219393,
+              "fold_ic": [
+                0.0091,
+                0.04979,
+                0.01423,
+                -0.01723
+              ],
+              "t_stat": 1.946,
+              "coverage": 2939,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.00909804481233053, 0.04979400904698019, 0.014229947074768691, -0.017225509533201844])"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "direction",
+              "ic": -0.01357677895983151,
+              "fold_ic": [
+                0.00214,
+                -0.05437,
+                0.00916,
+                -0.01124
+              ],
+              "t_stat": -2.081,
+              "coverage": 2879,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.00214046822742475, -0.05436577311577314, 0.009158257880714215, -0.011240068831691867])"
+            },
+            {
+              "factor": "macd_hist",
+              "kind": "direction",
+              "ic": -0.012405158260932084,
+              "fold_ic": [
+                -0.01747,
+                -0.01352,
+                0.01478,
+                -0.03341
+              ],
+              "t_stat": -1.839,
+              "coverage": 2965,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.01747070497070497, -0.013515895868837044, 0.014780945373227806, -0.03341497757741413])"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "direction",
+              "ic": -0.012212009587014051,
+              "fold_ic": [
+                0.00928,
+                -0.02486,
+                -0.03211,
+                -0.00117
+              ],
+              "t_stat": -1.89,
+              "coverage": 2953,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.00928344476729526, -0.024855892726768466, -0.03210849012843513, -0.001167100260147873])"
+            },
+            {
+              "factor": "macd_hist__rel",
+              "kind": "direction",
+              "ic": -0.012180531026267547,
+              "fold_ic": [
+                -0.0212,
+                -0.01698,
+                0.00967,
+                -0.02022
+              ],
+              "t_stat": -1.925,
+              "coverage": 2906,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.021195299545815015, -0.016977867493331408, 0.009669166779143094, -0.020218123845066858])"
+            },
+            {
+              "factor": "vol_percentile__rel",
+              "kind": "direction",
+              "ic": -0.011352414413171162,
+              "fold_ic": [
+                0.00691,
+                -0.00936,
+                -0.02584,
+                -0.01712
+              ],
+              "t_stat": -1.738,
+              "coverage": 2897,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.006908462867012089, -0.009356161080299014, -0.025836970044044377, -0.017124989395353347])"
+            },
+            {
+              "factor": "squeeze__rel",
+              "kind": "direction",
+              "ic": 0.011317131493766813,
+              "fold_ic": [
+                0.02206,
+                -0.01675,
+                0.01288,
+                0.02708
+              ],
+              "t_stat": 1.646,
+              "coverage": 2916,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.022055977629342204, -0.016749916091785003, 0.012880528866744985, 0.027081935570765072])"
+            },
+            {
+              "factor": "rsi",
+              "kind": "direction",
+              "ic": 0.011020327963216777,
+              "fold_ic": [
+                -0.00168,
+                0.02983,
+                0.03326,
+                -0.01733
+              ],
+              "t_stat": 1.7,
+              "coverage": 2984,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.0016750418760469027, 0.029825174825174834, 0.0332606507786656, -0.01732947187492642])"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.010848473118550788,
+              "fold_ic": [
+                -0.03244,
+                -0.04145,
+                0.02144,
+                0.00906
+              ],
+              "t_stat": -1.655,
+              "coverage": 2998,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.03243838742145401, -0.04145306174885982, 0.02143857798390073, 0.009058978712209956])"
+            },
+            {
+              "factor": "pressure__rel",
+              "kind": "direction",
+              "ic": -0.010677754992561576,
+              "fold_ic": [
+                -0.04382,
+                -0.01138,
+                0.01279,
+                -0.0003
+              ],
+              "t_stat": -1.767,
+              "coverage": 2933,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.04381966156710185, -0.011377038634278844, 0.01278503840720489, -0.0002993581760705036])"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                0.043,
+                0.0779,
+                0.1188
+              ],
+              "topMinusBottomPct": 0.0758,
+              "rows": 35664
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                0.0528,
+                0.0697,
+                0.1195
+              ],
+              "topMinusBottomPct": 0.0668,
+              "rows": 35664
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                0.061,
+                0.0743,
+                0.115
+              ],
+              "topMinusBottomPct": 0.054,
+              "rows": 34956
+            }
+          }
+        },
+        "2": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.39247802598165143,
+              "fold_ic": [
+                0.40031,
+                0.37159,
+                0.39317,
+                0.40484
+              ],
+              "t_stat": 78.112,
+              "coverage": 2984,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.30406032804678695,
+              "fold_ic": [
+                0.32673,
+                0.23331,
+                0.34141,
+                0.31479
+              ],
+              "t_stat": 52.012,
+              "coverage": 2937,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.2933835879426595,
+              "fold_ic": [
+                0.29925,
+                0.27578,
+                0.29961,
+                0.29888
+              ],
+              "t_stat": 55.65,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.2700259433963613,
+              "fold_ic": [
+                0.30311,
+                0.22892,
+                0.26991,
+                0.27816
+              ],
+              "t_stat": 49.869,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position",
+              "kind": "move",
+              "ic": -0.08798816212525322,
+              "fold_ic": [
+                -0.11564,
+                -0.08624,
+                -0.06155,
+                -0.08852
+              ],
+              "t_stat": -14.724,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "stoch_k",
+              "kind": "move",
+              "ic": -0.08782871079929576,
+              "fold_ic": [
+                -0.11681,
+                -0.08954,
+                -0.06025,
+                -0.08471
+              ],
+              "t_stat": -14.691,
+              "coverage": 2982,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "move",
+              "ic": -0.07829578912308802,
+              "fold_ic": [
+                -0.07449,
+                -0.10517,
+                -0.0483,
+                -0.08523
+              ],
+              "t_stat": -13.162,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "fisher",
+              "kind": "move",
+              "ic": -0.07025486243127688,
+              "fold_ic": [
+                -0.09099,
+                -0.07579,
+                -0.05211,
+                -0.06213
+              ],
+              "t_stat": -11.908,
+              "coverage": 2989,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "pressure",
+              "kind": "move",
+              "ic": -0.06839337777000692,
+              "fold_ic": [
+                -0.07949,
+                -0.08534,
+                -0.03323,
+                -0.07551
+              ],
+              "t_stat": -11.572,
+              "coverage": 2991,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_mean",
+              "kind": "move",
+              "ic": 0.06705564919787951,
+              "fold_ic": [
+                0.06711,
+                0.06869,
+                0.06918,
+                0.06324
+              ],
+              "t_stat": 11.565,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.060040389293100786,
+              "fold_ic": [
+                0.0877,
+                0.06598,
+                0.05305,
+                0.03343
+              ],
+              "t_stat": 10.031,
+              "coverage": 2952,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rsi",
+              "kind": "move",
+              "ic": -0.057358316259312675,
+              "fold_ic": [
+                -0.09947,
+                -0.02946,
+                -0.03183,
+                -0.06867
+              ],
+              "t_stat": -9.59,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b",
+              "kind": "move",
+              "ic": -0.0533073005155474,
+              "fold_ic": [
+                -0.07937,
+                -0.04551,
+                -0.04659,
+                -0.04177
+              ],
+              "t_stat": -9.025,
+              "coverage": 2978,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_median",
+              "kind": "move",
+              "ic": 0.0529354434996367,
+              "fold_ic": [
+                0.0737,
+                0.04239,
+                0.05563,
+                0.04002
+              ],
+              "t_stat": 9.086,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                1.7194,
+                1.939,
+                2.2995
+              ],
+              "topMinusBottomPct": 0.5802,
+              "rows": 35964
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                1.601,
+                1.9504,
+                2.3614
+              ],
+              "topMinusBottomPct": 0.7604,
+              "rows": 35964
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                1.9831,
+                1.9699,
+                2.1308
+              ],
+              "topMinusBottomPct": 0.1476,
+              "rows": 35220
+            }
+          },
+          "direction": [
+            {
+              "factor": "analog_prob_up",
+              "kind": "direction",
+              "ic": 0.02535347802157498,
+              "fold_ic": [
+                0.04587,
+                0.03678,
+                0.00651,
+                0.01226
+              ],
+              "t_stat": 4.567,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "macd_hist",
+              "kind": "direction",
+              "ic": -0.02513023555003886,
+              "fold_ic": [
+                -0.03581,
+                -0.02123,
+                0.00575,
+                -0.04924
+              ],
+              "t_stat": -3.691,
+              "coverage": 2964,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.03580514240412719, -0.021226665408790205, 0.005746375865221368, -0.04923551025245941])"
+            },
+            {
+              "factor": "analog_median",
+              "kind": "direction",
+              "ic": 0.024596611010974892,
+              "fold_ic": [
+                0.04302,
+                0.04295,
+                0.0086,
+                0.00382
+              ],
+              "t_stat": 4.175,
+              "coverage": 2907,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "direction",
+              "ic": -0.02395846512910067,
+              "fold_ic": [
+                -0.01117,
+                -0.06919,
+                0.01191,
+                -0.02739
+              ],
+              "t_stat": -3.607,
+              "coverage": 2878,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.011171755074194106, -0.06918820310124658, 0.011911299869415056, -0.027385202210377046])"
+            },
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": 0.023637693867822693,
+              "fold_ic": [
+                0.04333,
+                0.05195,
+                0.00104,
+                -0.00177
+              ],
+              "t_stat": 2.954,
+              "coverage": 2937,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.04332805184593942, 0.05195315757496338, 0.0010417664527253537, -0.0017722004023373826])"
+            },
+            {
+              "factor": "analog_prob_up__rel",
+              "kind": "direction",
+              "ic": 0.023574134400190162,
+              "fold_ic": [
+                0.037,
+                0.02994,
+                0.01971,
+                0.00765
+              ],
+              "t_stat": 4.161,
+              "coverage": 2848,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx",
+              "kind": "direction",
+              "ic": 0.022966581604961796,
+              "fold_ic": [
+                0.00604,
+                0.02916,
+                0.039,
+                0.01767
+              ],
+              "t_stat": 3.763,
+              "coverage": 2971,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx__rel",
+              "kind": "direction",
+              "ic": 0.021890327664309366,
+              "fold_ic": [
+                0.01396,
+                0.02923,
+                0.02384,
+                0.02053
+              ],
+              "t_stat": 3.712,
+              "coverage": 2912,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_median__rel",
+              "kind": "direction",
+              "ic": 0.021382371700303566,
+              "fold_ic": [
+                0.04026,
+                0.02441,
+                0.02036,
+                0.00049
+              ],
+              "t_stat": 3.767,
+              "coverage": 2848,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "fisher__rel",
+              "kind": "direction",
+              "ic": -0.02124723033568049,
+              "fold_ic": [
+                -0.04635,
+                -0.01474,
+                0.01002,
+                -0.03392
+              ],
+              "t_stat": -3.338,
+              "coverage": 2930,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.0463495548819781, -0.014740396589711657, 0.010022511734840506, -0.033921481605872696])"
+            },
+            {
+              "factor": "macd_hist__rel",
+              "kind": "direction",
+              "ic": -0.020962270848084434,
+              "fold_ic": [
+                -0.03397,
+                -0.02265,
+                -0.00174,
+                -0.02549
+              ],
+              "t_stat": -3.268,
+              "coverage": 2905,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "ema_spread",
+              "kind": "direction",
+              "ic": 0.019725958214849966,
+              "fold_ic": [
+                0.00902,
+                0.07293,
+                0.02137,
+                -0.02442
+              ],
+              "t_stat": 2.744,
+              "coverage": 2938,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.009018239001203226, 0.07292707292707296, 0.02137417377143405, -0.02441565284031038])"
+            },
+            {
+              "factor": "atr_pct__rel",
+              "kind": "direction",
+              "ic": -0.018039326749797895,
+              "fold_ic": [
+                -0.00364,
+                -0.0177,
+                -0.04208,
+                -0.00874
+              ],
+              "t_stat": -2.797,
+              "coverage": 2925,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.018003042126207253,
+              "fold_ic": [
+                -0.04529,
+                -0.06025,
+                0.02066,
+                0.01287
+              ],
+              "t_stat": -2.721,
+              "coverage": 2997,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.045292910916848235, -0.06025170044467805, 0.020663499927239953, 0.01286894292945732])"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                0.0826,
+                0.1402,
+                0.2443
+              ],
+              "topMinusBottomPct": 0.1617,
+              "rows": 35964
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                0.1047,
+                0.1283,
+                0.2406
+              ],
+              "topMinusBottomPct": 0.136,
+              "rows": 35964
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                0.0896,
+                0.1632,
+                0.231
+              ],
+              "topMinusBottomPct": 0.1414,
+              "rows": 35256
+            }
+          }
+        },
+        "3": {
+          "move": [
+            {
+              "factor": "atr_pct",
+              "kind": "move",
+              "ic": 0.39017321079934314,
+              "fold_ic": [
+                0.39724,
+                0.35257,
+                0.40493,
+                0.40595
+              ],
+              "t_stat": 77.382,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta",
+              "kind": "move",
+              "ic": 0.3033376414320986,
+              "fold_ic": [
+                0.3257,
+                0.23182,
+                0.34564,
+                0.31019
+              ],
+              "t_stat": 52.166,
+              "coverage": 2936,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "move",
+              "ic": 0.2898987149010394,
+              "fold_ic": [
+                0.28889,
+                0.26323,
+                0.30012,
+                0.30735
+              ],
+              "t_stat": 54.206,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_spread",
+              "kind": "move",
+              "ic": 0.2666660489405884,
+              "fold_ic": [
+                0.31282,
+                0.22503,
+                0.25774,
+                0.27108
+              ],
+              "t_stat": 50.382,
+              "coverage": 2906,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "range_position",
+              "kind": "move",
+              "ic": -0.08692176840848653,
+              "fold_ic": [
+                -0.12944,
+                -0.0747,
+                -0.06234,
+                -0.08121
+              ],
+              "t_stat": -14.285,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "stoch_k",
+              "kind": "move",
+              "ic": -0.08386025467592248,
+              "fold_ic": [
+                -0.12616,
+                -0.07309,
+                -0.06658,
+                -0.06961
+              ],
+              "t_stat": -13.948,
+              "coverage": 2981,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "cmf",
+              "kind": "move",
+              "ic": -0.0774967329525155,
+              "fold_ic": [
+                -0.07447,
+                -0.09887,
+                -0.05069,
+                -0.08596
+              ],
+              "t_stat": -13.203,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "pressure",
+              "kind": "move",
+              "ic": -0.0727924973077031,
+              "fold_ic": [
+                -0.07876,
+                -0.0809,
+                -0.04366,
+                -0.08786
+              ],
+              "t_stat": -12.375,
+              "coverage": 2990,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_mean",
+              "kind": "move",
+              "ic": 0.07253569996907702,
+              "fold_ic": [
+                0.08173,
+                0.06031,
+                0.08849,
+                0.05962
+              ],
+              "t_stat": 12.704,
+              "coverage": 2906,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "fisher",
+              "kind": "move",
+              "ic": -0.0661293942054619,
+              "fold_ic": [
+                -0.10217,
+                -0.05518,
+                -0.05815,
+                -0.04901
+              ],
+              "t_stat": -11.056,
+              "coverage": 2988,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "analog_median",
+              "kind": "move",
+              "ic": 0.05986460874233042,
+              "fold_ic": [
+                0.07344,
+                0.0453,
+                0.08125,
+                0.03946
+              ],
+              "t_stat": 10.354,
+              "coverage": 2906,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "rsi",
+              "kind": "move",
+              "ic": -0.05480369593680768,
+              "fold_ic": [
+                -0.10772,
+                -0.01775,
+                -0.02874,
+                -0.065
+              ],
+              "t_stat": -9.049,
+              "coverage": 2982,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "vol_percentile",
+              "kind": "move",
+              "ic": 0.053069525697101216,
+              "fold_ic": [
+                0.07164,
+                0.0582,
+                0.04384,
+                0.03861
+              ],
+              "t_stat": 8.528,
+              "coverage": 2951,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "percent_b",
+              "kind": "move",
+              "ic": -0.053038376750413625,
+              "fold_ic": [
+                -0.08871,
+                -0.02994,
+                -0.05454,
+                -0.03897
+              ],
+              "t_stat": -8.859,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            }
+          ],
+          "moveSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                2.056,
+                2.4155,
+                2.86
+              ],
+              "topMinusBottomPct": 0.8041,
+              "rows": 35952
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                1.9759,
+                2.3984,
+                2.9217
+              ],
+              "topMinusBottomPct": 0.9458,
+              "rows": 35952
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                2.4281,
+                2.4338,
+                2.6357
+              ],
+              "topMinusBottomPct": 0.2076,
+              "rows": 35208
+            }
+          },
+          "direction": [
+            {
+              "factor": "beta",
+              "kind": "direction",
+              "ic": 0.03448462101756224,
+              "fold_ic": [
+                0.06928,
+                0.06223,
+                0.01203,
+                -0.0056
+              ],
+              "t_stat": 4.332,
+              "coverage": 2936,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.06927504748958928, 0.06223418829892426, 0.01203085079585938, -0.005601602514123957])"
+            },
+            {
+              "factor": "bandwidth",
+              "kind": "direction",
+              "ic": 0.028683184629863814,
+              "fold_ic": [
+                0.03752,
+                0.00831,
+                0.03743,
+                0.03147
+              ],
+              "t_stat": 4.438,
+              "coverage": 2977,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx",
+              "kind": "direction",
+              "ic": 0.02703227998862107,
+              "fold_ic": [
+                0.00606,
+                0.04064,
+                0.04345,
+                0.01799
+              ],
+              "t_stat": 4.377,
+              "coverage": 2970,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "atr_pct",
+              "kind": "direction",
+              "ic": 0.027004811393009368,
+              "fold_ic": [
+                0.04255,
+                0.03549,
+                0.01626,
+                0.01371
+              ],
+              "t_stat": 3.973,
+              "coverage": 2983,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "adx__rel",
+              "kind": "direction",
+              "ic": 0.026957776754988085,
+              "fold_ic": [
+                0.00411,
+                0.04052,
+                0.02896,
+                0.03424
+              ],
+              "t_stat": 4.527,
+              "coverage": 2911,
+              "usable": true,
+              "reason": "폴드 4개 모두 같은 방향"
+            },
+            {
+              "factor": "beta__rel",
+              "kind": "direction",
+              "ic": -0.024428765156750284,
+              "fold_ic": [
+                3e-05,
+                -0.09197,
+                0.02152,
+                -0.02729
+              ],
+              "t_stat": -3.684,
+              "coverage": 2877,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([2.598884748192515e-05, -0.09197085636876214, 0.021516005809199528, -0.02728619891492046])"
+            },
+            {
+              "factor": "fisher__rel",
+              "kind": "direction",
+              "ic": -0.022397797945239446,
+              "fold_ic": [
+                -0.05582,
+                0.00156,
+                0.0134,
+                -0.04872
+              ],
+              "t_stat": -3.569,
+              "coverage": 2929,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.05582336493055035, 0.0015566625155666238, 0.013398265542347881, -0.04872275490832193])"
+            },
+            {
+              "factor": "attention_spike",
+              "kind": "direction",
+              "ic": -0.022390081045140956,
+              "fold_ic": [
+                -0.05283,
+                -0.06924,
+                0.01916,
+                0.01335
+              ],
+              "t_stat": -3.389,
+              "coverage": 2996,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.05282946568997448, -0.06924218961330438, 0.01916234444258177, 0.013348986680133243])"
+            },
+            {
+              "factor": "ema_spread",
+              "kind": "direction",
+              "ic": 0.021520282725751794,
+              "fold_ic": [
+                0.01119,
+                0.09384,
+                0.0151,
+                -0.03405
+              ],
+              "t_stat": 3.011,
+              "coverage": 2937,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.011188297663619952, 0.09384472183107, 0.015101536542359866, -0.03405342513404264])"
+            },
+            {
+              "factor": "analog_mean",
+              "kind": "direction",
+              "ic": 0.021240583340474777,
+              "fold_ic": [
+                0.04694,
+                0.03606,
+                0.01768,
+                -0.01572
+              ],
+              "t_stat": 3.602,
+              "coverage": 2906,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.04694314042175864, 0.03606221364842055, 0.01767609553076682, -0.015719116239046916])"
+            },
+            {
+              "factor": "macd_hist",
+              "kind": "direction",
+              "ic": -0.02072313466738639,
+              "fold_ic": [
+                -0.03784,
+                -0.00014,
+                0.01256,
+                -0.05747
+              ],
+              "t_stat": -3.041,
+              "coverage": 2963,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.03784331504889335, -0.0001417501417501467, 0.012558869701726845, -0.057466343180628904])"
+            },
+            {
+              "factor": "macd_hist__rel",
+              "kind": "direction",
+              "ic": -0.02061240233343084,
+              "fold_ic": [
+                -0.04181,
+                -0.0137,
+                0.01038,
+                -0.03733
+              ],
+              "t_stat": -3.222,
+              "coverage": 2904,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.041805227772516024, -0.0136966481794068, 0.01038062283737025, -0.03732835621917078])"
+            },
+            {
+              "factor": "analog_mean__rel",
+              "kind": "direction",
+              "ic": 0.0188781646274263,
+              "fold_ic": [
+                0.03812,
+                0.01481,
+                0.03348,
+                -0.0109
+              ],
+              "t_stat": 3.345,
+              "coverage": 2847,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([0.038118022328548655, 0.014810893332020101, 0.03348241864142925, -0.010898675792292816])"
+            },
+            {
+              "factor": "clv__rel",
+              "kind": "direction",
+              "ic": -0.017394830349727077,
+              "fold_ic": [
+                -0.0263,
+                -0.04312,
+                -0.00816,
+                0.00799
+              ],
+              "t_stat": -2.782,
+              "coverage": 2937,
+              "usable": false,
+              "reason": "폴드마다 부호가 뒤집힌다 ([-0.026295805787958412, -0.043115587484188166, -0.008156509014141949, 0.007988580887380206])"
+            }
+          ],
+          "directionSpread": {
+            "all": {
+              "available": true,
+              "buckets": [
+                0.1937,
+                0.1911,
+                0.34
+              ],
+              "topMinusBottomPct": 0.1463,
+              "rows": 35952
+            },
+            "raw": {
+              "available": true,
+              "buckets": [
+                0.1833,
+                0.2014,
+                0.3381
+              ],
+              "topMinusBottomPct": 0.1548,
+              "rows": 35952
+            },
+            "relative": {
+              "available": true,
+              "buckets": [
+                0.1986,
+                0.2245,
+                0.3226
+              ],
+              "topMinusBottomPct": 0.124,
+              "rows": 35244
+            }
+          }
+        }
+      }
+    }
+  }
+}

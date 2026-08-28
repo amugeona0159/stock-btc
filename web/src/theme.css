@@ -116,6 +116,12 @@ button:disabled { opacity: 0.4; cursor: default; }
 
 .rows { display: grid; gap: 4px; }
 .row { display: flex; justify-content: space-between; gap: 10px; }
+/* 목록 안에서 누를 수 있는 글자. 버튼처럼 보이면 목록이 버튼 밭이 된다. */
+.linky {
+  padding: 0; background: none; border: none; color: inherit;
+  font: inherit; cursor: pointer; text-align: left;
+}
+.linky:hover { color: var(--accent); }
 .row span { color: var(--text-dim); }
 .row b { font-weight: 500; font-variant-numeric: tabular-nums; }
 

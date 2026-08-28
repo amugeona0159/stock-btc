@@ -6,3 +6,5 @@ REM 저장소의 learning/ 은 Actions 가 쓴다. 여기는 옆자리에 쌓아
 set MARKET_LENS_LEARNING=learning-local
 if not exist "logs" mkdir "logs"
 ".venv\Scripts\python.exe" scripts\daily.py --budget %1 >> "logs\daily.log" 2>&1
+REM 추천 팩터도 같은 주기로 다시 잰다. 국내주식은 여기서만 잴 수 있다.
+".venv\Scripts\python.exe" scripts\screen.py --horizons 1 2 3 --provider binance --provider yahoo --provider toss_kr >> "logs\screen.log" 2>&1

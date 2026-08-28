@@ -14,6 +14,7 @@ import {
   SignalCard,
   SituationCard,
 } from "./components/Panels";
+import { ScreenPanel } from "./components/ScreenPanel";
 import { useLive } from "./useLive";
 import type {
   AskResult,
@@ -33,10 +34,11 @@ const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
 
-type Tab = "signal" | "predict" | "learn" | "indicators" | "research";
+type Tab = "signal" | "predict" | "screen" | "learn" | "indicators" | "research";
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "predict", label: "예측" },
+  { key: "screen", label: "추천" },
   { key: "learn", label: "학습" },
   { key: "signal", label: "판단" },
   { key: "indicators", label: "지표" },
@@ -327,6 +329,10 @@ export default function App() {
               onClear={() => setAsk(null)}
             />
           </>
+        )}
+
+        {tab === "screen" && (
+          <ScreenPanel provider={provider} timeframe={timeframe} onPick={setSymbol} />
         )}
 
         {tab === "learn" && (

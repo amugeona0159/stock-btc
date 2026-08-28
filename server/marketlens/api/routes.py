@@ -21,9 +21,10 @@ from ..core.series import IndicatorRequest, candles_payload, compute_requests
 from ..indicators import catalog, patterns
 from ..providers import (ProviderError, ProviderUnavailable, SymbolNotFound,
                          describe, get as get_provider)
+from ..screen import universe
 from ..signals.engine import evaluate
-from . import learning
 from ..store.cache import cache
+from . import learning, screening
 
 router = APIRouter(prefix="/api")
 
@@ -353,19 +354,10 @@ def research_library() -> dict:
     return {"entries": [e.to_dict() for e in research.all_entries()]}
 
 
-# 함께 학습할 기본 동료 종목. 한 종목 몇천 행으로는 표본이 모자란다 —
-# 축이 전부 무차원이라 다른 종목을 섞어도 같은 표에 들어간다.
-PEERS = {
-    # 많을수록 좋다. 축이 전부 무차원이라 종목이 늘수록 표본만 커진다.
-    "binance": ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT",
-                "ADAUSDT", "AVAXUSDT", "LINKUSDT", "DOTUSDT", "LTCUSDT"),
-    "upbit": ("KRW-BTC", "KRW-ETH", "KRW-XRP", "KRW-SOL", "KRW-DOGE"),
-    "yahoo": ("AAPL", "MSFT", "NVDA", "AMZN", "^GSPC"),
-    "us_stock": ("AAPL", "MSFT", "NVDA", "AMZN", "TSLA"),
-    "toss_us": ("AAPL", "MSFT", "NVDA", "AMZN", "TSLA"),
-    "toss_kr": ("005930", "000660", "035720", "005380", "051910"),
-    "kis": ("005930", "000660", "035720", "005380"),
-}
+# 함께 학습할 기본 동료 종목 = 추천 후보 목록(`screen.universe`) 그대로.
+# 표를 두 벌 두면 갈라진다 — 학습은 종목이 늘수록 표본만 커지고(축이 전부 무차원),
+# 추천은 후보가 넓을수록 낫다. 목적은 달라도 내용은 같아도 된다.
+PEERS = universe.UNIVERSE
 # `scripts/sweep.py` 로 잰 결과. 봉과 지평에 따라 학습이 되는 자리가 정해져 있다.
 # (지평 하한, 지평 상한). 이 밖에서는 대개 변동성 기준선이 그대로 쓰인다.
 LEARNABLE = {
@@ -498,6 +490,32 @@ def models() -> dict:
     from ..forecast.ml import model as ml_model
 
     return {"models": ml_model.available()}
+
+
+class ScreenBody(BaseModel):
+    provider: str
+    timeframe: str = "1d"
+    # 하루/이틀/사흘. 잰 지평만 받는다 — 안 잰 지평은 순위를 만들지 않는다.
+    horizon: int = Field(1, ge=1, le=60)
+    limit: int = Field(10, ge=3, le=30)
+
+
+@router.post("/screen")
+async def screen(body: ScreenBody) -> dict:
+    """오늘 관심있게 볼 종목.
+
+    **순위는 "크게 움직일 것 같은 순서"다. "오를 순서"가 아니다.** 방향 점수는
+    따로 붙고, 잰 결과로는 변동보다 훨씬 약하다. 둘을 하나로 섞지 않는 이유가 그것이다.
+    """
+    provider_info = _provider(body.provider).info
+    return await screening.build(load_candles, body.provider, body.timeframe,
+                                 body.horizon, body.limit, provider_info.market)
+
+
+@router.get("/screen/status")
+def screen_status() -> dict:
+    """무엇을 언제 쟀는지. 화면이 '아직 안 쟀다'를 설명하는 데 쓴다."""
+    return screening.status()
 
 
 @router.get("/learning")

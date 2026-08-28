@@ -20,6 +20,10 @@ const SHOTS = [
   // 학습 성적표는 "이 도구가 자기 한계를 말하는가" 를 보는 화면이다.
   { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습",
     timeframe: "1d" },
+  // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
+  // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
+  { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
+    timeframe: "1d" },
 ];
 
 mkdirSync(OUT, { recursive: true });

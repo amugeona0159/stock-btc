@@ -96,3 +96,12 @@ export const learn = {
   predict: (body: { provider: string; symbol: string; timeframe: string }) =>
     post<import("./types").Learned>("/api/learned", body),
 };
+
+export const screen = {
+  /** 오늘 관심있게 볼 종목. 순위는 "크게 움직일 순서"지 "오를 순서"가 아니다. */
+  rank: (body: { provider: string; timeframe: string; horizon: number; limit?: number }) =>
+    post<import("./types").ScreenResult>("/api/screen", body),
+
+  status: () => get<{ available: boolean; updated: string | null;
+                      providers: Record<string, number[]> }>("/api/screen/status"),
+};

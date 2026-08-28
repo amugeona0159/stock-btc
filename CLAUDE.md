@@ -256,6 +256,37 @@
 - 서버는 학습을 돌리지 않는다. `api/learning.py` 가 기록을 **읽기만** 한다.
 - **토스(국내주식)는 Actions 에서 못 돈다**(IP 허용 목록). PC 쪽만 국내주식을 학습한다.
 
+## 종목 추천 — 재고 나서 줄 세운다
+
+`screen/` + `scripts/screen.py`. "오늘 관심있게 볼 종목"을 횡단면으로 줄 세운다.
+
+- **팩터를 새로 만들지 않는다.** 학습 표(`forecast/ml/dataset.py`)의 축에서 고르기만
+  한다. 거기에 인과성 보증(`test_asof.py`)이 붙어 있고, 여기서 축을 다시 만들면
+  그 보증 밖으로 나간다. 캘린더 축은 뺀다 — 같은 시각이면 전 종목이 같은 값이라
+  순위가 안 갈린다.
+- **부호를 미리 정하지 말 것.** "RSI 가 낮으면 산다" 를 코드에 적지 않는다. 랭크 IC 를
+  재고, **폴드마다 부호가 일관된 축만** 쓴다(`ic.MIN_FOLDS` 3개 이상). 평균만 보면
+  한 시기에만 통한 축이 살아남는다.
+- **무게는 안 정한다.** 고른 뒤에는 동일 가중. IC 크기에 비례시키면 그 IC 를 잰
+  구간에 무게를 맞춘 셈이다. 부호만 쓴다.
+- **원값이 아니라 평소대비(`__rel`) 로 점수를 만든다**(`rank.FAMILY`). 원값 축
+  (변동성·베타·밴드폭)은 IC 가 3~10배 크게 나오지만 그건 "DOGE 는 원래 BTC 보다
+  많이 움직인다"는 **고정 순위**다. 늘 맞지만 매일 같은 답을 내므로 "오늘 뭘 볼까"에는
+  쓸모가 없다. `scripts/screen.py` 는 전부/원값만/평소대비만 셋을 다 재서 남긴다 —
+  나눠 보지 않으면 그냥 변동성 순위를 추천이라고 부르게 된다.
+- **변동과 방향을 섞지 말 것.** `move`(얼마나 움직일까, |수익률| 기준)와
+  `direction`(어느 쪽일까)은 강도가 자릿수로 다르다. 하나로 합치면 "크게 움직인다"가
+  "오른다"로 읽힌다. 목록의 정렬은 `move` 고, 화면 문구가 그걸 못 박는다.
+- **안 잰 지평은 순위를 안 만든다.** `learning/factors.json` 에 없는 지평은 빈 답을
+  낸다. 그럴듯한 목록보다 빈 화면이 낫다.
+- 후보 표는 `screen/universe.py` **한 벌**이고 `routes.PEERS` 가 그걸 그대로 가리킨다.
+  두 벌이면 "재 본 목록"과 "추천하는 목록"이 갈라진다. 시장마다 최소 열 종목 —
+  다섯에서 셋을 고르는 건 순위가 아니라 나열이다.
+- 순위는 **확정봉**으로만 매긴다. 진행 중인 봉을 쓰면 같은 날 오전과 오후의 추천이
+  달라지고, 그건 추천이 아니라 시세 중계다.
+- 고쳤으면 `.venv/Scripts/python -m pytest server/tests/test_screen.py -q` 와
+  `.venv/Scripts/python scripts/screen.py --provider binance --horizons 1 3 --dry-run`.
+
 ## 화면에서 지킬 것
 
 - **예측선은 세로축 계산에 끼지 않는다**(`autoscaleInfoProvider: () => null`).
@@ -270,8 +301,9 @@
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 279개
+.venv/Scripts/python -m pytest server/tests -q      # 299개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
+.venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web && npx tsc -b
 cd web && npm run shot     # uvicorn(8000) + vite(5173) 가 떠 있어야 한다
 ```
