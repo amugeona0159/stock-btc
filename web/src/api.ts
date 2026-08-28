@@ -90,6 +90,9 @@ export const learn = {
   /** 매일 도는 자동 학습이 남긴 기록. 서버는 읽기만 한다. */
   state: () => get<import("./types").LearningState>("/api/learning"),
 
+  /** 자율 학습이 찾아낸 기권 규칙과 그 근거. */
+  gate: () => get<import("./types").GateStatus>("/api/gate"),
+
   train: (body: {
     provider: string;
     symbol: string;

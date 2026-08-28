@@ -69,6 +69,9 @@ OUT = ROOT / "learning" / "study"
 VERDICTS = OUT / "verdicts.jsonl"
 STATE = OUT / "state.json"
 SUMMARY = ROOT / "docs" / "STUDY.md"
+# 최종 구간에서 확인된 규칙만 여기에 쓴다. 화면이 이걸 읽어 실제로 기권한다.
+GATE = OUT / "gate.json"
+NEWLINE = chr(10)
 
 # 규칙이 챔피언을 갈아치우려면 이만큼은 이겨야 한다. `daily.py` 와 같은 정신.
 PROMOTE_MARGIN = 0.01
@@ -473,9 +476,11 @@ def search_rules(frame: pd.DataFrame, peek: bool = False) -> dict:
     # 최종 구간은 **살아남은 게 있고 열어 볼 차례일 때만**, 최고 하나만.
     if survivors and peek:
         best = Rule(**survivors[0]["rule"])
+        # **최종 구간에서 실제로 잰 규칙을 같이 들고 다닌다.** 안 그러면 나중에
+        # 확인 구간 1위(그때그때 바뀐다)를 내보내면서 성적은 다른 규칙의 것을 붙이게 된다.
         result["holdout"] = {"base": value_of(holdout, None),
                              "withRule": value_of(holdout, best),
-                             "label": best.label}
+                             "rule": asdict(best), "label": best.label}
     return result
 
 
@@ -513,6 +518,39 @@ def save_state(state: dict) -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     STATE.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n",
                      encoding="utf-8")
+
+
+def write_gate(state: dict, analysis: dict) -> None:
+    """찾은 것을 **실제 예측에 쓰는 곳**으로 넘긴다.
+
+    최종 구간에서까지 확인된 규칙 하나만 쓴다. 확인 구간까지만 이긴 규칙은 안 쓴다 —
+    거기서 이긴 것들은 수십 개고, 그중 하나는 우연히 이긴다.
+    """
+    holdout = state.get("lastHoldout")
+    if not holdout:
+        return
+    base = holdout.get("base", {}).get("directionHit")
+    ruled = holdout.get("withRule", {}).get("directionHit")
+    if base is None or ruled is None or ruled <= base:
+        # 최종 구간에서 못 이겼으면 아무것도 안 내보낸다. 빈 파일이 낫다.
+        GATE.write_text(json.dumps({"updated": now(), "rule": None,
+                                    "reason": "최종 구간에서 못 이겼다"},
+                                   ensure_ascii=False, indent=2) + NEWLINE, encoding="utf-8")
+        return
+    # 최종 구간에서 잰 그 규칙만 내보낸다.
+    rule = holdout.get("rule")
+    if not rule:
+        return
+    GATE.write_text(json.dumps({
+        "updated": now(),
+        "rule": rule,
+        "label": holdout.get("label"),
+        "holdout": {"withoutRule": base, "withRule": ruled,
+                    "n": holdout.get("withRule", {}).get("n"),
+                    "coverage": holdout.get("withRule", {}).get("coverage")},
+        "holdoutLooks": state.get("holdoutLooks", 0),
+        "trials": analysis.get("tried"),
+    }, ensure_ascii=False, indent=2) + NEWLINE, encoding="utf-8")
 
 
 def write_summary(state: dict, frame: pd.DataFrame, analysis: dict,
@@ -678,6 +716,7 @@ async def main() -> None:
         state["analysis"] = analysis
         state["overall"] = overall(everything)
         save_state(state)
+        write_gate(state, analysis)
         write_summary(state, everything, analysis, found)
 
     print(f"\n예산 종료 · 라운드 {state.get('rounds', 0)}회 · "

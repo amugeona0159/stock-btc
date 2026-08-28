@@ -287,6 +287,29 @@
 - 고쳤으면 `.venv/Scripts/python -m pytest server/tests/test_screen.py -q` 와
   `.venv/Scripts/python scripts/screen.py --provider binance --horizons 1 3 --dry-run`.
 
+## 못 맞히는 자리에서는 말을 안 한다 — 자율 학습
+
+`scripts/study.py` 가 과거 시점에 서서 예측하고(그 시점 이후는 안 본다), 지평이 지난 뒤
+실제와 맞춘 다음, **맞은 판과 틀린 판을 조건별로 갈라** 본다. 갈라진 조건은 "이 조건이면
+말을 안 한다"는 기권 규칙이 되고, 규칙은 **찾은 구간이 아니라 뒤 구간**에서 확인한다.
+
+- 판 하나가 `learning/study/verdicts.jsonl` 한 줄이다 — 예측·실제·적중·**그때의 조건**.
+  조건은 `dataset.build` 의 축을 그대로 쓴다. 여기서 축을 새로 만들면
+  `tests/test_asof.py` 의 인과성 보증 밖으로 나간다.
+- 판을 시간순으로 **탐색 60% / 확인 20% / 최종 20%** 로 나눈다. 규칙은 탐색에서 찾고,
+  확인에서 거르고, **최종 구간은 열 라운드에 한 번만** 열어 본다. 볼 때마다 그 숫자가
+  닳으므로 **본 횟수를 기록에 남긴다**(`holdoutLooks`).
+- **최종 구간에서 잰 그 규칙만 내보낸다**(`learning/study/gate.json`). 확인 구간 1위는
+  라운드마다 바뀌므로, 그걸 내보내면서 성적은 다른 규칙 것을 붙이게 된다. 실제로 그랬다.
+- 규칙을 손으로 적지 말 것. `forecast/gate.py` 에는 **읽고 적용하는 코드만** 있다.
+  임계값을 코드에 박는 순간 그건 측정이 아니라 믿음이고, `tests/test_gate.py` 가 막는다.
+- **모르는 조건으로 입을 다물지 않는다.** 조건이 표에 없으면 기권하지 않는다.
+- 기권해도 **밴드는 그대로 낸다.** 방향과 달리 밴드는 실제로 잘 맞는다(적중 78~80%).
+- 학습은 **동료 종목까지 모아서** 한다. 한 종목만 쓰면 표본이 모자라 실력을 실제보다
+  낮게 재게 된다 — 이 저장소가 이미 겪은 함정이다.
+- 고쳤으면 `.venv/Scripts/python scripts/study.py --hours 0.1 --origins 8` 로 한 바퀴,
+  그리고 `.venv/Scripts/python -m pytest server/tests/test_gate.py -q`.
+
 ## 종목 고르기와 검색
 
 - **종목을 고르는 길은 하나다** — `App.selectSymbol(provider, symbol)`. 시장·종목·봉을
@@ -345,7 +368,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 319개
+.venv/Scripts/python -m pytest server/tests -q      # 328개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b

@@ -527,7 +527,28 @@ def predict(
         "report": saved,
         "verdict": saved.get("verdict"),
     }
-    if bundle.get("classifier") is not None:
+    # --- 기권 ---
+    # 학습이 "이 조건에서는 틀린다"고 잰 자리에서는 방향을 말하지 않는다. 규칙은
+    # `scripts/study.py` 가 한 번도 안 본 구간에서 확인한 것만 온다.
+    from .. import gate
+
+    conditions = {name: float(row[name].iloc[0])
+                  for name in row.columns if pd.notna(row[name].iloc[0])}
+    conditions["band_atr"] = (raw[max(bundle["quantiles"])][-1]
+                              - raw[min(bundle["quantiles"])][-1]) / scale
+    conditions["move_atr"] = median_final / scale
+    if result.get("probUp") is not None:
+        conditions["prob_up"] = float(result["probUp"])
+    quiet, why = gate.abstains(conditions)
+    if quiet:
+        # 밴드는 그대로 둔다 — 방향과 달리 밴드는 실제로 잘 맞는다(적중 78~80%).
+        result["abstain"] = True
+        result["abstainReason"] = why
+        result["expectedMovePct"] = None
+        result["probUp"] = None
+        result["sourceLabel"] = f"{result['sourceLabel']} · 방향 기권"
+
+    if bundle.get("classifier") is not None and not quiet:
         proba = bundle["classifier"].predict_proba(x)[0]
         classes = [int(c) for c in bundle["classifier"].classes_]
         ranked = dict(zip(classes, (float(p) for p in proba)))

@@ -120,7 +120,7 @@ npm run dev
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 319개
+.venv/Scripts/python -m pytest server/tests -q      # 328개
 cd web; npx tsc -b                                # 타입체크
 cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
@@ -128,6 +128,7 @@ cd web; npm run shot                              # 실제 화면 PNG (서버 2�
 .venv/Scripts/python scripts/asof.py --tf 1d        # 그날 서서 예측하고 실제와 맞춰 보기
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 자동 학습 한 바퀴 (승격 없이)
 .venv/Scripts/python scripts/screen.py --dry-run     # 추천 팩터가 실제로 맞는지 재기
+.venv/Scripts/python scripts/study.py --hours 0.1    # 예측→채점→분석→기권규칙 한 바퀴
 ```
 
 **as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):
@@ -178,6 +179,19 @@ cd web; npm run shot                              # 실제 화면 PNG (서버 2�
 내므로 "오늘 뭘 볼까"에는 쓸모가 없다. 그래서 점수는 **자기 과거와 견준 축**으로만
 만들고, 측정은 전부/원값만/평소대비만 셋을 다 재서 남긴다 — 나눠 보지 않으면 그냥
 변동성 순위를 추천이라고 부르게 된다.
+
+## 못 맞히는 자리에서는 말을 안 한다
+
+먼저 예측하고, 지평이 지난 뒤 맞았는지 보고, **맞은 판과 틀린 판을 조건별로 갈라** 본다.
+갈라진 조건은 "이 조건이면 말을 안 한다"는 기권 규칙이 되고, 규칙은 **한 번도 안 본
+구간**에서 확인한 것만 쓴다. 결과는 [docs/STUDY.md](docs/STUDY.md) 에 쌓인다.
+
+짧은 지평의 방향 예측은 문헌에서도 잡음에 가깝다. 그런 판에서 정확도를 올리는 확실한
+길은 더 잘 맞히는 것이 아니라 **못 맞히는 자리에서 안 맞히는 것**이다. 기권한 판은
+방향을 말하지 않고 밴드만 남긴다 — 밴드는 방향과 달리 실제로 잘 맞는다(적중 78~80%).
+
+가설 수와 최종 구간을 열어 본 횟수를 화면에 같이 적는다. 수백 개를 세우면 그중 하나는
+반드시 이기고, 최종 구간도 볼 때마다 조금씩 닳는다.
 
 ## 매일 스스로 학습
 

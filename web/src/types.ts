@@ -334,6 +334,9 @@ export interface TrainReport {
 }
 
 export interface Learned {
+  /** 학습이 '이 조건에서는 틀린다'고 잰 자리. 방향을 말하지 않는다. */
+  abstain?: boolean;
+  abstainReason?: string;
   available: boolean;
   reason?: string;
   model?: string;
@@ -473,4 +476,16 @@ export interface SearchResult {
   groups: Array<{ provider: string; name: string; market: string; items: SymbolItem[] }>;
   /** 왜 빠졌는지. 조용히 빠지면 "그 시장엔 없다"고 잘못 배우게 된다. */
   sources: Record<string, { ok: boolean; count: number; error: string }>;
+}
+
+/** 기권 규칙과 그 근거. `GET /api/gate`. */
+export interface GateStatus {
+  available: boolean;
+  label: string | null;
+  holdout: { withoutRule: number; withRule: number; n: number;
+             coverage: number } | null;
+  /** 최종 구간을 몇 번 열어 봤나. 볼수록 그 숫자가 닳는다. */
+  holdoutLooks: number | null;
+  trials: number | null;
+  updated: string | null;
 }

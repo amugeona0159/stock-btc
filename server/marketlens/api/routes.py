@@ -531,6 +531,18 @@ def screen_status() -> dict:
     return screening.status()
 
 
+@router.get("/gate")
+def gate_status() -> dict:
+    """학습이 찾아낸 기권 규칙과 그 근거.
+
+    규칙만 보여주고 성적을 숨기면 그냥 마법 규칙이 된다 — 몇 번 시험했고 한 번도
+    안 본 구간에서 얼마였는지를 같이 낸다.
+    """
+    from ..forecast import gate
+
+    return gate.status()
+
+
 @router.get("/learning")
 def learning_state() -> dict:
     """매일 도는 자동 학습이 지금까지 알아낸 것.

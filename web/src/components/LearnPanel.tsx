@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { learn } from "../api";
-import type { Learned, LearningState, TrainReport } from "../types";
+import type { GateStatus, Learned, LearningState, TrainReport } from "../types";
 
 const HORIZONS = [
   { label: "5봉", value: 5 },
@@ -107,7 +107,7 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
               <span>현재 변동성 (ATR)</span>
               <b>{learned.atrPct}%</b>
             </div>
-            {learned.direction !== undefined && (
+            {learned.direction !== undefined && !learned.abstain && (
               <div className="row">
                 <span>방향 분류</span>
                 <b>
@@ -120,9 +120,16 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
               </div>
             )}
           </div>
+          {learned.abstain && (
+            <p className="note warn">
+              <b>방향은 말하지 않는다.</b> {learned.abstainReason}
+            </p>
+          )}
           {learned.verdict && <p className="note warn">{learned.verdict}</p>}
         </section>
       )}
+
+      <GateCard />
 
       <AutoLearnCard />
 
@@ -291,6 +298,59 @@ function ReportCard({ report }: { report: TrainReport }) {
           </div>
         </>
       )}
+    </section>
+  );
+}
+
+function GateCard() {
+  const [state, setState] = useState<GateStatus | null>(null);
+
+  useEffect(() => {
+    learn.gate().then(setState).catch(() => setState(null));
+  }, []);
+
+  if (!state?.available || !state.holdout) return null;
+  const { withoutRule, withRule, n, coverage } = state.holdout;
+
+  return (
+    <section className="card">
+      <h2>못 맞히는 자리에서는 말을 안 한다</h2>
+      <p className="formula" style={{ marginTop: 0 }}>
+        과거 판을 쌓아 <b>맞은 판과 틀린 판을 조건별로 갈라</b> 보고, 거기서 나온 규칙을
+        <b> 한 번도 안 본 구간</b>에서 확인한 것만 쓴다. 짧은 지평의 방향은 문헌에서도
+        잡음에 가까워, 더 잘 맞히는 것보다 못 맞히는 자리에서 안 맞히는 쪽이 확실하다.
+      </p>
+      <div className="rows">
+        <div className="row">
+          <span>지금 쓰는 규칙</span>
+          <b>{state.label ?? "—"}</b>
+        </div>
+        <div className="row">
+          <span>규칙 없이 (안 본 구간)</span>
+          <b>{pct(withoutRule, 1)}</b>
+        </div>
+        <div className="row">
+          <span>규칙 적용</span>
+          <b style={{ color: withRule > withoutRule ? "var(--up)" : "var(--down)" }}>
+            {pct(withRule, 1)}
+            <span style={{ color: "var(--text-dim)" }}>
+              {" "}
+              · {n}판 · {pct(coverage, 0)} 만 말함
+            </span>
+          </b>
+        </div>
+        <div className="row">
+          <span>세운 가설 / 최종구간 열어 본 횟수</span>
+          <b>
+            {state.trials ?? "—"}개 / {state.holdoutLooks ?? "—"}번
+          </b>
+        </div>
+      </div>
+      <p className="formula" style={{ marginTop: 10 }}>
+        가설 수와 최종 구간을 열어 본 횟수를 같이 적는다. 수백 개를 세우면 그중 하나는
+        반드시 이기고, 최종 구간도 볼 때마다 조금씩 닳는다 — 그걸 숨기면 이 표가
+        실제보다 좋아 보인다.
+      </p>
     </section>
   );
 }

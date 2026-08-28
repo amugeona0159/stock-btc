@@ -1,0 +1,17 @@
+{
+  "updated": "2026-08-28T16:55:33+00:00",
+  "rule": {
+    "condition": "px_over_ema20",
+    "op": ">",
+    "threshold": 0.556294
+  },
+  "label": "px_over_ema20 > 0.5563 이면 기권",
+  "holdout": {
+    "withoutRule": 0.6337,
+    "withRule": 0.6654,
+    "n": 257,
+    "coverage": 0.8482
+  },
+  "holdoutLooks": 5,
+  "trials": 29
+}
