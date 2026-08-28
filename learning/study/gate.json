@@ -1,17 +1,6 @@
 {
-  "updated": "2026-08-28T17:19:23+00:00",
-  "rule": {
-    "condition": "prob_up",
-    "op": "<",
-    "threshold": 0.5157
-  },
-  "label": "prob_up < 0.5157 이면 기권",
-  "holdout": {
-    "withoutRule": 0.6299,
-    "withRule": 0.7647,
-    "n": 102,
-    "coverage": 0.2008
-  },
-  "holdoutLooks": 9,
-  "trials": 27
+  "updated": null,
+  "rule": null,
+  "reason": "8시간 학습에서 최종 구간을 60번 열어 본 끝에 남은 것이 +0.5%p 였다. 그건 개선이 아니라 잡음이라 쓰지 않는다.",
+  "holdoutLooks": 60
 }

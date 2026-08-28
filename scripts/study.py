@@ -142,6 +142,19 @@ CONDITIONS = (
 # 예측 자체에서 나오는 조건. "모델이 자신 있다고 했나" 를 재는 축이라 따로 만든다.
 FORECAST_CONDITIONS = ("band_atr", "move_atr", "prob_up")
 
+# **부호 있는 축은 절댓값도 같이 본다.**
+#
+# `move_atr < 0.03 이면 기권` 같은 규칙이 최종 구간에서 크게 이겼는데, 그건 확신도
+# 게이트가 아니라 **음수 예측을 전부 버리는 것**이었다. 상승장에서만 성립하는
+# 편향이지 "모델이 자신 있을 때만 말한다"가 아니다. 0 에서 얼마나 떨어졌는지를
+# 축으로 같이 두면, 진짜 확신도 규칙이 있을 때 그쪽이 이긴다.
+SIGNED = (
+    "move_atr", "prob_up", "rsi", "percent_b", "range_position",
+    "px_over_ema20", "px_over_ema60", "clv", "pressure", "cmf",
+    "analog_prob_up", "trend_state",
+)
+ABS = "abs_"
+
 
 @dataclass
 class Verdict:
@@ -303,6 +316,10 @@ def judge(piece: asof.Slice, name: str, target: Target,
     conditions["move_atr"] = round(predicted / atr, 6)
     if out.get("probUp") is not None:
         conditions["prob_up"] = round(float(out["probUp"]), 6)
+    # 0 에서 얼마나 떨어졌나. 부호를 버린 축이라 "확신도"에 가깝다.
+    for name in SIGNED:
+        if name in conditions:
+            conditions[f"{ABS}{name}"] = round(abs(conditions[name]), 6)
 
     return Verdict(
         target=target.key, symbol=piece.symbol, timeframe=target.timeframe,
@@ -448,18 +465,33 @@ def value_of(frame: pd.DataFrame, rule: Rule | None) -> dict:
     if len(kept) < MIN_BUCKET:
         return {"n": int(len(kept)), "score": float("-inf")}
     hit = float(kept["direction_hit"].mean())
+    # 남긴 판이 한쪽으로 쏠렸나. `move_atr < 0.03 이면 기권` 처럼 음수 예측을 통째로
+    # 버리는 규칙은 확신도 게이트가 아니라 상승장 편향이다 — 숫자로 드러나게 둔다.
+    up = float((kept["predicted"] > 0).mean())
     return {
         "n": int(len(kept)),
         "coverage": round(len(kept) / len(called), 4),
         "directionHit": round(hit, 4),
         "errorAtr": round(float(kept["error_atr"].mean()), 4),
+        "upShare": round(up, 4),
         "score": round((hit - 0.5) * math.sqrt(len(kept)), 4),
     }
 
 
 # 최종 구간을 몇 라운드마다 한 번만 열어 본다. 매 라운드 들여다보면 그건 더 이상
 # 최종 구간이 아니다 — 보는 횟수만큼 그 숫자도 닳는다. 본 횟수를 기록에 남긴다.
-HOLDOUT_EVERY = 10
+#
+# 10 으로 뒀더니 8시간 730라운드에서 **73번**을 열어 봤다. 그쯤이면 최종 구간이라고
+# 부를 수 없다. 50 이면 같은 길이에서 15번이다.
+HOLDOUT_EVERY = 50
+# 최종 구간에서 이만큼은 이겨야 규칙을 내보낸다. 8시간을 돌린 결과 살아남은 규칙이
+# **+0.5%p** 였는데, 라운드마다 서른 개 넘는 가설을 세운 끝에 나온 +0.5%p 는
+# 개선이 아니라 잡음이다. 그런 걸 실제 예측에 물리면 학습이 해가 된다.
+MIN_HOLDOUT_GAIN = 0.02
+# 최종 구간에 이만큼은 있어야 규칙을 내보낸다. 야간 작업이 1,300판짜리 풀에서
+# **62판**으로 규칙을 만들어 8시간치 결과를 덮은 적이 있다 — 62판의 +9%p 는
+# 아무 말도 아니다.
+MIN_HOLDOUT_N = 300
 
 
 def search_rules(frame: pd.DataFrame, peek: bool = False) -> dict:
@@ -561,11 +593,19 @@ def write_gate(state: dict, analysis: dict) -> None:
         return
     base = holdout.get("base", {}).get("directionHit")
     ruled = holdout.get("withRule", {}).get("directionHit")
-    if base is None or ruled is None or ruled <= base:
-        # 최종 구간에서 못 이겼으면 아무것도 안 내보낸다. 빈 파일이 낫다.
-        GATE.write_text(json.dumps({"updated": now(), "rule": None,
-                                    "reason": "최종 구간에서 못 이겼다"},
-                                   ensure_ascii=False, indent=2) + NEWLINE, encoding="utf-8")
+    kept = holdout.get("withRule", {}).get("n", 0)
+    if (base is None or ruled is None or ruled - base < MIN_HOLDOUT_GAIN
+            or kept < MIN_HOLDOUT_N):
+        # 마진만큼 못 이겼으면 아무것도 안 내보낸다. 빈 파일이 낫다 —
+        # 잡음을 규칙이라고 부르며 예측에 물리는 것보다 낫다.
+        gap = "—" if base is None or ruled is None else f"{(ruled - base) * 100:+.1f}%p"
+        why = (f"최종 구간이 {kept}판뿐 — {MIN_HOLDOUT_N}판은 있어야 쓴다"
+               if kept < MIN_HOLDOUT_N else
+               f"최종 구간에서 {gap} — {MIN_HOLDOUT_GAIN * 100:.0f}%p 는 넘어야 쓴다")
+        GATE.write_text(json.dumps(
+            {"updated": now(), "rule": None, "reason": why,
+             "holdoutLooks": state.get("holdoutLooks", 0)},
+            ensure_ascii=False, indent=2) + NEWLINE, encoding="utf-8")
         return
     # 최종 구간에서 잰 그 규칙만 내보낸다.
     rule = holdout.get("rule")
@@ -651,6 +691,11 @@ def write_summary(state: dict, frame: pd.DataFrame, analysis: dict,
                 f"| 규칙 없이 | {base.get('directionHit', float('nan')) * 100:.1f}% | {base.get('n', 0)} |",
                 f"| 규칙 적용 | {with_rule.get('directionHit', float('nan')) * 100:.1f}% "
                 f"| {with_rule.get('n', 0)} |",
+                "",
+                f"남긴 판 중 **상승 예측이 {with_rule.get('upShare', float('nan')) * 100:.0f}%**"
+                f" (규칙 없이는 {base.get('upShare', float('nan')) * 100:.0f}%). "
+                "한쪽으로 쏠렸으면 그건 확신도 게이트가 아니라 방향 편향이다 — "
+                "상승장에서만 성립한다.",
                 "",
                 f"이 구간을 지금까지 **{state.get('holdoutLooks', 0)}번** 열어 봤다. "
                 "볼 때마다 이 숫자도 조금씩 닳는다 — 그래서 횟수를 같이 적는다.",
