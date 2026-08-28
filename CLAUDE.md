@@ -73,7 +73,7 @@
   제멋대로 서브패널을 만든다.
 - 판단에는 **근거 문장이 반드시 붙는다.** "매수 신호" 만 뜨는 화면은 아무것도 알려주지
   않는다. 숫자를 넣어 왜 그렇게 봤는지가 읽히게 쓸 것.
-- UI 를 고쳤으면 `cd web && npm run shot` 하고 `screenshots/*.png` 를 Read 로 직접 볼 것.
+- UI 를 고쳤으면 `cd web; npm run shot` 하고 `screenshots/*.png` 를 Read 로 직접 볼 것.
   차트는 캔버스라 DOM 스냅샷으로는 아무것도 안 보인다. 특히
   `chart-ichimoku.png` 는 구름이 마지막 봉보다 앞까지 뻗는지를 보는 유일한 방법이다.
 
@@ -300,12 +300,17 @@
 
 ## 검증
 
+**문서에 `&&` 를 적지 말 것.** 이 프로젝트는 Windows PowerShell 5.1 에서 돌고,
+거기서는 `&&` 가 문 구분 기호가 아니라 `올바른 문 구분 기호가 아닙니다` 로 죽는다.
+이어 쓸 때는 `;` 를 쓴다. 실제로 README 의 `cd web && npm install` 이 그대로 붙여넣기
+안 되는 명령이었다.
+
 ```bash
 .venv/Scripts/python -m pytest server/tests -q      # 299개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
-cd web && npx tsc -b
-cd web && npm run shot     # uvicorn(8000) + vite(5173) 가 떠 있어야 한다
+cd web; npx tsc -b
+cd web; npm run shot     # uvicorn(8000) + vite(5173) 가 떠 있어야 한다
 ```
 
 `npm run shot` 은 실제로 질문을 던져 답이 뜰 때까지 기다린다. `chart-predict.png` 에서

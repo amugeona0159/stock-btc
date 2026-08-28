@@ -8,14 +8,41 @@
 ## 빠르게 띄우기
 
 키가 없어도 바로 돈다 — 기본값인 Binance 는 인증이 필요 없다.
+서버 두 개를 띄운다: API(8000)와 화면(5173). **창 두 개가 필요하다.**
 
-```bash
+처음 한 번:
+
+```powershell
 python -m venv .venv
-.venv/Scripts/pip install -e ".[dev]"        # Linux/macOS 는 .venv/bin/pip
-.venv/Scripts/python -m uvicorn marketlens.api.app:app --app-dir server --port 8000
-
-cd web && npm install && npm run dev          # http://localhost:5173
+.venv\Scripts\pip install -e ".[dev,ml]"
+cd web
+npm install
+cd ..
 ```
+
+띄울 때 — 첫 번째 창. **한 줄이다.** 뒤쪽 인자를 빼고 `python -m uvicorn` 까지만
+치면 오류가 아니라 사용법(`Usage: python -m uvicorn [OPTIONS] APP`)이 출력된다:
+
+```powershell
+.venv\Scripts\python -m uvicorn marketlens.api.app:app --app-dir server --port 8000
+```
+
+`Uvicorn running on http://127.0.0.1:8000` 이 뜨면 **이 창은 그대로 둔다.** 서버가
+살아 있어야 하고, 창을 닫으면 화면이 데이터를 못 받는다.
+
+두 번째 창:
+
+```powershell
+cd web
+npm run dev
+```
+
+그리고 http://localhost:5173 을 연다. 상단 탭에서 **추천** 을 누르면 오늘 볼 종목이 나온다.
+
+> **Windows PowerShell 에서 `&&` 를 쓰지 말 것.** 5.1 은 `&&` 를 문 구분 기호로
+> 안 받아 `'&&' 토큰은 이 버전에서 올바른 문 구분 기호가 아닙니다` 로 죽는다.
+> 한 줄에 이어 쓰려면 `;` 를 쓴다 — `cd web; npm install; cd ..`.
+> Linux·macOS·Git Bash 는 `&&` 가 그대로 되고, 경로 구분은 `.venv/bin/pip` 이다.
 
 `.env.example` 를 `.env` 로 복사해 키를 넣으면 미국주식·국내주식이 켜진다. 키가 없는
 프로바이더는 목록에 '비활성'으로 남고 앱은 정상 기동한다.
@@ -91,8 +118,8 @@ cd web && npm install && npm run dev          # http://localhost:5173
 
 ```bash
 .venv/Scripts/python -m pytest server/tests -q      # 299개
-cd web && npx tsc -b                                # 타입체크
-cd web && npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
+cd web; npx tsc -b                                # 타입체크
+cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
 .venv/Scripts/python scripts/sweep.py               # 학습 기법 실험
 .venv/Scripts/python scripts/asof.py --tf 1d        # 그날 서서 예측하고 실제와 맞춰 보기
