@@ -22,6 +22,7 @@ import asyncio
 import json
 import os
 import time
+from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
@@ -58,6 +59,45 @@ class TossClient:
         self._token: tuple[str, float] | None = None
         self._lock = asyncio.Lock()
 
+    # --- 토큰을 프로세스끼리 나눠 쓴다 ---
+    #
+    # 토스는 **클라이언트당 토큰이 하나**다. 새로 발급하면 앞 토큰이 죽는다. 그래서
+    # 서버와 학습 스크립트를 같이 돌리면 서로의 토큰을 무효로 만들며 401 을 주고받는다
+    # (실제로 국내주식 차트가 통째로 비었다). 파일 한 곳에 두고 나눠 쓰면 그 싸움이
+    # 사라진다. `store_data/` 는 gitignore 라 저장소에 안 올라간다.
+    @staticmethod
+    def _cache_path() -> Path:
+        # 저장소 뿌리 기준 절대경로. 상대경로면 서버와 스크립트가 서로 다른 파일을
+        # 보게 되어 나눠 쓰는 의미가 없어진다.
+        return Path(__file__).resolve().parents[3] / "store_data" / "toss_token.json"
+
+    def _read_cache(self) -> tuple[str, float] | None:
+        try:
+            body = json.loads(self._cache_path().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        access, expires = body.get("access"), body.get("expires")
+        if not access or not isinstance(expires, (int, float)):
+            return None
+        return str(access), float(expires)
+
+    def _write_cache(self, access: str, expires: float) -> None:
+        path = self._cache_path()
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({"access": access, "expires": expires}),
+                            encoding="utf-8")
+        except OSError:
+            pass                      # 못 써도 동작은 해야 한다. 느려질 뿐이다.
+
+    def forget(self) -> None:
+        """죽은 토큰을 버린다. 파일까지 지워야 다음 프로세스도 새로 받는다."""
+        self._token = None
+        try:
+            self._cache_path().unlink(missing_ok=True)
+        except OSError:
+            pass
+
     @property
     def client_id(self) -> str:
         return os.environ.get("TOSS_CLIENT_ID", "").strip()
@@ -79,6 +119,11 @@ class TossClient:
         async with self._lock:
             if self._token and self._token[1] > time.time() + 60:
                 return self._token[0]
+            # 다른 프로세스가 이미 받아 뒀으면 그걸 쓴다. 새로 받으면 그 토큰이 죽는다.
+            shared = self._read_cache()
+            if shared and shared[1] > time.time() + 60:
+                self._token = shared
+                return shared[0]
             async with httpx.AsyncClient(timeout=15.0) as http:
                 try:
                     res = await http.post(
@@ -104,7 +149,9 @@ class TossClient:
             access = body.get("access_token")
             if not access:
                 raise ProviderError(f"토스 토큰 응답에 access_token 이 없다: {body}")
-            self._token = (access, time.time() + float(body.get("expires_in", 3600)))
+            expires = time.time() + float(body.get("expires_in", 3600))
+            self._token = (access, expires)
+            self._write_cache(access, expires)
             return access
 
     async def get(self, path: str, params: dict) -> dict:
@@ -128,7 +175,7 @@ class TossClient:
                         raise SymbolNotFound(
                             f"토스에 그 종목이 없다: {params.get('symbol')}") from exc
                     if code == 401 and attempt < MAX_RETRIES:
-                        self._token = None          # 죽은 토큰을 버리고 다시 받는다
+                        self.forget()               # 죽은 토큰을 버리고 다시 받는다
                         continue
                     if code == 429 and attempt < MAX_RETRIES:
                         await asyncio.sleep(RETRY_WAIT * (attempt + 1))

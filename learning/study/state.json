@@ -1,5 +1,5 @@
 {
-  "rounds": 87,
+  "rounds": 90,
   "seen": {
     "binance:1d:1": 6,
     "binance:1d:10": 6,
@@ -8,9 +8,9 @@
     "binance:1d:5": 6,
     "binance:1h:12": 6,
     "binance:1h:3": 6,
-    "binance:1h:6": 5,
-    "toss_kr:1d:1": 5,
-    "toss_kr:1d:3": 5,
+    "binance:1h:6": 6,
+    "toss_kr:1d:1": 6,
+    "toss_kr:1d:3": 6,
     "toss_kr:1d:5": 5,
     "yahoo:1d:1": 5,
     "yahoo:1d:10": 5,
@@ -714,70 +714,72 @@
       "verdicts": 40,
       "seconds": 50.3,
       "directionHit": 0.5666666666666667
+    },
+    {
+      "round": 88,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T17:03:31+00:00",
+      "verdicts": 40,
+      "seconds": 44.5,
+      "directionHit": 0.5555555555555556
+    },
+    {
+      "round": 89,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T17:04:44+00:00",
+      "verdicts": 40,
+      "seconds": 72.8,
+      "directionHit": NaN
+    },
+    {
+      "round": 90,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T17:06:47+00:00",
+      "verdicts": 40,
+      "seconds": 72.4,
+      "directionHit": 0.5
     }
   ],
   "analysis": {
     "ready": true,
-    "tried": 30,
+    "tried": 31,
     "wonDiscover": 19,
-    "survivedConfirm": 4,
+    "survivedConfirm": 5,
     "baseDiscover": {
-      "n": 1146,
+      "n": 1189,
       "coverage": 1.0,
-      "directionHit": 0.5524,
-      "errorAtr": 1.2615,
-      "score": 1.7724
+      "directionHit": 0.5517,
+      "errorAtr": 1.2523,
+      "score": 1.7835
     },
     "baseConfirm": {
-      "n": 382,
+      "n": 396,
       "coverage": 1.0,
-      "directionHit": 0.6073,
-      "errorAtr": 1.4209,
-      "score": 2.0977
+      "directionHit": 0.5909,
+      "errorAtr": 1.4292,
+      "score": 1.8091
     },
     "survivors": [
       {
         "rule": {
           "condition": "range_position",
           "op": "<",
-          "threshold": -0.143172
+          "threshold": -0.167249
         },
-        "label": "range_position < -0.1432 이면 기권",
+        "label": "range_position < -0.1672 이면 기권",
         "discover": {
-          "n": 765,
-          "coverage": 0.6675,
-          "directionHit": 0.5817,
-          "errorAtr": 1.3087,
-          "score": 2.2597
+          "n": 794,
+          "coverage": 0.6678,
+          "directionHit": 0.5781,
+          "errorAtr": 1.3163,
+          "score": 2.2003
         },
         "confirm": {
-          "n": 233,
-          "coverage": 0.6099,
-          "directionHit": 0.6781,
-          "errorAtr": 1.2711,
-          "score": 2.7188
-        }
-      },
-      {
-        "rule": {
-          "condition": "rsi",
-          "op": "<",
-          "threshold": -0.035111
-        },
-        "label": "rsi < -0.03511 이면 기권",
-        "discover": {
-          "n": 768,
-          "coverage": 0.6702,
-          "directionHit": 0.5794,
-          "errorAtr": 1.2972,
-          "score": 2.2011
-        },
-        "confirm": {
-          "n": 212,
-          "coverage": 0.555,
-          "directionHit": 0.6604,
-          "errorAtr": 1.2144,
-          "score": 2.3351
+          "n": 248,
+          "coverage": 0.6263,
+          "directionHit": 0.6734,
+          "errorAtr": 1.2526,
+          "score": 2.7305
         }
       },
       {
@@ -788,96 +790,140 @@
         },
         "label": "attention_z < -0.3178 이면 기권",
         "discover": {
-          "n": 767,
-          "coverage": 0.6693,
-          "directionHit": 0.5737,
-          "errorAtr": 1.3052,
-          "score": 2.0401
+          "n": 794,
+          "coverage": 0.6678,
+          "directionHit": 0.5756,
+          "errorAtr": 1.2974,
+          "score": 2.1293
         },
         "confirm": {
-          "n": 222,
-          "coverage": 0.5812,
-          "directionHit": 0.6847,
-          "errorAtr": 1.3091,
-          "score": 2.7517
+          "n": 241,
+          "coverage": 0.6086,
+          "directionHit": 0.6515,
+          "errorAtr": 1.3174,
+          "score": 2.3512
+        }
+      },
+      {
+        "rule": {
+          "condition": "rsi",
+          "op": "<",
+          "threshold": -0.036072
+        },
+        "label": "rsi < -0.03607 이면 기권",
+        "discover": {
+          "n": 799,
+          "coverage": 0.672,
+          "directionHit": 0.572,
+          "errorAtr": 1.2969,
+          "score": 2.0342
+        },
+        "confirm": {
+          "n": 219,
+          "coverage": 0.553,
+          "directionHit": 0.6667,
+          "errorAtr": 1.2002,
+          "score": 2.4664
         }
       },
       {
         "rule": {
           "condition": "percent_b",
           "op": "<",
-          "threshold": -0.107329
+          "threshold": -0.11849
         },
-        "label": "percent_b < -0.1073 이면 기권",
+        "label": "percent_b < -0.1185 이면 기권",
         "discover": {
-          "n": 768,
-          "coverage": 0.6702,
-          "directionHit": 0.5703,
-          "errorAtr": 1.3218,
-          "score": 1.9486
+          "n": 793,
+          "coverage": 0.6669,
+          "directionHit": 0.5687,
+          "errorAtr": 1.3175,
+          "score": 1.9354
         },
         "confirm": {
-          "n": 214,
-          "coverage": 0.5602,
-          "directionHit": 0.6729,
-          "errorAtr": 1.2037,
-          "score": 2.5293
+          "n": 223,
+          "coverage": 0.5631,
+          "directionHit": 0.6682,
+          "errorAtr": 1.1872,
+          "score": 2.5112
+        }
+      },
+      {
+        "rule": {
+          "condition": "band_atr",
+          "op": "<",
+          "threshold": 2.613104
+        },
+        "label": "band_atr < 2.613 이면 기권",
+        "discover": {
+          "n": 803,
+          "coverage": 0.6754,
+          "directionHit": 0.5641,
+          "errorAtr": 1.4248,
+          "score": 1.8174
+        },
+        "confirm": {
+          "n": 326,
+          "coverage": 0.8232,
+          "directionHit": 0.6074,
+          "errorAtr": 1.5346,
+          "score": 1.9385
         }
       }
     ],
     "holdout": {
       "base": {
-        "n": 348,
+        "n": 397,
         "coverage": 1.0,
-        "directionHit": 0.6351,
-        "errorAtr": 2.1322,
-        "score": 2.5195
+        "directionHit": 0.6398,
+        "errorAtr": 2.1645,
+        "score": 2.7855
       },
       "withRule": {
-        "n": 163,
-        "coverage": 0.4684,
-        "directionHit": 0.589,
-        "errorAtr": 1.9458,
-        "score": 1.1357
+        "n": 216,
+        "coverage": 0.5441,
+        "directionHit": 0.5648,
+        "errorAtr": 2.0444,
+        "score": 0.9526
       },
       "rule": {
-        "condition": "rsi",
+        "condition": "range_position",
         "op": "<",
-        "threshold": -0.022088
+        "threshold": -0.167249
       },
-      "label": "rsi < -0.02209 이면 기권"
+      "label": "range_position < -0.1672 이면 기권"
     }
   },
   "overall": {
-    "n": 2568,
-    "directionN": 1910,
-    "directionHit": 0.5790575916230366,
-    "bandHit": 0.7799844236760125,
-    "errorAtr": 1.20026641143476,
-    "baselineErrorAtr": 1.2271041974122103,
-    "beatsBaseline": 0.026837785977450408
+    "n": 2688,
+    "directionN": 1982,
+    "directionHit": 0.5771947527749748,
+    "bandHit": 0.7808779761904762,
+    "errorAtr": 1.190618895149783,
+    "baselineErrorAtr": 1.216348277219574,
+    "beatsBaseline": 0.02572938206979109
   },
-  "holdoutLooks": 6,
+  "holdoutLooks": 7,
   "lastHoldout": {
     "base": {
-      "n": 348,
+      "n": 397,
       "coverage": 1.0,
-      "directionHit": 0.6351,
-      "errorAtr": 2.1322,
-      "score": 2.5195
+      "directionHit": 0.6398,
+      "errorAtr": 2.1645,
+      "score": 2.7855
     },
     "withRule": {
-      "n": 163,
-      "coverage": 0.4684,
-      "directionHit": 0.589,
-      "errorAtr": 1.9458,
-      "score": 1.1357
+      "n": 216,
+      "coverage": 0.5441,
+      "directionHit": 0.5648,
+      "errorAtr": 2.0444,
+      "score": 0.9526
     },
     "rule": {
-      "condition": "rsi",
+      "condition": "range_position",
       "op": "<",
-      "threshold": -0.022088
+      "threshold": -0.167249
     },
-    "label": "rsi < -0.02209 이면 기권"
+    "label": "range_position < -0.1672 이면 기권"
   }
 }
