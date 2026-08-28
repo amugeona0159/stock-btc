@@ -102,7 +102,7 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
 
       {result?.available && (
         <section className="card">
-          <h2>순위 · {horizon}일</h2>
+          <h2>얼마나 움직일까 · {horizon}일</h2>
           {/* 이 문장이 이 화면에서 제일 중요하다. 순위를 '오를 순서'로 읽으면 해롭다. */}
           <p className="note warn" style={{ marginTop: 0 }}>{result.note}</p>
           <div className="rows">
@@ -127,13 +127,9 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
                     </span>
                   )}
                 </span>
-                <b>
-                  변동 {signed(item.move)}
-                  <span style={{ color: "var(--text-dim)" }}>
-                    {" "}
-                    · 방향 {signed(item.direction)}
-                  </span>
-                </b>
+                {/* 방향 점수는 여기 안 쓴다. 한 줄에 나란히 두면 같은 무게로 읽히는데,
+                    실제로는 변동이 +0.94%p 를 가르고 방향은 +0.03~0.65%p 다. */}
+                <b style={{ fontSize: 14 }}>{signed(item.move)}</b>
               </div>
             ))}
           </div>
@@ -145,6 +141,22 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
                 .join(" · ")}
             </p>
           )}
+
+          {/* 방향은 접어 둔다. 지우지는 않는다 — 숨기는 것과 작게 두는 것은 다르고,
+              쓸지 말지는 보는 사람이 정한다. */}
+          <details style={{ marginTop: 8 }}>
+            <summary style={{ cursor: "pointer", color: "var(--text-dim)", fontSize: 12 }}>
+              방향 점수 (약하다 — 펼쳐 보기)
+            </summary>
+            <div className="rows" style={{ marginTop: 6, color: "var(--text-dim)" }}>
+              {result.items.map((item) => (
+                <div className="row" key={`dir-${item.symbol}`}>
+                  <span>{item.symbol}</span>
+                  <b>{signed(item.direction)}</b>
+                </div>
+              ))}
+            </div>
+          </details>
         </section>
       )}
 
@@ -152,28 +164,37 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
         <section className="card">
           <h2>이 순위가 과거에 맞았나</h2>
           <div className="rows">
-            {(["move", "direction"] as const).map((kind) => {
-              const q = quality[kind];
-              const gap = q.topMinusBottomPct;
-              return (
-                <div className="row" key={kind}>
-                  <span>{kind === "move" ? "변동 상위−하위" : "방향 상위−하위"}</span>
-                  <b
-                    style={{
-                      color:
-                        gap === null || gap === undefined
-                          ? "var(--text-dim)"
-                          : gap > 0
-                            ? "var(--up)"
-                            : "var(--down)",
-                    }}
-                  >
-                    {gap === null || gap === undefined ? "—" : `${signed(gap)}%p`}
-                    <span style={{ color: "var(--text-dim)" }}> · {q.factors}축</span>
-                  </b>
-                </div>
-              );
-            })}
+            <div className="row">
+              <span>변동 상위−하위</span>
+              <b
+                style={{
+                  fontSize: 15,
+                  color:
+                    quality.move.topMinusBottomPct === null
+                    || quality.move.topMinusBottomPct === undefined
+                      ? "var(--text-dim)"
+                      : quality.move.topMinusBottomPct > 0
+                        ? "var(--up)"
+                        : "var(--down)",
+                }}
+              >
+                {quality.move.topMinusBottomPct === null
+                || quality.move.topMinusBottomPct === undefined
+                  ? "—"
+                  : `${signed(quality.move.topMinusBottomPct)}%p`}
+                <span style={{ color: "var(--text-dim)" }}> · {quality.move.factors}축</span>
+              </b>
+            </div>
+            <div className="row" style={{ color: "var(--text-dim)" }}>
+              <span>방향 상위−하위 (참고)</span>
+              <b>
+                {quality.direction.topMinusBottomPct === null
+                || quality.direction.topMinusBottomPct === undefined
+                  ? "—"
+                  : `${signed(quality.direction.topMinusBottomPct)}%p`}
+                <span> · {quality.direction.factors}축</span>
+              </b>
+            </div>
             <div className="row">
               <span>후보 종목</span>
               <b>{result?.breadth ?? 0}개</b>

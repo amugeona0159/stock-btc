@@ -40,6 +40,11 @@ export function SignalCard({ signal }: { signal: Signal | null }) {
           </li>
         ))}
       </ul>
+      <p className="formula" style={{ marginTop: 10, marginBottom: 0 }}>
+        이건 <b>방향 투표</b>다. 27,664판을 채점해 보니 방향은 55.0% 로 동전던지기를
+        조금 넘는 정도였다 — 근거 문장을 읽는 용도지 이대로 따르라는 뜻이 아니다.
+        <b>위 칸의 변동 폭이 이 화면에서 믿을 만한 쪽이다.</b>
+      </p>
     </section>
   );
 }
@@ -47,6 +52,10 @@ export function SignalCard({ signal }: { signal: Signal | null }) {
 export function ForecastCard({ forecast }: { forecast: Forecast | null }) {
   if (!forecast) return null;
   const { stat, monteCarlo, ml } = forecast.layers;
+  // 80% 구간의 반폭을 현재가 대비 %로. "앞으로 이만큼 움직인다"를 한 숫자로 읽게.
+  const wide = stat.bands?.["80"];
+  const band80 =
+    wide && stat.mid ? ((wide.high - wide.low) / 2 / stat.mid) * 100 : null;
 
   return (
     <section className="card">
@@ -55,14 +64,14 @@ export function ForecastCard({ forecast }: { forecast: Forecast | null }) {
         <p className="formula">{stat.reason}</p>
       ) : (
         <div className="rows">
-          <div className="row">
-            <span>중심</span>
-            <b>
-              {price(stat.mid)} ({stat.expectedMovePct !== undefined
-                ? `${stat.expectedMovePct >= 0 ? "+" : ""}${stat.expectedMovePct.toFixed(2)}%`
-                : "—"})
-            </b>
-          </div>
+          {/* **폭을 맨 위에 둔다.** 이 도구가 실제로 맞히는 건 여기다 —
+              밴드 적중 82.2%. 중심(방향)은 55% 라 아래 참고 칸으로 내렸다. */}
+          {band80 !== null && (
+            <div className="row">
+              <span>예상 변동 폭 (80%)</span>
+              <b style={{ fontSize: 15 }}>±{band80.toFixed(2)}%</b>
+            </div>
+          )}
           {stat.bands &&
             Object.entries(stat.bands).map(([level, band]) => (
               <div className="row" key={level}>
@@ -80,23 +89,41 @@ export function ForecastCard({ forecast }: { forecast: Forecast | null }) {
               </b>
             </div>
           )}
-          {monteCarlo.available && (
-            <div className="row">
-              <span>상승 확률 (부트스트랩)</span>
-              <b>{percent(monteCarlo.probUp, 1)}</b>
-            </div>
-          )}
-          <div className="row">
-            <span>학습 모델</span>
-            <b>
-              {ml.available
-                ? `${ml.direction === 1 ? "상승" : ml.direction === -1 ? "하락" : "중립"} ${percent(ml.confidence, 0)}`
-                : "미학습"}
-            </b>
-          </div>
         </div>
       )}
+      {stat.available && (
+        <>
+          <div className="group-label">방향 (참고)</div>
+          <div className="rows" style={{ color: "var(--text-dim)" }}>
+            <div className="row">
+              <span>중심</span>
+              <b>
+                {price(stat.mid)} ({stat.expectedMovePct !== undefined
+                  ? `${stat.expectedMovePct >= 0 ? "+" : ""}${stat.expectedMovePct.toFixed(2)}%`
+                  : "—"})
+              </b>
+            </div>
+            {monteCarlo.available && (
+              <div className="row">
+                <span>상승 확률 (부트스트랩)</span>
+                <b>{percent(monteCarlo.probUp, 1)}</b>
+              </div>
+            )}
+            <div className="row">
+              <span>학습 모델</span>
+              <b>
+                {ml.available
+                  ? `${ml.direction === 1 ? "상승" : ml.direction === -1 ? "하락" : "중립"} ${percent(ml.confidence, 0)}`
+                  : "미학습"}
+              </b>
+            </div>
+          </div>
+        </>
+      )}
       <p className="formula" style={{ marginTop: 10, marginBottom: 0 }}>
+        <b>폭이 이 도구가 맞히는 것이다.</b> 27,664판을 채점해 보니 80% 밴드는 82.2% 로
+        들어맞았고 방향은 55.0% 였다 — 동전던지기보다 조금 나은 정도라 방향은 참고로만 둔다.
+        <br />
         구간은 로그수익률 표준편차를 √N 으로 늘린 것이다. 변동성이 뭉치는 실제 시장에서는
         낙관적인 하한이라 ATR 범위와 같이 본다.
       </p>

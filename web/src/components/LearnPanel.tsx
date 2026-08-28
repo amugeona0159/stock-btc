@@ -35,6 +35,16 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
   const [horizon, setHorizon] = useState(10);
   const report = learned?.report;
 
+  // 지평에서의 80% 밴드 반폭을 현재가 대비 %로. "이만큼 움직인다"를 한 숫자로.
+  const low = learned?.bands?.p10?.at(-1)?.value;
+  const high = learned?.bands?.p90?.at(-1)?.value;
+  const band =
+    low !== undefined && high !== undefined && learned?.last
+      ? ((high - low) / 2 / learned.last) * 100
+      : null;
+  // 이 모델의 밴드가 검증에서 실제로 몇 %를 담았나. 목표는 80%.
+  const coverage = report?.coverage?.[`${report?.horizon}:80`];
+
   return (
     <>
       <section className="card">
@@ -85,16 +95,41 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
         <section className="card">
           <h2>학습 예측</h2>
           <div className="rows">
+            {/* **폭이 먼저다.** 채점해 보면 밴드는 82% 로 맞고 방향은 55% 다.
+                방향을 위에 두면 이 화면이 실제보다 잘하는 것처럼 읽힌다. */}
+            {band !== null && (
+              <div className="row">
+                <span>{learned.horizon}봉 뒤 변동 폭 (80%)</span>
+                <b style={{ fontSize: 15 }}>±{band.toFixed(2)}%</b>
+              </div>
+            )}
+            {coverage !== undefined && (
+              <div className="row">
+                <span>이 모델의 밴드 실제 적중</span>
+                <b style={{ color: coverage >= 0.75 ? "var(--up)" : "var(--warn)" }}>
+                  {pct(coverage, 1)}
+                  <span style={{ color: "var(--text-dim)" }}> · 목표 80%</span>
+                </b>
+              </div>
+            )}
+            <div className="row">
+              <span>현재 변동성 (ATR)</span>
+              <b>{learned.atrPct}%</b>
+            </div>
             <div className="row">
               <span>쓰고 있는 것</span>
               <b style={{ color: learned.source === "blend" ? "var(--up)" : "var(--warn)" }}>
                 {learned.sourceLabel}
               </b>
             </div>
+          </div>
+
+          <div className="group-label">방향 (참고 · 55%)</div>
+          <div className="rows" style={{ color: "var(--text-dim)" }}>
             <div className="row">
               <span>{learned.horizon}봉 뒤 중앙</span>
               <b>
-                {learned.expectedMovePct !== undefined
+                {learned.expectedMovePct !== undefined && learned.expectedMovePct !== null
                   ? `${learned.expectedMovePct >= 0 ? "+" : ""}${learned.expectedMovePct.toFixed(2)}%`
                   : "—"}
               </b>
@@ -102,10 +137,6 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
             <div className="row">
               <span>상승 비중</span>
               <b>{pct(learned.probUp, 0)}</b>
-            </div>
-            <div className="row">
-              <span>현재 변동성 (ATR)</span>
-              <b>{learned.atrPct}%</b>
             </div>
             {learned.direction !== undefined && !learned.abstain && (
               <div className="row">

@@ -37,9 +37,12 @@ const CHART_BARS = 600;
 
 type Tab = "signal" | "predict" | "screen" | "learn" | "indicators" | "research";
 
+// **되는 것부터 보이게 둔다.** 이 도구가 실제로 잘하는 건 "얼마나 움직일까"(밴드
+// 적중 82.2%, 추천의 변동 점수)지 "어느 쪽으로 갈까"(방향 55%)가 아니다.
+// 8시간 · 27,664판으로 잰 결과다 — docs/STUDY.md.
 const TABS: Array<{ key: Tab; label: string }> = [
-  { key: "predict", label: "예측" },
   { key: "screen", label: "추천" },
+  { key: "predict", label: "예측" },
   { key: "learn", label: "학습" },
   { key: "signal", label: "판단" },
   { key: "indicators", label: "지표" },
@@ -57,7 +60,7 @@ export default function App() {
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [timeframe, setTimeframe] = useState("1h");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>("predict");
+  const [tab, setTab] = useState<Tab>("screen");
 
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [patterns, setPatterns] = useState<PatternHit[]>([]);
@@ -373,8 +376,10 @@ export default function App() {
 
         {tab === "signal" && (
           <>
-            <SignalCard signal={live.signal} />
+            {/* 폭이 먼저, 방향 투표가 나중. 이 순서가 잰 결과와 같다 —
+                밴드 82.2%, 방향 55.0%. */}
             <ForecastCard forecast={forecast} />
+            <SignalCard signal={live.signal} />
             <PatternCard patterns={patterns} />
           </>
         )}

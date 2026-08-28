@@ -17,9 +17,12 @@ const SHOTS = [
   { name: "predict", width: 1600, height: 950, indicators: [], solo: true,
     ask: "급락 나온 뒤 3일 동안 어떻게 움직였어?" },
   { name: "research", width: 1600, height: 950, indicators: [], tab: "근거" },
+  // 판단 탭도 폭이 먼저 오는지. 순서는 그림으로만 확인된다.
+  { name: "verdict", width: 1600, height: 950, indicators: [], tab: "판단",
+    timeframe: "1d", waitFor: "text=예상 변동 폭" },
   // 학습 성적표는 "이 도구가 자기 한계를 말하는가" 를 보는 화면이다.
   { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습",
-    timeframe: "1d" },
+    timeframe: "1d", waitFor: "text=봉 뒤 변동 폭" },
   // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
@@ -76,6 +79,13 @@ for (const shot of SHOTS) {
     // 유사구간 검색은 몇 초 걸린다. 답이 뜰 때까지 기다린다.
     await page.waitForSelector(".answer", { timeout: 90000 });
     await page.waitForTimeout(1200);
+  }
+
+  if (shot.waitFor) {
+    // 학습 예측은 모델을 읽고 피처를 만드느라 10초 넘게 걸린다. 안 기다리면
+    // 카드가 없는 그림을 찍어 놓고 "안 나온다"고 오해하게 된다.
+    await page.locator(shot.waitFor).first()
+      .waitFor({ timeout: 60000 }).catch(() => {});
   }
 
   if (shot.picker) {
