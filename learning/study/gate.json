@@ -1,5 +1,17 @@
 {
-  "updated": "2026-08-28T17:06:47+00:00",
-  "rule": null,
-  "reason": "최종 구간에서 못 이겼다"
+  "updated": "2026-08-28T17:19:23+00:00",
+  "rule": {
+    "condition": "prob_up",
+    "op": "<",
+    "threshold": 0.5157
+  },
+  "label": "prob_up < 0.5157 이면 기권",
+  "holdout": {
+    "withoutRule": 0.6299,
+    "withRule": 0.7647,
+    "n": 102,
+    "coverage": 0.2008
+  },
+  "holdoutLooks": 9,
+  "trials": 27
 }

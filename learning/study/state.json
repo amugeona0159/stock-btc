@@ -1,22 +1,22 @@
 {
-  "rounds": 90,
+  "rounds": 114,
   "seen": {
-    "binance:1d:1": 6,
-    "binance:1d:10": 6,
-    "binance:1d:2": 6,
-    "binance:1d:3": 6,
-    "binance:1d:5": 6,
-    "binance:1h:12": 6,
-    "binance:1h:3": 6,
-    "binance:1h:6": 6,
-    "toss_kr:1d:1": 6,
-    "toss_kr:1d:3": 6,
-    "toss_kr:1d:5": 5,
-    "yahoo:1d:1": 5,
-    "yahoo:1d:10": 5,
-    "yahoo:1d:2": 5,
-    "yahoo:1d:3": 5,
-    "yahoo:1d:5": 5
+    "binance:1d:1": 8,
+    "binance:1d:10": 8,
+    "binance:1d:2": 7,
+    "binance:1d:3": 7,
+    "binance:1d:5": 7,
+    "binance:1h:12": 7,
+    "binance:1h:3": 7,
+    "binance:1h:6": 7,
+    "toss_kr:1d:1": 7,
+    "toss_kr:1d:3": 7,
+    "toss_kr:1d:5": 7,
+    "yahoo:1d:1": 7,
+    "yahoo:1d:10": 7,
+    "yahoo:1d:2": 7,
+    "yahoo:1d:3": 7,
+    "yahoo:1d:5": 7
   },
   "history": [
     {
@@ -738,192 +738,384 @@
       "verdicts": 40,
       "seconds": 72.4,
       "directionHit": 0.5
+    },
+    {
+      "round": 91,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T17:07:53+00:00",
+      "verdicts": 40,
+      "seconds": 66.3,
+      "directionHit": NaN
+    },
+    {
+      "round": 92,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T17:08:25+00:00",
+      "verdicts": 40,
+      "seconds": 31.3,
+      "directionHit": 0.5862068965517241
+    },
+    {
+      "round": 93,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T17:08:47+00:00",
+      "verdicts": 40,
+      "seconds": 22.4,
+      "directionHit": 0.7692307692307693
+    },
+    {
+      "round": 94,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T17:09:07+00:00",
+      "verdicts": 40,
+      "seconds": 19.1,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 95,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T17:09:28+00:00",
+      "verdicts": 40,
+      "seconds": 20.8,
+      "directionHit": 0.5714285714285714
+    },
+    {
+      "round": 96,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T17:09:50+00:00",
+      "verdicts": 40,
+      "seconds": 22.1,
+      "directionHit": 0.6944444444444444
+    },
+    {
+      "round": 97,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T17:10:33+00:00",
+      "verdicts": 37,
+      "seconds": 42.9,
+      "directionHit": 0.36363636363636365
+    },
+    {
+      "round": 98,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T17:10:52+00:00",
+      "verdicts": 37,
+      "seconds": 19.0,
+      "directionHit": 0.3235294117647059
+    },
+    {
+      "round": 99,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T17:11:08+00:00",
+      "verdicts": 37,
+      "seconds": 15.4,
+      "directionHit": 0.5666666666666667
+    },
+    {
+      "round": 100,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T17:11:26+00:00",
+      "verdicts": 37,
+      "seconds": 17.2,
+      "directionHit": 0.3870967741935484
+    },
+    {
+      "round": 101,
+      "target": "binance:1d:5",
+      "at": "2026-08-28T17:11:44+00:00",
+      "verdicts": 37,
+      "seconds": 18.6,
+      "directionHit": 0.4375
+    },
+    {
+      "round": 102,
+      "target": "binance:1h:12",
+      "at": "2026-08-28T17:12:38+00:00",
+      "verdicts": 40,
+      "seconds": 52.9,
+      "directionHit": 0.4117647058823529
+    },
+    {
+      "round": 103,
+      "target": "binance:1h:3",
+      "at": "2026-08-28T17:13:16+00:00",
+      "verdicts": 40,
+      "seconds": 38.3,
+      "directionHit": 0.5666666666666667
+    },
+    {
+      "round": 104,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T17:13:56+00:00",
+      "verdicts": 40,
+      "seconds": 39.4,
+      "directionHit": 0.5555555555555556
+    },
+    {
+      "round": 105,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T17:14:57+00:00",
+      "verdicts": 40,
+      "seconds": 60.4,
+      "directionHit": NaN
+    },
+    {
+      "round": 106,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T17:16:01+00:00",
+      "verdicts": 40,
+      "seconds": 63.8,
+      "directionHit": 0.5
+    },
+    {
+      "round": 107,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T17:17:06+00:00",
+      "verdicts": 40,
+      "seconds": 65.5,
+      "directionHit": NaN
+    },
+    {
+      "round": 108,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T17:17:24+00:00",
+      "verdicts": 40,
+      "seconds": 17.7,
+      "directionHit": 0.5862068965517241
+    },
+    {
+      "round": 109,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T17:17:46+00:00",
+      "verdicts": 40,
+      "seconds": 21.9,
+      "directionHit": 0.7692307692307693
+    },
+    {
+      "round": 110,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T17:18:06+00:00",
+      "verdicts": 40,
+      "seconds": 19.1,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 111,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T17:18:27+00:00",
+      "verdicts": 40,
+      "seconds": 20.8,
+      "directionHit": 0.5714285714285714
+    },
+    {
+      "round": 112,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T17:18:49+00:00",
+      "verdicts": 40,
+      "seconds": 22.1,
+      "directionHit": 0.6944444444444444
+    },
+    {
+      "round": 113,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T17:19:03+00:00",
+      "verdicts": 37,
+      "seconds": 14.1,
+      "directionHit": 0.36363636363636365
+    },
+    {
+      "round": 114,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T17:19:23+00:00",
+      "verdicts": 37,
+      "seconds": 19.5,
+      "directionHit": 0.3235294117647059
     }
   ],
   "analysis": {
     "ready": true,
-    "tried": 31,
-    "wonDiscover": 19,
+    "tried": 27,
+    "wonDiscover": 15,
     "survivedConfirm": 5,
     "baseDiscover": {
-      "n": 1189,
+      "n": 1600,
       "coverage": 1.0,
-      "directionHit": 0.5517,
-      "errorAtr": 1.2523,
-      "score": 1.7835
+      "directionHit": 0.5687,
+      "errorAtr": 1.1853,
+      "score": 2.75
     },
     "baseConfirm": {
-      "n": 396,
+      "n": 533,
       "coverage": 1.0,
-      "directionHit": 0.5909,
-      "errorAtr": 1.4292,
-      "score": 1.8091
+      "directionHit": 0.5253,
+      "errorAtr": 1.3715,
+      "score": 0.5847
     },
     "survivors": [
       {
         "rule": {
-          "condition": "range_position",
+          "condition": "move_atr",
           "op": "<",
-          "threshold": -0.167249
+          "threshold": 0.038276
         },
-        "label": "range_position < -0.1672 이면 기권",
+        "label": "move_atr < 0.03828 이면 기권",
         "discover": {
-          "n": 794,
-          "coverage": 0.6678,
-          "directionHit": 0.5781,
-          "errorAtr": 1.3163,
-          "score": 2.2003
+          "n": 1084,
+          "coverage": 0.6775,
+          "directionHit": 0.6273,
+          "errorAtr": 1.2224,
+          "score": 4.1915
         },
         "confirm": {
-          "n": 248,
-          "coverage": 0.6263,
-          "directionHit": 0.6734,
-          "errorAtr": 1.2526,
-          "score": 2.7305
+          "n": 197,
+          "coverage": 0.3696,
+          "directionHit": 0.5482,
+          "errorAtr": 1.4682,
+          "score": 0.6768
+        }
+      },
+      {
+        "rule": {
+          "condition": "attention_z",
+          "op": ">",
+          "threshold": 0.146582
+        },
+        "label": "attention_z > 0.1466 이면 기권",
+        "discover": {
+          "n": 1077,
+          "coverage": 0.6731,
+          "directionHit": 0.6119,
+          "errorAtr": 1.1579,
+          "score": 3.6718
+        },
+        "confirm": {
+          "n": 403,
+          "coverage": 0.7561,
+          "directionHit": 0.5335,
+          "errorAtr": 1.48,
+          "score": 0.6725
+        }
+      },
+      {
+        "rule": {
+          "condition": "px_over_ema20",
+          "op": ">",
+          "threshold": 0.556294
+        },
+        "label": "px_over_ema20 > 0.5563 이면 기권",
+        "discover": {
+          "n": 1072,
+          "coverage": 0.67,
+          "directionHit": 0.5933,
+          "errorAtr": 1.1333,
+          "score": 3.0542
+        },
+        "confirm": {
+          "n": 444,
+          "coverage": 0.833,
+          "directionHit": 0.536,
+          "errorAtr": 1.4266,
+          "score": 0.7593
         }
       },
       {
         "rule": {
           "condition": "attention_z",
           "op": "<",
-          "threshold": -0.317813
+          "threshold": -0.343002
         },
-        "label": "attention_z < -0.3178 이면 기권",
+        "label": "attention_z < -0.343 이면 기권",
         "discover": {
-          "n": 794,
-          "coverage": 0.6678,
-          "directionHit": 0.5756,
-          "errorAtr": 1.2974,
-          "score": 2.1293
+          "n": 1068,
+          "coverage": 0.6675,
+          "directionHit": 0.5927,
+          "errorAtr": 1.2118,
+          "score": 3.0294
         },
         "confirm": {
-          "n": 241,
-          "coverage": 0.6086,
-          "directionHit": 0.6515,
-          "errorAtr": 1.3174,
-          "score": 2.3512
+          "n": 353,
+          "coverage": 0.6623,
+          "directionHit": 0.5949,
+          "errorAtr": 1.3113,
+          "score": 1.783
         }
       },
       {
         "rule": {
-          "condition": "rsi",
+          "condition": "range_position",
           "op": "<",
-          "threshold": -0.036072
+          "threshold": -0.183371
         },
-        "label": "rsi < -0.03607 이면 기권",
+        "label": "range_position < -0.1834 이면 기권",
         "discover": {
-          "n": 799,
-          "coverage": 0.672,
-          "directionHit": 0.572,
-          "errorAtr": 1.2969,
-          "score": 2.0342
+          "n": 1069,
+          "coverage": 0.6681,
+          "directionHit": 0.5912,
+          "errorAtr": 1.2171,
+          "score": 2.9821
         },
         "confirm": {
-          "n": 219,
-          "coverage": 0.553,
-          "directionHit": 0.6667,
-          "errorAtr": 1.2002,
-          "score": 2.4664
-        }
-      },
-      {
-        "rule": {
-          "condition": "percent_b",
-          "op": "<",
-          "threshold": -0.11849
-        },
-        "label": "percent_b < -0.1185 이면 기권",
-        "discover": {
-          "n": 793,
-          "coverage": 0.6669,
-          "directionHit": 0.5687,
-          "errorAtr": 1.3175,
-          "score": 1.9354
-        },
-        "confirm": {
-          "n": 223,
-          "coverage": 0.5631,
-          "directionHit": 0.6682,
-          "errorAtr": 1.1872,
-          "score": 2.5112
-        }
-      },
-      {
-        "rule": {
-          "condition": "band_atr",
-          "op": "<",
-          "threshold": 2.613104
-        },
-        "label": "band_atr < 2.613 이면 기권",
-        "discover": {
-          "n": 803,
-          "coverage": 0.6754,
-          "directionHit": 0.5641,
-          "errorAtr": 1.4248,
-          "score": 1.8174
-        },
-        "confirm": {
-          "n": 326,
-          "coverage": 0.8232,
-          "directionHit": 0.6074,
-          "errorAtr": 1.5346,
-          "score": 1.9385
+          "n": 330,
+          "coverage": 0.6191,
+          "directionHit": 0.5667,
+          "errorAtr": 1.3183,
+          "score": 1.2111
         }
       }
     ],
     "holdout": {
       "base": {
-        "n": 397,
+        "n": 508,
         "coverage": 1.0,
-        "directionHit": 0.6398,
-        "errorAtr": 2.1645,
-        "score": 2.7855
+        "directionHit": 0.6299,
+        "errorAtr": 2.1477,
+        "score": 2.9283
       },
       "withRule": {
-        "n": 216,
-        "coverage": 0.5441,
-        "directionHit": 0.5648,
-        "errorAtr": 2.0444,
-        "score": 0.9526
+        "n": 102,
+        "coverage": 0.2008,
+        "directionHit": 0.7647,
+        "errorAtr": 0.864,
+        "score": 2.6734
       },
       "rule": {
-        "condition": "range_position",
+        "condition": "prob_up",
         "op": "<",
-        "threshold": -0.167249
+        "threshold": 0.5157
       },
-      "label": "range_position < -0.1672 이면 기권"
+      "label": "prob_up < 0.5157 이면 기권"
     }
   },
   "overall": {
-    "n": 2688,
-    "directionN": 1982,
-    "directionHit": 0.5771947527749748,
-    "bandHit": 0.7808779761904762,
-    "errorAtr": 1.190618895149783,
-    "baselineErrorAtr": 1.216348277219574,
-    "beatsBaseline": 0.02572938206979109
+    "n": 3627,
+    "directionN": 2667,
+    "directionHit": 0.5706786651668542,
+    "bandHit": 0.7968017645437,
+    "errorAtr": 1.1623794931737355,
+    "baselineErrorAtr": 1.1878388153048927,
+    "beatsBaseline": 0.025459322131156953
   },
-  "holdoutLooks": 7,
+  "holdoutLooks": 9,
   "lastHoldout": {
     "base": {
-      "n": 397,
+      "n": 508,
       "coverage": 1.0,
-      "directionHit": 0.6398,
-      "errorAtr": 2.1645,
-      "score": 2.7855
+      "directionHit": 0.6299,
+      "errorAtr": 2.1477,
+      "score": 2.9283
     },
     "withRule": {
-      "n": 216,
-      "coverage": 0.5441,
-      "directionHit": 0.5648,
-      "errorAtr": 2.0444,
-      "score": 0.9526
+      "n": 102,
+      "coverage": 0.2008,
+      "directionHit": 0.7647,
+      "errorAtr": 0.864,
+      "score": 2.6734
     },
     "rule": {
-      "condition": "range_position",
+      "condition": "prob_up",
       "op": "<",
-      "threshold": -0.167249
+      "threshold": 0.5157
     },
-    "label": "range_position < -0.1672 이면 기권"
+    "label": "prob_up < 0.5157 이면 기권"
   }
 }

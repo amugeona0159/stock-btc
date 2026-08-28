@@ -368,7 +368,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 328개
+.venv/Scripts/python -m pytest server/tests -q      # 333개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b

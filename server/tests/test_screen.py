@@ -8,6 +8,8 @@
 """
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -226,3 +228,89 @@ def test_flipping_the_ic_sign_flips_the_ranking():
     up = rank.build(latest, _measured(ic_value=0.05), horizon=1)
     down = rank.build(latest, _measured(ic_value=-0.05), horizon=1)
     assert [i["symbol"] for i in up["items"]] == [i["symbol"] for i in down["items"]][::-1]
+
+
+# --- 잰 것과 쓰는 것이 어긋나지 않게 ------------------------------------
+
+def _factors(tmp_path, name: str, body: dict):
+    folder = tmp_path / name
+    folder.mkdir(exist_ok=True)
+    (folder / "factors.json").write_text(json.dumps(body, ensure_ascii=False),
+                                         encoding="utf-8")
+    return folder
+
+
+def test_measured_merges_both_folders(tmp_path, monkeypatch):
+    """저장소(Actions)와 이 PC 의 측정을 **합쳐서** 읽는다.
+
+    토스는 IP 제한 때문에 PC 에서만 잴 수 있다. 하나만 읽으면 로컬 파일에 토스만
+    있을 때 저장소가 잰 암호화폐·미국주식을 통째로 잃는다.
+    """
+    from marketlens.api import screening
+
+    local = _factors(tmp_path, "learning-local",
+                     {"providers": {"toss_kr": {"timeframe": "1d", "horizons": {"1": {}}}}})
+    repo = _factors(tmp_path, "learning",
+                    {"providers": {"binance": {"timeframe": "1d", "horizons": {"1": {}}}}})
+    monkeypatch.setattr(screening, "DIRS", (local, repo))
+    found = screening._measured()["providers"]
+    assert set(found) == {"toss_kr", "binance"}
+
+
+def test_the_local_folder_wins_on_conflict(tmp_path, monkeypatch):
+    from marketlens.api import screening
+
+    local = _factors(tmp_path, "learning-local",
+                     {"providers": {"binance": {"timeframe": "1h", "horizons": {}}}})
+    repo = _factors(tmp_path, "learning",
+                    {"providers": {"binance": {"timeframe": "1d", "horizons": {}}}})
+    monkeypatch.setattr(screening, "DIRS", (local, repo))
+    assert screening._measured()["providers"]["binance"]["timeframe"] == "1h"
+
+
+def test_status_reports_the_measured_timeframe(tmp_path, monkeypatch):
+    from marketlens.api import screening
+
+    repo = _factors(tmp_path, "learning",
+                    {"updated": "2026-08-28T00:00:00+00:00",
+                     "providers": {"binance": {"timeframe": "1d",
+                                               "horizons": {"1": {}, "3": {}}}}})
+    monkeypatch.setattr(screening, "DIRS", (repo,))
+    found = screening.status()["providers"]["binance"]
+    assert found["timeframe"] == "1d"
+    assert found["horizons"] == [1, 3]
+
+
+def test_screening_refuses_a_timeframe_it_did_not_measure(tmp_path, monkeypatch):
+    """일봉으로 잰 IC 부호를 시간봉 팩터에 그대로 곱하면 **조용히 거짓말하는 순위**가
+    나온다. 기본 화면이 1시간봉이라 그동안 늘 그 상태였다."""
+    import asyncio
+
+    from marketlens.api import screening
+
+    repo = _factors(tmp_path, "learning",
+                    {"providers": {"binance": {"timeframe": "1d", "horizons": {"1": {}}}}})
+    monkeypatch.setattr(screening, "DIRS", (repo,))
+
+    async def never_called(*args, **kwargs):        # 시세를 받기 전에 막아야 한다
+        raise AssertionError("봉이 어긋났는데 시세를 받으러 갔다")
+
+    out = asyncio.run(screening.build(never_called, "binance", "1h", 1, 10, "crypto"))
+    assert out["available"] is False
+    assert out["measuredTimeframe"] == "1d"
+    assert "1d" in out["reason"] and "1h" in out["reason"]
+
+
+def test_an_unmeasured_market_lists_the_measured_ones(tmp_path, monkeypatch):
+    """터미널 명령어만 적어 두면 화면에서 할 수 있는 게 없다."""
+    import asyncio
+
+    from marketlens.api import screening
+
+    repo = _factors(tmp_path, "learning",
+                    {"providers": {"binance": {"timeframe": "1d", "horizons": {"1": {}}},
+                                   "yahoo": {"timeframe": "1d", "horizons": {"1": {}}}}})
+    monkeypatch.setattr(screening, "DIRS", (repo,))
+    out = asyncio.run(screening.build(None, "kis", "1d", 1, 10, "kr"))
+    assert out["available"] is False
+    assert out["measuredProviders"] == ["binance", "yahoo"]
