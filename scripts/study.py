@@ -38,6 +38,7 @@ import argparse
 import asyncio
 import json
 import math
+import os
 import sys
 import time
 import traceback
@@ -65,10 +66,16 @@ import asof                                                       # noqa: E402
 from marketlens.forecast.ml import dataset                        # noqa: E402
 from marketlens.forecast.ml import model as ml                    # noqa: E402
 
-OUT = ROOT / "learning" / "study"
+# `daily.py`·`screen.py` 와 같은 규칙. 저장소의 `learning/` 은 GitHub Actions 가,
+# `learning-local/` 은 이 PC 가 쓴다.
+LEARNING = Path(os.environ.get("MARKET_LENS_LEARNING") or ROOT / "learning")
+if not LEARNING.is_absolute():
+    LEARNING = ROOT / LEARNING
+OUT = LEARNING / "study"
 VERDICTS = OUT / "verdicts.jsonl"
 STATE = OUT / "state.json"
-SUMMARY = ROOT / "docs" / "STUDY.md"
+SUMMARY = (ROOT / "docs" / "STUDY.md" if LEARNING.name == "learning"
+           else OUT / "STUDY.md")
 # 최종 구간에서 확인된 규칙만 여기에 쓴다. 화면이 이걸 읽어 실제로 기권한다.
 GATE = OUT / "gate.json"
 NEWLINE = chr(10)
@@ -79,6 +86,8 @@ PROMOTE_MARGIN = 0.01
 MIN_BUCKET = 30
 # 학습을 몇 origin 마다 다시 할지. 매번이면 못 끝내고, 한 번이면 미래를 본다.
 RETRAIN_EVERY = 10
+# 한 라운드에서 채점할 종목 수. 하나만 채점하면 규칙이 그 종목의 버릇이 된다.
+JUDGE_SYMBOLS = 4
 
 
 def now() -> str:
@@ -215,14 +224,19 @@ async def play(target: Target, origins: int, budget_end: float) -> list[Verdict]
     if not pool:
         return []
 
+    # **채점도 여러 종목으로 한다.** 한 종목만 채점하면 쌓이는 판이 BTC·AAPL·삼성전자
+    # 셋뿐이고, 거기서 찾은 기권 규칙은 그 세 종목의 버릇일 수 있다. 학습은 여러
+    # 종목으로 모으면서 채점만 하나로 하는 건 앞뒤가 안 맞는다.
+    judged = pool[:JUDGE_SYMBOLS]
     lead = pool[0]
-    closed = lead.closed
-    n = len(closed)
+    n = len(lead.closed)
     lo, hi = asof.MIN_HISTORY, n - target.horizon - 1
     if hi <= lo:
         return []
-    positions = np.unique(np.linspace(lo, hi, origins).astype(int))
-    log_close = np.log(closed["close"].to_numpy(dtype="float64"))
+    # origin 수는 그대로 두고 종목으로 나눈다. 종목 수만큼 시간이 늘면 8시간 안에
+    # 대상을 한 바퀴도 못 돈다.
+    per_symbol = max(4, origins // len(judged))
+    positions = np.unique(np.linspace(lo, hi, per_symbol).astype(int))
 
     name = f"study-{target.key.replace(':', '-')}".lower()
     verdicts: list[Verdict] = []
@@ -231,12 +245,7 @@ async def play(target: Target, origins: int, budget_end: float) -> list[Verdict]
     for order, position in enumerate(positions):
         if time.time() > budget_end:
             break
-        origin_ts = int(closed["ts"].iloc[position])
-        view = asof.cut(lead, origin_ts)
-        atr = float(ml.volatility_scale(view.closed).iloc[-1])
-        if not np.isfinite(atr) or atr <= 0:
-            continue
-        realised = float(log_close[position + target.horizon] - log_close[position])
+        origin_ts = int(lead.closed["ts"].iloc[position])
 
         # 학습은 **동료 종목까지 모아서** 한다. 한 종목만 쓰면 표본이 모자라
         # 실력을 실제보다 낮게 재게 된다 — 이 저장소가 이미 겪은 함정이다.
@@ -251,35 +260,56 @@ async def play(target: Target, origins: int, budget_end: float) -> list[Verdict]
                     trained_at = order
                 except Exception:                                  # noqa: BLE001
                     pass
-
         if ml.load(name) is None:
             continue
-        try:
-            out = ml.predict(view.closed, name, view.events, target.timeframe,
-                             view.attention)
-        except Exception:                                          # noqa: BLE001
-            continue
-        if not out.get("available"):
-            continue
 
-        last = out["last"]
-        predicted = float(np.log(out["bands"]["p50"][-1]["value"] / last))
-        low = float(np.log(out["bands"]["p10"][-1]["value"] / last))
-        high = float(np.log(out["bands"]["p90"][-1]["value"] / last))
-        conditions = condition_row(view, target.horizon)
-        # 예측 자체가 말해 주는 조건. 밴드가 넓다는 건 모델이 모르겠다는 뜻이다.
-        conditions["band_atr"] = round((high - low) / atr, 6)
-        conditions["move_atr"] = round(predicted / atr, 6)
-        if out.get("probUp") is not None:
-            conditions["prob_up"] = round(float(out["probUp"]), 6)
-
-        verdicts.append(Verdict(
-            target=target.key, symbol=lead.symbol, timeframe=target.timeframe,
-            horizon=target.horizon, origin_ts=origin_ts,
-            source=str(out.get("source", "?")), predicted=predicted,
-            realised=realised, low=low, high=high, atr=atr, conditions=conditions,
-        ))
+        for piece in judged:
+            found = judge(piece, name, target, origin_ts)
+            if found is not None:
+                verdicts.append(found)
     return verdicts
+
+
+def judge(piece: asof.Slice, name: str, target: Target,
+          origin_ts: int) -> Verdict | None:
+    """한 종목·한 시점의 판. 그 시점 이후는 아무것도 안 본다."""
+    closed = piece.closed
+    where = closed["ts"].searchsorted(origin_ts, side="right") - 1
+    if where < asof.MIN_HISTORY or where + target.horizon >= len(closed):
+        return None                      # 이 종목에는 그 시점이 없거나 결과가 아직이다
+
+    view = asof.cut(piece, int(closed["ts"].iloc[where]))
+    atr = float(ml.volatility_scale(view.closed).iloc[-1])
+    if not np.isfinite(atr) or atr <= 0:
+        return None
+    log_close = np.log(closed["close"].to_numpy(dtype="float64"))
+    realised = float(log_close[where + target.horizon] - log_close[where])
+
+    try:
+        out = ml.predict(view.closed, name, view.events, target.timeframe,
+                         view.attention)
+    except Exception:                                              # noqa: BLE001
+        return None
+    if not out.get("available"):
+        return None
+
+    last = out["last"]
+    predicted = float(np.log(out["bands"]["p50"][-1]["value"] / last))
+    low = float(np.log(out["bands"]["p10"][-1]["value"] / last))
+    high = float(np.log(out["bands"]["p90"][-1]["value"] / last))
+    conditions = condition_row(view, target.horizon)
+    # 예측 자체가 말해 주는 조건. 밴드가 넓다는 건 모델이 모르겠다는 뜻이다.
+    conditions["band_atr"] = round((high - low) / atr, 6)
+    conditions["move_atr"] = round(predicted / atr, 6)
+    if out.get("probUp") is not None:
+        conditions["prob_up"] = round(float(out["probUp"]), 6)
+
+    return Verdict(
+        target=target.key, symbol=piece.symbol, timeframe=target.timeframe,
+        horizon=target.horizon, origin_ts=int(view.closed["ts"].iloc[-1]),
+        source=str(out.get("source", "?")), predicted=predicted,
+        realised=realised, low=low, high=high, atr=atr, conditions=conditions,
+    )
 
 
 # --- ③ 분석: 맞은 판과 틀린 판을 조건별로 갈라 본다 -----------------------
