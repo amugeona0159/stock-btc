@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/uselive.ts","./src/components/askpanel.tsx","./src/components/chart.tsx","./src/components/panels.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/types.ts","./src/uselive.ts","./src/components/askpanel.tsx","./src/components/chart.tsx","./src/components/learnpanel.tsx","./src/components/panels.tsx"],"version":"5.9.3"}

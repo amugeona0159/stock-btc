@@ -16,6 +16,7 @@ def combined(
     timeframe: str = "1d",
     horizon: int = 10,
     model_name: str | None = None,
+    events: list | None = None,
 ) -> dict:
     signal = evaluate(df)
     layers = {
@@ -34,7 +35,7 @@ def combined(
         # sklearn 이 없거나 학습 전이면 그 층만 비활성으로 나간다. 나머지 둘은 그대로 쓴다.
         try:
             from .ml import model as ml_model
-            layers["ml"] = ml_model.predict(df, model_name)
+            layers["ml"] = ml_model.predict(df, model_name, events, timeframe)
         except Exception as exc:
             layers["ml"] = {"available": False, "reason": str(exc)}
     else:

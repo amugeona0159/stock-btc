@@ -304,3 +304,52 @@ export interface AskResult {
   citations: Evidence[];
   eventSources: Record<string, { count: number; ok: boolean; error: string }>;
 }
+
+// --- 학습층 ---------------------------------------------------------------
+
+export interface TrainReport {
+  rows: number;
+  horizon: number;
+  window: number;
+  horizons: number[];
+  folds: number;
+  /** 변동성 기준선 대비. 0 이하면 학습이 아무것도 못 더한 것이다. */
+  skill: Record<string, number>;
+  /** 아무것도 모를 때 대비. 변동성 스케일링만으로 여기까지 간다. */
+  volSkill: Record<string, number>;
+  coverage: Record<string, number>;
+  directionAccuracy: number | null;
+  directionBaseline: number | null;
+  importance: Array<{ feature: string; score: number }>;
+  learnedSomething: boolean;
+  verdict: string;
+  citations: Evidence[];
+}
+
+export interface Learned {
+  available: boolean;
+  reason?: string;
+  model?: string;
+  source?: "model" | "volatility-baseline";
+  sourceLabel?: string;
+  horizon?: number;
+  last?: number;
+  atrPct?: number;
+  bands?: Record<string, PathPoint[]>;
+  median?: number;
+  expectedMovePct?: number;
+  probUp?: number;
+  direction?: number;
+  directionConfidence?: number;
+  directionBeatsBaseline?: boolean;
+  report?: TrainReport;
+  verdict?: string;
+}
+
+export interface ModelInfo {
+  name: string;
+  horizon: number;
+  rows: number;
+  learnedSomething: boolean;
+  skill: number | null;
+}

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { api, predict, research } from "./api";
+import { api, learn, predict, research } from "./api";
 import { AskPanel } from "./components/AskPanel";
 import { ChartStack } from "./components/Chart";
+import { LearnPanel } from "./components/LearnPanel";
 import {
   EventsCard,
   EvidenceLibrary,
@@ -22,6 +23,7 @@ import type {
   IndicatorSpec,
   PatternHit,
   ProviderInfo,
+  Learned,
   Requested,
   ScenarioForm,
   Situation,
@@ -31,10 +33,11 @@ const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
 
-type Tab = "signal" | "predict" | "indicators" | "research";
+type Tab = "signal" | "predict" | "learn" | "indicators" | "research";
 
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "predict", label: "예측" },
+  { key: "learn", label: "학습" },
   { key: "signal", label: "판단" },
   { key: "indicators", label: "지표" },
   { key: "research", label: "근거" },
@@ -61,6 +64,10 @@ export default function App() {
   const [ask, setAsk] = useState<AskResult | null>(null);
   const [asking, setAsking] = useState(false);
   const [askError, setAskError] = useState<string | null>(null);
+
+  const [learned, setLearned] = useState<Learned | null>(null);
+  const [training, setTraining] = useState(false);
+  const [trainError, setTrainError] = useState<string | null>(null);
 
   const [events, setEvents] = useState<EventMark[]>([]);
   const [eventSources, setEventSources] = useState<
@@ -153,7 +160,39 @@ export default function App() {
   useEffect(() => {
     setAsk(null);
     setAskError(null);
+    setLearned(null);
+    setTrainError(null);
   }, [provider, symbol, timeframe]);
+
+  // 이 종목·봉으로 학습된 모델이 이미 있으면 바로 불러온다.
+  useEffect(() => {
+    let cancelled = false;
+    learn
+      .predict({ provider, symbol, timeframe })
+      .then((res) => {
+        if (!cancelled) setLearned(res);
+      })
+      .catch(() => {
+        if (!cancelled) setLearned(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [provider, symbol, timeframe]);
+
+  const runTrain = useCallback(
+    (horizon: number) => {
+      setTraining(true);
+      setTrainError(null);
+      learn
+        .train({ provider, symbol, timeframe, horizon, limit: 4000 })
+        .then(() => learn.predict({ provider, symbol, timeframe }))
+        .then(setLearned)
+        .catch((err) => setTrainError(String(err.message ?? err)))
+        .finally(() => setTraining(false));
+    },
+    [provider, symbol, timeframe],
+  );
 
   const submitSymbol = (event: React.FormEvent) => {
     event.preventDefault();
@@ -250,6 +289,7 @@ export default function App() {
           candles={live.candles}
           indicators={live.indicators}
           projection={ask?.projection ?? null}
+          learned={learned}
           eventPath={ask?.eventPath ?? null}
           events={showEvents ? events : []}
         />
@@ -279,6 +319,15 @@ export default function App() {
               onClear={() => setAsk(null)}
             />
           </>
+        )}
+
+        {tab === "learn" && (
+          <LearnPanel
+            learned={learned}
+            busy={training}
+            error={trainError}
+            onTrain={runTrain}
+          />
         )}
 
         {tab === "signal" && (

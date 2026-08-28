@@ -14,6 +14,7 @@ import type {
   Candle,
   EventMark,
   IndicatorResult,
+  Learned,
   Projection,
   SeriesOutput,
 } from "../types";
@@ -126,6 +127,7 @@ interface Props {
   candles: Candle[];
   indicators: IndicatorResult[];
   projection?: Projection | null;
+  learned?: Learned | null;
   eventPath?: Array<{ time: number; value: number }> | null;
   events?: EventMark[];
   onEventClick?: (mark: EventMark) => void;
@@ -135,6 +137,7 @@ export function ChartStack({
   candles,
   indicators,
   projection,
+  learned,
   eventPath,
   events,
 }: Props) {
@@ -284,6 +287,15 @@ export function ChartStack({
     if (eventPath && eventPath.length > 1) {
       draw("event-path", eventPath, token("warn"), 2, true);
     }
+    // 학습층 밴드. 사례 밴드와 색을 달리해 둘이 다른 말을 할 때 그게 보이게 한다.
+    if (learned?.available && learned.bands) {
+      for (const [key, points] of Object.entries(learned.bands)) {
+        const style = BAND_STYLE[key];
+        if (!style) continue;
+        draw(`learned-${key}`, points, `${token("up")}${style.opacity}`,
+             style.width, style.dashed);
+      }
+    }
 
     for (const [key, series] of map) {
       if (!wanted.has(key)) {
@@ -291,7 +303,7 @@ export function ChartStack({
         map.delete(key);
       }
     }
-  }, [projection, eventPath]);
+  }, [projection, learned, eventPath]);
 
   // --- 사건 마커 ---
   useEffect(() => {
@@ -419,7 +431,8 @@ export function ChartStack({
     return () => window.removeEventListener("resize", resize);
   }, [subPanes]);
 
-  const showLegend = Boolean(projection?.available) || Boolean(eventPath?.length);
+  const showLegend =
+    Boolean(projection?.available) || Boolean(eventPath?.length) || Boolean(learned?.available);
 
   return (
     <div className="charts">
@@ -438,6 +451,11 @@ export function ChartStack({
             {eventPath?.length ? (
               <span>
                 <i className="dashed" style={{ background: token("warn") }} /> 같은 사건 이후 평균
+              </span>
+            ) : null}
+            {learned?.available ? (
+              <span>
+                <i style={{ background: token("up") }} /> {learned.sourceLabel} 밴드
               </span>
             ) : null}
           </div>

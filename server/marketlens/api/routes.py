@@ -260,7 +260,27 @@ async def ask(body: AskBody) -> dict:
     result["eventSources"] = status
     result["symbol"] = body.symbol
     result["provider"] = body.provider
+    # 학습 모델이 있으면 그 곡선도 같이. 검색 기반과 나란히 놓고 봐야
+    # 둘이 다른 말을 할 때 그걸 알 수 있다.
+    result["learned"] = await _learned_layer(
+        df, body.provider, body.symbol, body.timeframe,
+        events.relevant(found, body.symbol, provider_info.market),
+    )
     return result
+
+
+async def _learned_layer(df, provider: str, symbol: str, timeframe: str,
+                         relevant) -> dict:
+    from ..forecast.ml import model as ml_model
+
+    name = model_name(provider, symbol, timeframe)
+    if ml_model.load(name) is None:
+        return {"available": False,
+                "reason": f"{symbol} {timeframe} 로 학습된 모델이 없다 — '학습' 에서 만들 수 있다"}
+    try:
+        return await asyncio.to_thread(ml_model.predict, df, name, relevant, timeframe)
+    except Exception as exc:  # noqa: BLE001 - 학습층이 없다고 답 전체가 막히면 안 된다
+        return {"available": False, "reason": str(exc)}
 
 
 class EventsBody(BaseModel):
@@ -334,20 +354,74 @@ class TrainBody(BaseModel):
     provider: str
     symbol: str
     timeframe: str = "1d"
-    limit: int = Field(2000, ge=300, le=MAX_LIMIT)
-    horizon: int = Field(10, ge=1, le=100)
+    limit: int = Field(3000, ge=600, le=MAX_LIMIT)
+    horizon: int = Field(24, ge=2, le=200)
+    window: int = Field(48, ge=8, le=400)
+    folds: int = Field(4, ge=2, le=8)
+    event_sources: list[str] | None = None
+
+
+def model_name(provider: str, symbol: str, timeframe: str) -> str:
+    return f"{provider}-{symbol}-{timeframe}".lower()
 
 
 @router.post("/train")
 async def train(body: TrainBody) -> dict:
+    """이 종목·봉에서 학습이 실제로 무언가를 더하는지 재고, 되면 저장한다."""
     from ..forecast.ml import model as ml_model
 
+    provider_info = _provider(body.provider).info
     df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
-    name = f"{body.provider}-{body.symbol}-{body.timeframe}".lower()
+    sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
+    found, status = await events.collect(df, body.symbol, provider_info.market, sources)
+    relevant = events.relevant(found, body.symbol, provider_info.market)
+
+    name = model_name(body.provider, body.symbol, body.timeframe)
     try:
-        report = await asyncio.to_thread(ml_model.train, df, name, body.horizon)
+        report = await asyncio.to_thread(
+            ml_model.train, df, name, relevant, body.horizon, body.window, body.folds
+        )
     except ml_model.MissingDependency as exc:
         raise HTTPException(501, str(exc)) from exc
-    except ValueError as exc:
+    except (ValueError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
-    return {"model": name, "report": report}
+    return {"model": name, "report": report, "eventSources": status}
+
+
+@router.get("/models")
+def models() -> dict:
+    from ..forecast.ml import model as ml_model
+
+    return {"models": ml_model.available()}
+
+
+class LearnedBody(BaseModel):
+    provider: str
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = Field(3000, ge=600, le=MAX_LIMIT)
+    event_sources: list[str] | None = None
+
+
+@router.post("/learned")
+async def learned(body: LearnedBody) -> dict:
+    """학습 모델(없으면 변동성 기준선)의 분위수 곡선."""
+    from ..forecast.ml import model as ml_model
+
+    name = model_name(body.provider, body.symbol, body.timeframe)
+    if ml_model.load(name) is None:
+        raise HTTPException(
+            404,
+            f"{body.symbol} {body.timeframe} 로 학습된 모델이 없다 — 먼저 학습해야 한다",
+        )
+    provider_info = _provider(body.provider).info
+    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
+    sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
+    found, _ = await events.collect(df, body.symbol, provider_info.market, sources)
+    relevant = events.relevant(found, body.symbol, provider_info.market)
+
+    result = await asyncio.to_thread(
+        ml_model.predict, df, name, relevant, body.timeframe
+    )
+    result["symbol"] = body.symbol
+    return result

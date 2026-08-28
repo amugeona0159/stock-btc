@@ -17,6 +17,8 @@ const SHOTS = [
   { name: "predict", width: 1600, height: 950, indicators: [], solo: true,
     ask: "급락 나온 뒤 3일 동안 어떻게 움직였어?" },
   { name: "research", width: 1600, height: 950, indicators: [], tab: "근거" },
+  // 학습 성적표는 "이 도구가 자기 한계를 말하는가" 를 보는 화면이다.
+  { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습" },
 ];
 
 mkdirSync(OUT, { recursive: true });
