@@ -15,6 +15,7 @@ import {
   SituationCard,
 } from "./components/Panels";
 import { ScreenPanel } from "./components/ScreenPanel";
+import { SymbolPicker } from "./components/SymbolPicker";
 import { useLive } from "./useLive";
 import type {
   AskResult,
@@ -55,7 +56,7 @@ export default function App() {
   const [provider, setProvider] = useState("binance");
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [timeframe, setTimeframe] = useState("1h");
-  const [draft, setDraft] = useState("BTCUSDT");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("predict");
 
   const [forecast, setForecast] = useState<Forecast | null>(null);
@@ -204,19 +205,30 @@ export default function App() {
     [provider, symbol, timeframe],
   );
 
-  const submitSymbol = (event: React.FormEvent) => {
-    event.preventDefault();
-    const next = draft.trim();
-    if (next) setSymbol(next.toUpperCase());
-  };
+  /** 종목을 고르는 **유일한** 길. 시장·종목·봉을 한 핸들러 안에서 같이 바꾼다.
+   *
+   * 흩어져 있으면 어긋난다 — 예전에 추천 목록에서 고른 종목이 헤더에는 안 따라왔다.
+   * 세 setState 가 같은 이벤트 안에 있으면 React 가 한 번으로 묶어, 여기에 매달린
+   * 다섯 이펙트(실시간 재구독·분석·사건·상태 초기화·학습예측)도 한 번만 돈다.
+   */
+  const selectSymbol = useCallback(
+    (nextProvider: string, nextSymbol: string) => {
+      const info = providers.find((p) => p.key === nextProvider);
+      setProvider(nextProvider);
+      setSymbol(nextSymbol);
+      // 새 시장이 지금 봉을 안 주면 일봉으로. 목록 첫 항목으로 떨어지면 토스는
+      // 1분봉이 열려 사람이 아무것도 못 읽는다.
+      if (info && !info.timeframes.includes(timeframe)) {
+        setTimeframe(info.timeframes.includes("1d") ? "1d" : info.timeframes.at(-1)!);
+      }
+      setPickerOpen(false);
+    },
+    [providers, timeframe],
+  );
 
   const switchProvider = (key: string) => {
     const info = providers.find((p) => p.key === key);
-    setProvider(key);
-    const first = info?.defaultSymbols[0] ?? "";
-    setSymbol(first);
-    setDraft(first);
-    if (info && !info.timeframes.includes(timeframe)) setTimeframe(info.timeframes[0]);
+    selectSymbol(key, info?.defaultSymbols[0] ?? "");
   };
 
   const last = live.candles.at(-1);
@@ -227,6 +239,15 @@ export default function App() {
 
   return (
     <div className="app">
+      {pickerOpen && (
+        <SymbolPicker
+          providers={providers}
+          provider={provider}
+          onPick={selectSymbol}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
+
       <header className="topbar">
         <span className="brand">market-lens</span>
 
@@ -239,14 +260,13 @@ export default function App() {
           ))}
         </select>
 
-        <form onSubmit={submitSymbol}>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="종목"
-            style={{ width: 120 }}
-          />
-        </form>
+        {/* 자유입력 대신 목록을 연다. 예전에는 코드를 정확히 쳐야 했고, 틀려도
+            그 자리에서는 아무 말이 없었다. `<b>` 를 쓰면 안 된다 — 스크린샷
+            스크립트가 `.topbar b` 로 시세 도착을 판정한다. */}
+        <button onClick={() => setPickerOpen(true)} title="종목 고르기">
+          {symbol || "종목"}{" "}
+          <span style={{ color: "var(--text-dim)" }}>찾기</span>
+        </button>
 
         {timeframes.map((tf) => (
           <button key={tf} data-active={tf === timeframe} onClick={() => setTimeframe(tf)}>
@@ -332,7 +352,12 @@ export default function App() {
         )}
 
         {tab === "screen" && (
-          <ScreenPanel provider={provider} timeframe={timeframe} onPick={setSymbol} />
+          <ScreenPanel
+            provider={provider}
+            providers={providers}
+            onPick={(s) => selectSymbol(provider, s)}
+            onProvider={(key) => switchProvider(key)}
+          />
         )}
 
         {tab === "learn" && (

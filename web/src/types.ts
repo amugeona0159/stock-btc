@@ -138,6 +138,8 @@ export interface ProviderInfo {
   available: boolean;
   reason: string;
   defaultSymbols: string[];
+  /** 전체 종목 목록을 줄 수 있나. false 면 '검색만 되는 시장'이다. */
+  listsSymbols: boolean;
 }
 
 export interface Requested {
@@ -438,5 +440,37 @@ export interface ScreenResult {
   provider?: string;
   timeframe?: string;
   measuredAt?: string | null;
+  /** 안 잰 시장일 때, 재 둔 시장 목록. 화면이 그리로 넘어갈 수 있게. */
+  measuredProviders?: string[];
+  measuredTimeframe?: string;
   skipped?: Array<{ symbol: string; reason: string }>;
+}
+
+/** 종목 한 벌. 목록과 검색이 같은 모양을 쓴다. */
+export interface SymbolItem {
+  symbol: string;
+  label: string;
+  name: string;
+  market: string;
+  kind: string;
+  /** 검색 결과에만 붙는다. */
+  provider?: string;
+  providerName?: string;
+  /** 같은 종목을 주는 다른 시장. 한 줄로 접은 뒤 여기 남긴다. */
+  also?: string[];
+}
+
+export interface SymbolList {
+  provider: string;
+  listed: boolean;
+  count: number;
+  items: SymbolItem[];
+  reason: string;
+}
+
+export interface SearchResult {
+  q: string;
+  groups: Array<{ provider: string; name: string; market: string; items: SymbolItem[] }>;
+  /** 왜 빠졌는지. 조용히 빠지면 "그 시장엔 없다"고 잘못 배우게 된다. */
+  sources: Record<string, { ok: boolean; count: number; error: string }>;
 }

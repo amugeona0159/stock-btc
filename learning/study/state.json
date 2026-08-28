@@ -1,0 +1,743 @@
+{
+  "rounds": 68,
+  "seen": {
+    "binance:1d:1": 5,
+    "binance:1d:10": 5,
+    "binance:1d:2": 5,
+    "binance:1d:3": 5,
+    "binance:1d:5": 4,
+    "binance:1h:12": 4,
+    "binance:1h:3": 4,
+    "binance:1h:6": 4,
+    "toss_kr:1d:1": 4,
+    "toss_kr:1d:3": 4,
+    "toss_kr:1d:5": 4,
+    "yahoo:1d:1": 4,
+    "yahoo:1d:10": 4,
+    "yahoo:1d:2": 4,
+    "yahoo:1d:3": 4,
+    "yahoo:1d:5": 4
+  },
+  "history": [
+    {
+      "round": 1,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T15:54:52+00:00",
+      "verdicts": 6,
+      "seconds": 25.3,
+      "directionHit": 0.3333333333333333
+    },
+    {
+      "round": 2,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T15:55:03+00:00",
+      "verdicts": 6,
+      "seconds": 11.0,
+      "directionHit": 0.4
+    },
+    {
+      "round": 3,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T15:55:12+00:00",
+      "verdicts": 6,
+      "seconds": 8.7,
+      "directionHit": 0.2
+    },
+    {
+      "round": 4,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T15:55:21+00:00",
+      "verdicts": 6,
+      "seconds": 9.6,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 5,
+      "target": "binance:1d:5",
+      "at": "2026-08-28T15:55:32+00:00",
+      "verdicts": 6,
+      "seconds": 10.9,
+      "directionHit": 0.6
+    },
+    {
+      "round": 6,
+      "target": "binance:1h:12",
+      "at": "2026-08-28T15:55:54+00:00",
+      "verdicts": 6,
+      "seconds": 21.7,
+      "directionHit": 0.8333333333333334
+    },
+    {
+      "round": 7,
+      "target": "binance:1h:3",
+      "at": "2026-08-28T15:56:10+00:00",
+      "verdicts": 6,
+      "seconds": 15.5,
+      "directionHit": 0.3333333333333333
+    },
+    {
+      "round": 8,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T15:56:26+00:00",
+      "verdicts": 6,
+      "seconds": 16.8,
+      "directionHit": 0.8
+    },
+    {
+      "round": 9,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T15:57:34+00:00",
+      "verdicts": 6,
+      "seconds": 67.7,
+      "directionHit": NaN
+    },
+    {
+      "round": 10,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T15:58:30+00:00",
+      "verdicts": 6,
+      "seconds": 55.7,
+      "directionHit": 0.5
+    },
+    {
+      "round": 11,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T15:59:20+00:00",
+      "verdicts": 0,
+      "seconds": 50.1,
+      "directionHit": null
+    },
+    {
+      "round": 12,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T16:00:17+00:00",
+      "verdicts": 36,
+      "seconds": 39.2,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 13,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T16:01:03+00:00",
+      "verdicts": 36,
+      "seconds": 45.7,
+      "directionHit": 0.696969696969697
+    },
+    {
+      "round": 14,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T16:01:36+00:00",
+      "verdicts": 36,
+      "seconds": 32.9,
+      "directionHit": 0.7142857142857143
+    },
+    {
+      "round": 15,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T16:02:16+00:00",
+      "verdicts": 36,
+      "seconds": 39.4,
+      "directionHit": 0.625
+    },
+    {
+      "round": 16,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T16:03:02+00:00",
+      "verdicts": 36,
+      "seconds": 46.1,
+      "directionHit": 0.7419354838709677
+    },
+    {
+      "round": 17,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T16:03:57+00:00",
+      "verdicts": 36,
+      "seconds": 54.8,
+      "directionHit": 0.28
+    },
+    {
+      "round": 18,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T16:04:41+00:00",
+      "verdicts": 36,
+      "seconds": 44.0,
+      "directionHit": 0.5151515151515151
+    },
+    {
+      "round": 19,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T16:05:11+00:00",
+      "verdicts": 36,
+      "seconds": 30.4,
+      "directionHit": 0.5217391304347826
+    },
+    {
+      "round": 20,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T16:05:49+00:00",
+      "verdicts": 36,
+      "seconds": 37.4,
+      "directionHit": 0.4482758620689655
+    },
+    {
+      "round": 21,
+      "target": "binance:1d:5",
+      "at": "2026-08-28T16:06:33+00:00",
+      "verdicts": 36,
+      "seconds": 43.4,
+      "directionHit": 0.53125
+    },
+    {
+      "round": 22,
+      "target": "binance:1h:12",
+      "at": "2026-08-28T16:08:08+00:00",
+      "verdicts": 36,
+      "seconds": 95.0,
+      "directionHit": 0.5714285714285714
+    },
+    {
+      "round": 23,
+      "target": "binance:1h:3",
+      "at": "2026-08-28T16:09:52+00:00",
+      "verdicts": 36,
+      "seconds": 76.2,
+      "directionHit": 0.5769230769230769
+    },
+    {
+      "round": 24,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T16:11:17+00:00",
+      "verdicts": 36,
+      "seconds": 84.3,
+      "directionHit": 0.6363636363636364
+    },
+    {
+      "round": 25,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T16:12:40+00:00",
+      "verdicts": 36,
+      "seconds": 82.9,
+      "directionHit": NaN
+    },
+    {
+      "round": 26,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T16:14:03+00:00",
+      "verdicts": 36,
+      "seconds": 83.3,
+      "directionHit": 0.42857142857142855
+    },
+    {
+      "round": 27,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T16:14:49+00:00",
+      "verdicts": 36,
+      "seconds": 45.7,
+      "directionHit": 0.5333333333333333
+    },
+    {
+      "round": 28,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T16:15:22+00:00",
+      "verdicts": 36,
+      "seconds": 32.5,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 29,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T16:16:10+00:00",
+      "verdicts": 36,
+      "seconds": 47.9,
+      "directionHit": 0.696969696969697
+    },
+    {
+      "round": 30,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T16:16:43+00:00",
+      "verdicts": 36,
+      "seconds": 33.1,
+      "directionHit": 0.7142857142857143
+    },
+    {
+      "round": 31,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T16:17:24+00:00",
+      "verdicts": 36,
+      "seconds": 40.6,
+      "directionHit": 0.625
+    },
+    {
+      "round": 32,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T16:18:10+00:00",
+      "verdicts": 36,
+      "seconds": 45.9,
+      "directionHit": 0.7419354838709677
+    },
+    {
+      "round": 33,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T16:18:52+00:00",
+      "verdicts": 36,
+      "seconds": 41.9,
+      "directionHit": 0.28
+    },
+    {
+      "round": 34,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T16:19:39+00:00",
+      "verdicts": 36,
+      "seconds": 46.7,
+      "directionHit": 0.5151515151515151
+    },
+    {
+      "round": 35,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T16:20:10+00:00",
+      "verdicts": 36,
+      "seconds": 30.7,
+      "directionHit": 0.5217391304347826
+    },
+    {
+      "round": 36,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T16:20:48+00:00",
+      "verdicts": 36,
+      "seconds": 38.0,
+      "directionHit": 0.4482758620689655
+    },
+    {
+      "round": 37,
+      "target": "binance:1d:5",
+      "at": "2026-08-28T16:21:33+00:00",
+      "verdicts": 36,
+      "seconds": 45.0,
+      "directionHit": 0.53125
+    },
+    {
+      "round": 38,
+      "target": "binance:1h:12",
+      "at": "2026-08-28T16:23:02+00:00",
+      "verdicts": 36,
+      "seconds": 88.1,
+      "directionHit": 0.5714285714285714
+    },
+    {
+      "round": 39,
+      "target": "binance:1h:3",
+      "at": "2026-08-28T16:24:21+00:00",
+      "verdicts": 36,
+      "seconds": 79.3,
+      "directionHit": 0.5769230769230769
+    },
+    {
+      "round": 40,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T16:25:48+00:00",
+      "verdicts": 36,
+      "seconds": 87.1,
+      "directionHit": 0.6363636363636364
+    },
+    {
+      "round": 41,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T16:25:58+00:00",
+      "verdicts": 0,
+      "seconds": 9.1,
+      "directionHit": null
+    },
+    {
+      "round": 42,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T16:26:07+00:00",
+      "verdicts": 0,
+      "seconds": 9.4,
+      "directionHit": null
+    },
+    {
+      "round": 43,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T16:26:17+00:00",
+      "verdicts": 0,
+      "seconds": 9.4,
+      "directionHit": null
+    },
+    {
+      "round": 44,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T16:26:45+00:00",
+      "verdicts": 36,
+      "seconds": 28.1,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 45,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T16:27:32+00:00",
+      "verdicts": 36,
+      "seconds": 46.6,
+      "directionHit": 0.696969696969697
+    },
+    {
+      "round": 46,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T16:28:06+00:00",
+      "verdicts": 36,
+      "seconds": 33.6,
+      "directionHit": 0.7142857142857143
+    },
+    {
+      "round": 47,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T16:28:46+00:00",
+      "verdicts": 36,
+      "seconds": 39.9,
+      "directionHit": 0.625
+    },
+    {
+      "round": 48,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T16:29:33+00:00",
+      "verdicts": 36,
+      "seconds": 47.2,
+      "directionHit": 0.7419354838709677
+    },
+    {
+      "round": 49,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T16:29:58+00:00",
+      "verdicts": 36,
+      "seconds": 24.6,
+      "directionHit": 0.28
+    },
+    {
+      "round": 50,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T16:30:46+00:00",
+      "verdicts": 36,
+      "seconds": 47.4,
+      "directionHit": 0.5151515151515151
+    },
+    {
+      "round": 51,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T16:31:17+00:00",
+      "verdicts": 36,
+      "seconds": 31.7,
+      "directionHit": 0.5217391304347826
+    },
+    {
+      "round": 52,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T16:31:55+00:00",
+      "verdicts": 36,
+      "seconds": 37.7,
+      "directionHit": 0.4482758620689655
+    },
+    {
+      "round": 53,
+      "target": "binance:1d:5",
+      "at": "2026-08-28T16:32:39+00:00",
+      "verdicts": 36,
+      "seconds": 43.7,
+      "directionHit": 0.53125
+    },
+    {
+      "round": 54,
+      "target": "binance:1h:12",
+      "at": "2026-08-28T16:34:05+00:00",
+      "verdicts": 36,
+      "seconds": 85.5,
+      "directionHit": 0.5714285714285714
+    },
+    {
+      "round": 55,
+      "target": "binance:1h:3",
+      "at": "2026-08-28T16:35:25+00:00",
+      "verdicts": 36,
+      "seconds": 80.1,
+      "directionHit": 0.5769230769230769
+    },
+    {
+      "round": 56,
+      "target": "binance:1h:6",
+      "at": "2026-08-28T16:36:54+00:00",
+      "verdicts": 36,
+      "seconds": 88.3,
+      "directionHit": 0.6363636363636364
+    },
+    {
+      "round": 57,
+      "target": "toss_kr:1d:1",
+      "at": "2026-08-28T16:37:03+00:00",
+      "verdicts": 0,
+      "seconds": 9.2,
+      "directionHit": null
+    },
+    {
+      "round": 58,
+      "target": "toss_kr:1d:3",
+      "at": "2026-08-28T16:37:13+00:00",
+      "verdicts": 0,
+      "seconds": 9.1,
+      "directionHit": null
+    },
+    {
+      "round": 59,
+      "target": "toss_kr:1d:5",
+      "at": "2026-08-28T16:37:22+00:00",
+      "verdicts": 0,
+      "seconds": 9.1,
+      "directionHit": null
+    },
+    {
+      "round": 60,
+      "target": "yahoo:1d:1",
+      "at": "2026-08-28T16:37:49+00:00",
+      "verdicts": 36,
+      "seconds": 26.4,
+      "directionHit": 0.6666666666666666
+    },
+    {
+      "round": 61,
+      "target": "yahoo:1d:10",
+      "at": "2026-08-28T16:38:35+00:00",
+      "verdicts": 36,
+      "seconds": 46.1,
+      "directionHit": 0.696969696969697
+    },
+    {
+      "round": 62,
+      "target": "yahoo:1d:2",
+      "at": "2026-08-28T16:39:07+00:00",
+      "verdicts": 36,
+      "seconds": 32.4,
+      "directionHit": 0.7142857142857143
+    },
+    {
+      "round": 63,
+      "target": "yahoo:1d:3",
+      "at": "2026-08-28T16:39:50+00:00",
+      "verdicts": 36,
+      "seconds": 42.0,
+      "directionHit": 0.625
+    },
+    {
+      "round": 64,
+      "target": "yahoo:1d:5",
+      "at": "2026-08-28T16:40:36+00:00",
+      "verdicts": 36,
+      "seconds": 46.2,
+      "directionHit": 0.7419354838709677
+    },
+    {
+      "round": 65,
+      "target": "binance:1d:1",
+      "at": "2026-08-28T16:41:01+00:00",
+      "verdicts": 36,
+      "seconds": 24.7,
+      "directionHit": 0.28
+    },
+    {
+      "round": 66,
+      "target": "binance:1d:10",
+      "at": "2026-08-28T16:41:46+00:00",
+      "verdicts": 36,
+      "seconds": 44.5,
+      "directionHit": 0.5151515151515151
+    },
+    {
+      "round": 67,
+      "target": "binance:1d:2",
+      "at": "2026-08-28T16:42:17+00:00",
+      "verdicts": 36,
+      "seconds": 31.3,
+      "directionHit": 0.5217391304347826
+    },
+    {
+      "round": 68,
+      "target": "binance:1d:3",
+      "at": "2026-08-28T16:42:55+00:00",
+      "verdicts": 36,
+      "seconds": 37.7,
+      "directionHit": 0.4482758620689655
+    }
+  ],
+  "analysis": {
+    "ready": true,
+    "tried": 29,
+    "wonDiscover": 22,
+    "survivedConfirm": 6,
+    "baseDiscover": {
+      "n": 868,
+      "coverage": 1.0,
+      "directionHit": 0.5541,
+      "errorAtr": 1.2535,
+      "score": 1.5953
+    },
+    "baseConfirm": {
+      "n": 289,
+      "coverage": 1.0,
+      "directionHit": 0.6021,
+      "errorAtr": 1.5658,
+      "score": 1.7353
+    },
+    "survivors": [
+      {
+        "rule": {
+          "condition": "band_atr",
+          "op": "<",
+          "threshold": 2.535095
+        },
+        "label": "band_atr < 2.535 이면 기권",
+        "discover": {
+          "n": 608,
+          "coverage": 0.7005,
+          "directionHit": 0.5855,
+          "errorAtr": 1.4161,
+          "score": 2.1089
+        },
+        "confirm": {
+          "n": 236,
+          "coverage": 0.8166,
+          "directionHit": 0.6229,
+          "errorAtr": 1.7018,
+          "score": 1.8877
+        }
+      },
+      {
+        "rule": {
+          "condition": "range_position",
+          "op": "<",
+          "threshold": -0.167249
+        },
+        "label": "range_position < -0.1672 이면 기권",
+        "discover": {
+          "n": 580,
+          "coverage": 0.6682,
+          "directionHit": 0.581,
+          "errorAtr": 1.3036,
+          "score": 1.9516
+        },
+        "confirm": {
+          "n": 193,
+          "coverage": 0.6678,
+          "directionHit": 0.658,
+          "errorAtr": 1.4249,
+          "score": 2.1954
+        }
+      },
+      {
+        "rule": {
+          "condition": "analog_corr_max",
+          "op": ">",
+          "threshold": 0.948507
+        },
+        "label": "analog_corr_max > 0.9485 이면 기권",
+        "discover": {
+          "n": 586,
+          "coverage": 0.6751,
+          "directionHit": 0.5768,
+          "errorAtr": 1.2738,
+          "score": 1.8589
+        },
+        "confirm": {
+          "n": 238,
+          "coverage": 0.8235,
+          "directionHit": 0.6218,
+          "errorAtr": 1.6487,
+          "score": 1.8798
+        }
+      },
+      {
+        "rule": {
+          "condition": "attention_z",
+          "op": "<",
+          "threshold": -0.295468
+        },
+        "label": "attention_z < -0.2955 이면 기권",
+        "discover": {
+          "n": 580,
+          "coverage": 0.6682,
+          "directionHit": 0.5759,
+          "errorAtr": 1.3512,
+          "score": 1.827
+        },
+        "confirm": {
+          "n": 143,
+          "coverage": 0.4948,
+          "directionHit": 0.6713,
+          "errorAtr": 1.4194,
+          "score": 2.0488
+        }
+      },
+      {
+        "rule": {
+          "condition": "rsi",
+          "op": "<",
+          "threshold": -0.036072
+        },
+        "label": "rsi < -0.03607 이면 기권",
+        "discover": {
+          "n": 580,
+          "coverage": 0.6682,
+          "directionHit": 0.5741,
+          "errorAtr": 1.2823,
+          "score": 1.7855
+        },
+        "confirm": {
+          "n": 170,
+          "coverage": 0.5882,
+          "directionHit": 0.6353,
+          "errorAtr": 1.3859,
+          "score": 1.764
+        }
+      }
+    ],
+    "holdout": {
+      "base": {
+        "n": 245,
+        "coverage": 1.0,
+        "directionHit": 0.6163,
+        "errorAtr": 2.1815,
+        "score": 1.8208
+      },
+      "withRule": {
+        "n": 173,
+        "coverage": 0.7061,
+        "directionHit": 0.6416,
+        "errorAtr": 2.4293,
+        "score": 1.8627
+      },
+      "label": "analog_corr_max > 0.9489 이면 기권"
+    }
+  },
+  "overall": {
+    "n": 1896,
+    "directionN": 1447,
+    "directionHit": 0.5791292328956462,
+    "bandHit": 0.7837552742616034,
+    "errorAtr": 1.1839879228365613,
+    "baselineErrorAtr": 1.2118772125566764,
+    "beatsBaseline": 0.027889289720114813
+  },
+  "holdoutLooks": 4,
+  "lastHoldout": {
+    "base": {
+      "n": 245,
+      "coverage": 1.0,
+      "directionHit": 0.6163,
+      "errorAtr": 2.1815,
+      "score": 1.8208
+    },
+    "withRule": {
+      "n": 173,
+      "coverage": 0.7061,
+      "directionHit": 0.6416,
+      "errorAtr": 2.4293,
+      "score": 1.8627
+    },
+    "label": "analog_corr_max > 0.9489 이면 기권"
+  }
+}

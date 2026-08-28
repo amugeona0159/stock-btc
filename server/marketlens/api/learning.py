@@ -18,7 +18,10 @@ from pathlib import Path
 # 이 PC 에서 돈 기록이 있으면 그쪽이 맞다 — 저장소의 `learning/` 은 GitHub Actions 가
 # 쓴 것이고, 여기 모델은 PC 가 구운 것이다. 순서를 뒤집으면 화면의 성적이 실제로 서빙
 # 중인 모델과 어긋난다.
-DIRS = (Path("learning-local"), Path("learning"))
+# 저장소 뿌리 기준 **절대경로**. 상대경로로 두면 서버를 뿌리 밖에서 띄웠을 때
+# 조용히 못 찾아 '아직 안 쟀다'가 뜬다 — 원인이 안 보이는 종류의 고장이다.
+_ROOT = Path(__file__).resolve().parents[3]
+DIRS = (_ROOT / "learning-local", _ROOT / "learning")
 
 
 def _dir() -> Path | None:

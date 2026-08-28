@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { screen } from "../api";
-import type { ScreenResult } from "../types";
+import type { ProviderInfo, ScreenResult } from "../types";
+
+// **추천은 언제나 일봉으로 잰다.** "하루/이틀/사흘"은 일봉 개념이고, 팩터의 IC 부호도
+// 일봉으로 쟀다. 위 차트의 봉을 그대로 넘기면 1시간봉 화면에서 "하루 뒤"라고 써 놓고
+// 실제로는 1시간 뒤를 재게 된다 — 기본 화면이 1시간봉이라 늘 그 상태였다.
+const TIMEFRAME = "1d";
 
 // 사용자가 물은 그대로 — 하루·이틀·사흘. 봉 단위가 일봉일 때의 이야기다.
 const DAYS = [
@@ -18,11 +23,12 @@ function signed(value: number | null | undefined, digits = 2): string {
 
 interface Props {
   provider: string;
-  timeframe: string;
+  providers: ProviderInfo[];
   onPick: (symbol: string) => void;
+  onProvider: (key: string) => void;
 }
 
-export function ScreenPanel({ provider, timeframe, onPick }: Props) {
+export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) {
   const [horizon, setHorizon] = useState(1);
   const [result, setResult] = useState<ScreenResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -32,11 +38,11 @@ export function ScreenPanel({ provider, timeframe, onPick }: Props) {
     setBusy(true);
     setError(null);
     screen
-      .rank({ provider, timeframe, horizon, limit: 10 })
+      .rank({ provider, timeframe: TIMEFRAME, horizon, limit: 10 })
       .then(setResult)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false));
-  }, [provider, timeframe, horizon]);
+  }, [provider, horizon]);
 
   // 종목·봉·지평이 바뀌면 다시 뽑는다. 이 화면은 목록이 전부라 빈 채로 두면 쓸모가 없다.
   useEffect(() => {
@@ -54,6 +60,9 @@ export function ScreenPanel({ provider, timeframe, onPick }: Props) {
           같은 시각에 후보 종목을 팩터로 줄 세운 순위와, 그 뒤 실제로 간 결과의 순위가
           얼마나 맞았는지를 먼저 재고(<b>랭크 IC</b>), <b>폴드마다 부호가 일관된 축만</b>
           점수에 넣는다. 축의 부호도 미리 정하지 않고 잰 값을 따른다.
+        </p>
+        <p className="note" style={{ marginTop: 0 }}>
+          추천은 <b>일봉</b>으로 잰다. 위 차트의 봉과 무관하다.
         </p>
         <div className="chips">
           {DAYS.map((item) => (
@@ -73,7 +82,21 @@ export function ScreenPanel({ provider, timeframe, onPick }: Props) {
         </button>
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
         {result && !result.available && (
-          <p className="note warn">{result.reason}</p>
+          <>
+            <p className="note warn">{result.reason}</p>
+            {(result.measuredProviders?.length ?? 0) > 0 && (
+              <>
+                <div className="group-label">지금 재 둔 시장</div>
+                <div className="chips">
+                  {result.measuredProviders!.map((key) => (
+                    <button key={key} className="chip" onClick={() => onProvider(key)}>
+                      {providers.find((p) => p.key === key)?.name ?? key}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
       </section>
 

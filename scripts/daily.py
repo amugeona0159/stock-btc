@@ -37,6 +37,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
 
+from dotenv import load_dotenv                                    # noqa: E402
+
+# 프로바이더가 키를 읽기 **전에** 올린다. 스크립트는 `api/app.py` 를 안 거치므로
+# 여기서 직접 부르지 않으면 토스가 조용히 "키가 비어 있다"로 빠진다 — 실제로 그랬다.
+load_dotenv(ROOT / ".env")
+
 # 기록을 어디에 남길지. 저장소에 올라가는 `learning/` 은 **GitHub Actions 가 쓴다.**
 # 내 PC 는 `MARKET_LENS_LEARNING=learning-local` 로 옮겨 쓴다(gitignore) — 둘이 같은
 # 파일에 쓰면 매일 아침 pull 이 충돌한다. 대신 PC 쪽은 토스(국내주식)까지 학습한다.

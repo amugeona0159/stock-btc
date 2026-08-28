@@ -13,6 +13,7 @@ import pandas as pd
 
 from ..core.candle import to_frame
 from ..core.timeframe import SUPPORTED
+from . import base
 from .base import Provider, ProviderError, ProviderInfo, register
 
 DATA_DIR = Path(os.environ.get("MARKET_LENS_DATA", "data")).resolve()
@@ -76,12 +77,12 @@ class CsvProvider(Provider):
             raise ProviderError(f"{path} 에서 캔들을 읽지 못했다")
         return to_frame(rows[-limit:])
 
-    async def search(self, query: str) -> list[dict]:
+    async def catalog(self) -> list[dict]:
+        """로컬 디렉터리에 있는 것 전부. 캐시가 필요 없을 만큼 작고 즉시 읽힌다."""
         if not self.available:
             return []
-        needle = query.lower()
         found = {p.name.rsplit("_", 1)[0] for p in DATA_DIR.glob("*.csv")}
-        return [{"symbol": s, "label": s} for s in sorted(found) if needle in s.lower()][:30]
+        return [base.item(s, "", "csv", "file") for s in sorted(found)]
 
 
 def _to_ms(value: str) -> int:

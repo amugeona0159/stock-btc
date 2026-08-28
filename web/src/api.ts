@@ -27,9 +27,16 @@ export const api = {
       defaults: Requested[];
     }>("/api/indicators"),
 
-  search: (provider: string, q: string) =>
-    get<{ results: Array<{ symbol: string; label: string }> }>(
-      `/api/search?provider=${encodeURIComponent(provider)}&q=${encodeURIComponent(q)}`,
+  /** 그 시장의 전체 종목. 목록이 없는 시장도 200 으로 사유를 담아 온다. */
+  symbols: (provider: string) =>
+    get<import("./types").SymbolList>(
+      `/api/symbols?provider=${encodeURIComponent(provider)}`),
+
+  /** `provider` 를 안 주면 **전 시장을 한꺼번에** 찾는다. */
+  search: (q: string, provider?: string) =>
+    get<import("./types").SearchResult>(
+      `/api/search?q=${encodeURIComponent(q)}` +
+        (provider ? `&provider=${encodeURIComponent(provider)}` : ""),
     ),
 
   analyze: (body: {

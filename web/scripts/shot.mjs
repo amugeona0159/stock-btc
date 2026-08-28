@@ -24,6 +24,9 @@ const SHOTS = [
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
     timeframe: "1d" },
+  // 종목 고르기. 4,300종목을 그리면 브라우저가 멎으므로 잘라 놓았는데, 실제로
+  // 잘렸는지와 한글 종목명이 읽히는지는 그림으로만 확인된다.
+  { name: "symbols", width: 1600, height: 950, indicators: [], picker: "삼성" },
 ];
 
 mkdirSync(OUT, { recursive: true });
@@ -73,6 +76,17 @@ for (const shot of SHOTS) {
     // 유사구간 검색은 몇 초 걸린다. 답이 뜰 때까지 기다린다.
     await page.waitForSelector(".answer", { timeout: 90000 });
     await page.waitForTimeout(1200);
+  }
+
+  if (shot.picker) {
+    // 헤더 종목 버튼 → 전체화면 목록. 국내주식 목록은 첫 적재가 오래 걸린다.
+    await page.locator(".topbar button", { hasText: "찾기" }).first().click();
+    await page.waitForSelector(".picker", { timeout: 10000 });
+    await page.locator(".picker-markets .picker-row", { hasText: "국내주식" })
+      .first().click();
+    await page.waitForTimeout(9000);
+    await page.fill(".picker-search input", shot.picker);
+    await page.waitForTimeout(3500);
   }
 
   await page.waitForTimeout(1800);

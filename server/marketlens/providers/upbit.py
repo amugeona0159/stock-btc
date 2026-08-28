@@ -4,6 +4,7 @@ Binance 와 달리 실시간은 체결(trade)만 온다. 봉은 `CandleAggregato
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from datetime import datetime, timezone
@@ -12,10 +13,11 @@ from typing import AsyncIterator
 import httpx
 import pandas as pd
 
+from . import base
 from ..core.candle import Candle, to_frame
 from ..core.timeframe import to_ms
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
-                   SymbolNotFound, register)
+                   SymbolCatalog, SymbolNotFound, register)
 
 REST = "https://api.upbit.com/v1"
 WS = "wss://api.upbit.com/websocket/v1"
@@ -31,6 +33,12 @@ def _parse_utc(text: str) -> int:
     return int(datetime.fromisoformat(text).replace(tzinfo=timezone.utc).timestamp() * 1000)
 
 
+# 쪽 사이 대기와 429 재시도. 3천봉이면 15쪽이라 몰아치면 바로 한도에 걸린다.
+PAGE_PAUSE = 0.12
+MAX_RETRIES = 3
+RETRY_WAIT = 1.5
+
+
 class UpbitProvider(Provider):
     info = ProviderInfo(
         key="upbit",
@@ -40,10 +48,11 @@ class UpbitProvider(Provider):
         requires_key=False,
         note="원화 마켓. 실시간은 체결만 와서 봉은 서버가 접는다",
         default_symbols=("KRW-BTC", "KRW-ETH", "KRW-XRP"),
+        lists_symbols=True,
     )
 
     def __init__(self) -> None:
-        self._markets: list[dict] | None = None
+        self._catalog = SymbolCatalog()
 
     def _endpoint(self, timeframe: str) -> tuple[str, dict]:
         if timeframe in MINUTE_UNITS:
@@ -58,6 +67,7 @@ class UpbitProvider(Provider):
         now = int(time.time() * 1000)
         rows: list[dict] = []
         before: str | None = None
+        tries = 0
 
         # 최신부터 200개씩 거슬러 올라간다. `to` 는 배타적이라 그대로 이어 붙으면 된다.
         async with httpx.AsyncClient(timeout=15.0) as client:
@@ -75,6 +85,12 @@ class UpbitProvider(Provider):
                         raise SymbolNotFound(
                             f"Upbit 에 '{symbol.upper()}' 마켓이 없다 (예: KRW-BTC)"
                         ) from exc
+                    # 429 는 "잠깐 쉬라"는 말이지 고장이 아니다. 3천봉을 받으려면
+                    # 15쪽을 이어 받아야 해서 한도에 잘 걸린다 — 물러섰다 다시 친다.
+                    if exc.response.status_code == 429 and tries < MAX_RETRIES:
+                        tries += 1
+                        await asyncio.sleep(RETRY_WAIT * tries)
+                        continue
                     raise ProviderError(
                         f"Upbit 응답 오류 ({exc.response.status_code})"
                     ) from exc
@@ -82,10 +98,13 @@ class UpbitProvider(Provider):
                     raise ProviderError(f"Upbit 에 연결하지 못했다: {exc}") from exc
                 if not batch:
                     break
+                tries = 0
                 rows = [self._row(c, step, now) for c in reversed(batch)] + rows
                 before = batch[-1]["candle_date_time_utc"]
                 if len(batch) < params["count"]:
                     break
+                # 쪽 사이에 숨을 준다. 업비트는 초당 요청 수를 본다.
+                await asyncio.sleep(PAGE_PAUSE)
 
         return to_frame(rows[-limit:])
 
@@ -126,23 +145,26 @@ class UpbitProvider(Provider):
                 ):
                     yield candle
 
-    async def search(self, query: str) -> list[dict]:
-        if self._markets is None:
+    async def catalog(self) -> list[dict]:
+        """업비트 전체 마켓(약 850). KRW 마켓을 먼저 담아 검색 순서를 살린다."""
+        async def build() -> list[dict]:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 try:
-                    res = await client.get(f"{REST}/market/all", params={"isDetails": "false"})
+                    res = await client.get(f"{REST}/market/all",
+                                           params={"isDetails": "false"})
                     res.raise_for_status()
                 except httpx.HTTPError as exc:
                     raise ProviderError(f"Upbit 종목 목록 실패: {exc}") from exc
-            self._markets = [
-                {"symbol": m["market"], "label": f"{m['korean_name']} ({m['market']})"}
-                for m in res.json()
-            ]
-        needle = query.upper()
-        hits = [m for m in self._markets
-                if needle in m["symbol"].upper() or query in m["label"]]
-        hits.sort(key=lambda m: (not m["symbol"].startswith("KRW-"), len(m["symbol"])))
-        return hits[:30]
+            rows = sorted(res.json(),
+                          key=lambda m: (not m["market"].startswith("KRW-"),
+                                         len(m["market"])))
+            return base.prefer(
+                [base.item(m["market"], m.get("korean_name", ""),
+                              m["market"].split("-")[0], "spot") for m in rows],
+                self.info.default_symbols)
+
+        found, _ = await self._catalog.get(build)
+        return found
 
 
 register(UpbitProvider())

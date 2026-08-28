@@ -25,6 +25,7 @@ from ..screen import universe
 from ..signals.engine import evaluate
 from ..store.cache import cache
 from . import learning, screening
+from . import search as search_layer
 
 router = APIRouter(prefix="/api")
 
@@ -78,13 +79,25 @@ def indicators() -> dict:
 
 
 @router.get("/search")
-async def search(provider: str, q: str = Query(min_length=1)) -> dict:
+async def search(q: str = Query(min_length=1), provider: str | None = None) -> dict:
+    """종목 찾기. `provider` 를 안 주면 **전 시장을 한꺼번에** 찾는다.
+
+    시장을 먼저 맞춰야만 찾아지는 게 지금까지 제일 헷갈리는 부분이었다.
+    """
     try:
-        return {"results": await _provider(provider).search(q)}
+        return await search_layer.search(q, provider)
     except ProviderUnavailable as exc:
         raise HTTPException(400, str(exc)) from exc
     except ProviderError as exc:
         raise HTTPException(502, str(exc)) from exc
+
+
+@router.get("/symbols")
+async def symbols(provider: str) -> dict:
+    """그 시장의 전체 종목. 목록이 없는 시장도 **200 으로** 사유를 담아 답한다 —
+    그건 오류가 아니라 '검색만 되는 시장'이라는 상태다."""
+    _provider(provider)                       # 없는 키면 여기서 404
+    return await search_layer.catalog(provider)
 
 
 @router.get("/candles")

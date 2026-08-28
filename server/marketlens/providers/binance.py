@@ -12,9 +12,11 @@ from typing import AsyncIterator
 import httpx
 import pandas as pd
 
+from . import base
 from ..core.candle import Candle, to_frame
 from ..core.timeframe import to_ms
-from .base import (Provider, ProviderError, ProviderInfo, SymbolNotFound,
+from .base import (Provider, ProviderError, ProviderInfo, SymbolCatalog,
+                   SymbolNotFound,
                    register)
 
 REST = "https://api.binance.com"
@@ -36,10 +38,11 @@ class BinanceProvider(Provider):
         requires_key=False,
         note="키 없이 실시간 체결과 과거 캔들을 모두 받는다",
         default_symbols=("BTCUSDT", "ETHUSDT", "SOLUSDT"),
+        lists_symbols=True,
     )
 
     def __init__(self) -> None:
-        self._symbols: list[dict] | None = None
+        self._catalog = SymbolCatalog()
 
     def _interval(self, timeframe: str) -> str:
         try:
@@ -122,8 +125,9 @@ class BinanceProvider(Provider):
                     closed=bool(k["x"]),
                 )
 
-    async def search(self, query: str) -> list[dict]:
-        if self._symbols is None:
+    async def catalog(self) -> list[dict]:
+        """거래중인 현물 전부(약 500). USDT 쌍을 먼저 담아 검색 순서를 살린다."""
+        async def build() -> list[dict]:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 try:
                     res = await client.get(f"{REST}/api/v3/exchangeInfo",
@@ -131,15 +135,15 @@ class BinanceProvider(Provider):
                     res.raise_for_status()
                 except httpx.HTTPError as exc:
                     raise ProviderError(f"Binance 종목 목록을 못 받았다: {exc}") from exc
-            self._symbols = [
-                {"symbol": s["symbol"], "label": f"{s['baseAsset']}/{s['quoteAsset']}"}
-                for s in res.json().get("symbols", [])
-                if s.get("status") == "TRADING"
-            ]
-        needle = query.upper()
-        hits = [s for s in self._symbols if needle in s["symbol"]]
-        hits.sort(key=lambda s: (not s["symbol"].endswith("USDT"), len(s["symbol"])))
-        return hits[:30]
+            rows = [s for s in res.json().get("symbols", []) if s.get("status") == "TRADING"]
+            rows.sort(key=lambda s: (s["quoteAsset"] != "USDT", len(s["symbol"])))
+            return base.prefer(
+                [base.item(s["symbol"], f"{s['baseAsset']}/{s['quoteAsset']}",
+                              s["quoteAsset"], "spot") for s in rows],
+                self.info.default_symbols)
+
+        found, _ = await self._catalog.get(build)
+        return found
 
 
 register(BinanceProvider())

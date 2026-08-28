@@ -18,7 +18,9 @@ import pandas as pd
 
 from ..core.candle import to_frame
 from ..core.timeframe import floor_ts, to_ms
-from .base import (Provider, ProviderError, ProviderInfo, SymbolNotFound,
+from . import base
+from .base import (Provider, ProviderError, ProviderInfo, ProviderUnavailable,
+                   SymbolNotFound,
                    register)
 
 CHART = "https://query1.finance.yahoo.com/v8/finance/chart"
@@ -115,6 +117,11 @@ class YahooProvider(Provider):
         return to_frame(rows[-limit:])
 
     async def search(self, query: str) -> list[dict]:
+        # 야후는 한글 질의를 400 으로 거절한다(`Invalid Symbol`). 보내 봐야 오류
+        # 문자열만 화면에 남으므로 여기서 걸러 **사유를 사람 말로** 돌려준다.
+        if not query.isascii():
+            raise ProviderUnavailable(
+                "야후는 한글 검색을 받지 않는다 — 티커(AAPL·005930.KS)로 찾을 것")
         async with httpx.AsyncClient(timeout=15.0, headers=HEADERS) as client:
             try:
                 res = await client.get(SEARCH, params={"q": query, "quotesCount": 20,
@@ -123,15 +130,15 @@ class YahooProvider(Provider):
                 body = res.json()
             except (httpx.HTTPError, ValueError) as exc:
                 raise ProviderError(f"야후 종목 검색 실패: {exc}") from exc
+        # 야후는 **전체 목록을 안 준다** — `catalog()` 는 비어 있고 검색만 된다.
+        # 그건 오류가 아니라 상태다. 화면이 "검색만 되는 시장"으로 표시한다.
         return [
-            {
-                "symbol": item["symbol"],
-                "label": f"{item.get('shortname') or item.get('longname') or item['symbol']}"
-                         f" ({item.get('exchange', '')})",
-            }
-            for item in body.get("quotes", [])
-            if item.get("symbol")
-        ][:30]
+            base.item(row["symbol"],
+                      str(row.get("shortname") or row.get("longname") or ""),
+                      str(row.get("exchange", "")), str(row.get("quoteType", "")))
+            for row in body.get("quotes", [])
+            if row.get("symbol")
+        ][:base.SEARCH_LIMIT]
 
 
 register(YahooProvider())

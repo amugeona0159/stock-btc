@@ -27,12 +27,16 @@ from typing import AsyncIterator
 import httpx
 import pandas as pd
 
+from . import base
 from ..core.candle import Candle, resample, to_frame
 from ..core.timeframe import to_ms
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
-                   ProviderUnavailable, SymbolNotFound, register)
+                   ProviderUnavailable, SymbolCatalog, SymbolNotFound, register)
 
 REST = "https://openapi.tossinvest.com"
+# 401(토큰 무효)·429(한도)에 물러설 횟수와 대기.
+MAX_RETRIES = 2
+RETRY_WAIT = 2.0
 WS = "wss://openapi-ws.tossinvest.com/ws/v1"
 
 # 토스가 직접 주는 봉. 나머지는 여기서 접어 만든다.
@@ -104,20 +108,37 @@ class TossClient:
             return access
 
     async def get(self, path: str, params: dict) -> dict:
-        headers = {"Authorization": f"Bearer {await self.token()}"}
-        async with httpx.AsyncClient(timeout=20.0) as http:
-            try:
-                res = await http.get(f"{REST}{path}", params=params, headers=headers)
-                res.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                if exc.response.status_code == 404:
-                    raise SymbolNotFound(f"토스에 그 종목이 없다: {params.get('symbol')}") from exc
-                if exc.response.status_code == 429:
-                    raise ProviderError("토스 호출 한도를 넘었다 — 잠시 뒤 다시") from exc
-                raise ProviderError(f"토스 조회 실패 ({exc.response.status_code})") from exc
-            except httpx.HTTPError as exc:
-                raise ProviderError(f"토스에 연결하지 못했다: {exc}") from exc
-        return res.json()
+        """토스 REST 한 번. 401 과 429 는 **고장이 아니라 상태**라 물러섰다 다시 친다.
+
+        401 이 왜 나는가: 토스는 새 토큰을 내주면 앞 토큰을 무효로 만든다. 서버가
+        떠 있는 동안 `scripts/screen.py` 나 작업 스케줄러가 토큰을 새로 받으면,
+        서버가 들고 있던 토큰이 그 순간 죽는다. 그때 **버리고 다시 받지 않으면
+        서버를 다시 띄울 때까지 국내주식이 통째로 막힌다.**
+        """
+        for attempt in range(MAX_RETRIES + 1):
+            headers = {"Authorization": f"Bearer {await self.token()}"}
+            async with httpx.AsyncClient(timeout=20.0) as http:
+                try:
+                    res = await http.get(f"{REST}{path}", params=params, headers=headers)
+                    res.raise_for_status()
+                    return res.json()
+                except httpx.HTTPStatusError as exc:
+                    code = exc.response.status_code
+                    if code == 404:
+                        raise SymbolNotFound(
+                            f"토스에 그 종목이 없다: {params.get('symbol')}") from exc
+                    if code == 401 and attempt < MAX_RETRIES:
+                        self._token = None          # 죽은 토큰을 버리고 다시 받는다
+                        continue
+                    if code == 429 and attempt < MAX_RETRIES:
+                        await asyncio.sleep(RETRY_WAIT * (attempt + 1))
+                        continue
+                    if code == 429:
+                        raise ProviderError("토스 호출 한도를 넘었다 — 잠시 뒤 다시") from exc
+                    raise ProviderError(f"토스 조회 실패 ({code})") from exc
+                except httpx.HTTPError as exc:
+                    raise ProviderError(f"토스에 연결하지 못했다: {exc}") from exc
+        raise ProviderError("토스 조회 실패 — 재시도를 다 썼다")
 
 
 client = TossClient()
@@ -144,6 +165,9 @@ class TossProvider(Provider):
         self.info = info
         self._stream_type = stream_type      # trade:kr | trade:us
         self._tz = MARKET_TZ[info.market]
+        # 토큰은 모듈 전역 `client` 가 공유하지만 목록은 시장마다 다르다 —
+        # 국내와 미국을 같은 캐시에 넣으면 서로를 덮는다.
+        self._catalog = SymbolCatalog()
 
     @property
     def available(self) -> bool:
@@ -252,23 +276,42 @@ class TossProvider(Provider):
                 ):
                     yield candle
 
-    async def search(self, query: str) -> list[dict]:
-        needle = query.strip().upper()
-        found: list[dict] = []
-        for market in self._markets():
-            try:
-                body = await client.get("/api/v1/stocks/all",
-                                        {"market": market, "status": "ACTIVE"})
-            except ProviderError:
-                continue
-            for item in (body.get("result") or {}).get("stocks", []):
-                symbol = str(item.get("symbol", ""))
-                name = str(item.get("name") or item.get("koreanName") or symbol)
-                if needle in symbol.upper() or needle in name.upper() or query in name:
-                    found.append({"symbol": symbol, "label": f"{name} ({symbol})"})
-            if len(found) >= 30:
-                break
-        return found[:30]
+    async def catalog(self) -> list[dict]:
+        """이 시장의 상장 종목 전부. 코스피만 2,479건이다.
+
+        **응답 모양에 주의.** 실제 토스는 `{"result": [ ... ]}` 로 리스트를 준다.
+        예전 코드가 `result["stocks"]` 를 찾아서 `list.get` 으로 늘 터졌다 —
+        그래서 토스 종목 검색이 지금까지 한 번도 동작한 적이 없다.
+        두 모양을 다 받는다. 스펙이 바뀌어도 조용히 죽지 않게.
+        """
+        async def build() -> list[dict]:
+            found: list[dict] = []
+            failures: list[str] = []
+            for market in self._markets():
+                try:
+                    body = await client.get("/api/v1/stocks/all",
+                                            {"market": market, "status": "ACTIVE"})
+                except ProviderError as exc:
+                    failures.append(f"{market}: {exc}")
+                    continue
+                result = body.get("result")
+                rows = result if isinstance(result, list) else (result or {}).get("stocks") or []
+                for row in rows:
+                    symbol = str(row.get("symbol", ""))
+                    if not symbol:
+                        continue
+                    name = str(row.get("name") or row.get("koreanName") or symbol)
+                    found.append(base.item(symbol, name, market,
+                                           str(row.get("securityType", ""))))
+            if not found:
+                raise ProviderError("토스 종목 목록을 못 받았다: " + " / ".join(failures))
+            # 보통주를 ETF·리츠 앞에 둔다. "삼성"을 치면 삼성전자보다
+            # `RISE 삼성전자SK하이닉스채권혼합50` 같은 상품이 먼저 나온다.
+            found.sort(key=lambda x: x["kind"] != "STOCK")
+            return base.prefer(found, self.info.default_symbols)
+
+        items, _ = await self._catalog.get(build)
+        return items
 
     def _markets(self) -> tuple[str, ...]:
         return (("KOSPI", "KOSDAQ") if self.info.market == "kr"
@@ -284,6 +327,7 @@ register(TossProvider(
         requires_key=True,
         note="토스증권 계좌 + Open API 키. 실시간 체결과 과거 캔들을 모두 준다",
         default_symbols=("005930", "000660", "035720", "005380"),
+        lists_symbols=True,
     ),
     stream_type="trade:kr",
 ))
@@ -297,6 +341,7 @@ register(TossProvider(
         requires_key=True,
         note="같은 키로 미국주식까지. Finnhub 처럼 과거 캔들이 막혀 있지 않다",
         default_symbols=("AAPL", "MSFT", "NVDA", "TSLA"),
+        lists_symbols=True,
     ),
     stream_type="trade:us",
 ))

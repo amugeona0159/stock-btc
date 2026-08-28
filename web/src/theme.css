@@ -245,3 +245,25 @@ button:disabled { opacity: 0.4; cursor: default; }
 .chart-legend i.dashed {
   height: 0; border-top: 2px dashed currentColor; background: none !important;
 }
+
+/* --- 종목 고르기 (전체화면) ---
+   저장소에서 유일한 오버레이다. z-index 는 차트 위 라벨(3)보다 넉넉히 위로 둔다. */
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(13, 17, 23, 0.86);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+/* 판의 색·테두리는 .card 에서 그대로 받는다 (class="card picker"). */
+.picker {
+  width: min(1040px, 94vw); height: min(720px, 86vh);
+  display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr;
+  gap: var(--gutter); overflow: hidden;
+}
+.picker-search { grid-column: 1 / -1; display: flex; gap: 6px; }
+.picker-search input { flex: 1; min-width: 0; }
+.picker-markets, .picker-list { overflow-y: auto; min-height: 0; }
+.picker-row {
+  display: flex; gap: 8px; align-items: baseline;
+  padding: 4px 6px; border-radius: 5px;
+}
+.picker-row:hover, .picker-row[data-active="true"] { background: var(--panel-2); }

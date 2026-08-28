@@ -37,6 +37,12 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
+
+from dotenv import load_dotenv                                    # noqa: E402
+
+# 프로바이더가 키를 읽기 **전에** 올린다. 스크립트는 `api/app.py` 를 안 거치므로
+# 여기서 직접 부르지 않으면 토스가 조용히 "키가 비어 있다"로 빠진다 — 실제로 그랬다.
+load_dotenv(ROOT / ".env")
 warnings.filterwarnings("ignore")
 # 윈도우 콘솔은 기본이 cp949 라 한글 표에서 죽는다.
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -185,7 +191,8 @@ def report_horizon(panel: pd.DataFrame, scores: dict, folds: int) -> dict:
     return entry
 
 
-async def run(provider: str, timeframe: str, horizons: list, folds: int) -> dict:
+async def run(provider: str, timeframe: str, horizons: list, folds: int,
+              pause: float = 0.0) -> dict:
     symbols = universe.symbols(provider)
     if not symbols:
         print(f"  {provider}: 후보 목록이 없다")
@@ -194,8 +201,14 @@ async def run(provider: str, timeframe: str, horizons: list, folds: int) -> dict
 
     started = time.time()
     bars = BARS.get(timeframe, 3000)
-    loaded = [x for x in [await load(provider, s, timeframe, bars) for s in symbols]
-              if x is not None]
+    loaded = []
+    for symbol in symbols:
+        piece = await load(provider, symbol, timeframe, bars)
+        if piece is not None:
+            loaded.append(piece)
+        # 토스·업비트는 호출 한도가 있다. 몰아치면 429 로 절반이 빠진다.
+        if pause:
+            await asyncio.sleep(pause)
     if len(loaded) < universe.MIN_BREADTH:
         print(f"  쓸 수 있는 종목이 {len(loaded)}개뿐 - 횡단면 순위가 안 된다")
         return {}
@@ -221,31 +234,49 @@ async def main() -> None:
     parser.add_argument("--timeframe", default="1d")
     parser.add_argument("--horizons", type=int, nargs="+", default=[1, 2, 3])
     parser.add_argument("--folds", type=int, default=4)
+    parser.add_argument("--pause", type=float, default=0.0,
+                        help="종목 사이 대기(초). 토스·업비트는 1.0 권장")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
     providers = args.provider or ["binance", "yahoo"]
-    payload = {
-        "updated": pd.Timestamp.utcnow().isoformat(timespec="seconds"),
-        "timeframe": args.timeframe,
-        "minIc": ic.MIN_IC,
-        "providers": {},
-    }
+    stamp = pd.Timestamp.utcnow().isoformat(timespec="seconds")
+    measured: dict[str, dict] = {}
     for provider in providers:
-        found = await run(provider, args.timeframe, args.horizons, args.folds)
+        found = await run(provider, args.timeframe, args.horizons, args.folds,
+                          args.pause)
         if found:
-            payload["providers"][provider] = {"horizons": found}
+            # **잰 봉을 프로바이더 항목 안에 적는다.** 최상위에 하나만 두면 시장마다
+            # 다른 봉으로 잰 뒤에 무엇으로 잰 건지 알 수 없다. 화면이 이걸 대조한다.
+            measured[provider] = {"timeframe": args.timeframe, "updated": stamp,
+                                  "horizons": found}
 
     if args.dry_run:
         print("\n(dry-run - 저장하지 않았다)")
         return
-    if not payload["providers"]:
+    if not measured:
         print("\n잰 게 없다 — 저장하지 않는다. 옛 측정을 빈 파일로 덮으면 화면이 죽는다.")
         return
+
+    # **덮지 말고 합친다.** 이번에 잰 프로바이더만 갈아끼우고 나머지는 그대로 둔다.
+    # 통째로 덮으면 `--provider upbit` 한 번에 binance·yahoo 측정이 사라진다.
+    payload = {"updated": stamp, "timeframe": args.timeframe,
+               "minIc": ic.MIN_IC, "providers": {}}
+    if OUT.is_file():
+        try:
+            payload = json.loads(OUT.read_text(encoding="utf-8"))
+            payload["updated"] = stamp
+            payload["minIc"] = ic.MIN_IC
+        except (OSError, ValueError):
+            print("  옛 파일을 못 읽었다 — 새로 쓴다")
+    kept = [k for k in payload.setdefault("providers", {}) if k not in measured]
+    payload["providers"].update(measured)
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
                    encoding="utf-8")
-    print(f"\n저장: {OUT.relative_to(ROOT)}")
+    print(f"\n저장: {OUT.relative_to(ROOT)} · 새로 잰 것 {sorted(measured)} · "
+          f"그대로 둔 것 {sorted(kept)}")
 
 
 if __name__ == "__main__":

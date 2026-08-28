@@ -16,6 +16,7 @@ import pandas as pd
 
 from ..core.candle import Candle, resample, to_frame
 from ..core.timeframe import to_ms
+from . import base
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
                    ProviderUnavailable, register)
 
@@ -275,7 +276,7 @@ class KisProvider(Provider):
         # 종목 마스터는 별도 파일 배포라 REST 검색이 없다. 6자리 코드는 그대로 통과시킨다.
         code = query.strip()
         if code.isdigit() and len(code) == 6:
-            return [{"symbol": code, "label": code}]
+            return [base.item(code, "", "kr", "STOCK")]
         raise ProviderUnavailable("KIS 는 종목명 검색을 제공하지 않는다 — 6자리 종목코드를 넣을 것")
 
 

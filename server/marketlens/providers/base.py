@@ -7,6 +7,8 @@ API 나 화면에 흘리지 않기 위해서다. 거래소가 ms 를 주든 KST 
 from __future__ import annotations
 
 import abc
+import asyncio
+import time
 from dataclasses import dataclass, field
 from typing import AsyncIterator
 
@@ -14,6 +16,73 @@ import pandas as pd
 
 from ..core.candle import Candle, empty_frame
 from ..core.timeframe import floor_ts
+
+
+# 검색이 한 번에 돌려주는 최대 건수. 목록 화면은 이 컷을 안 쓴다 — 거기는 전부 받는다.
+SEARCH_LIMIT = 30
+
+
+def item(symbol: str, name: str = "", market: str = "", kind: str = "") -> dict:
+    """목록·검색 항목 한 벌. **라벨 모양을 정하는 곳은 여기 하나다.**
+
+    지금까지 프로바이더마다 제각각으로 만들었다 — 어디는 `BTC/USDT`, 어디는
+    `삼성전자 (005930)`. 한 화면에 섞이면 그게 그대로 보인다.
+    """
+    label = f"{name} ({symbol})" if name and name != symbol else symbol
+    return {"symbol": symbol, "label": label, "name": name or symbol,
+            "market": market, "kind": kind}
+
+
+def prefer(items: list[dict], first: tuple[str, ...]) -> list[dict]:
+    """자주 보는 종목을 목록 앞으로. `match` 가 동률에서 이 순서를 그대로 쓴다.
+
+    한글 종목명에는 우선순위를 매길 실마리가 없다 — "삼성"을 치면 삼성화재·삼성제약·
+    삼성전자가 다 같은 등급으로 걸리고, 그다음은 종목코드 순서라 삼성전자가 네 번째로
+    간다. 시가총액을 받아 오는 경로는 프로바이더마다 다르니, 이 프로그램이 실제로
+    추적하는 종목(`default_symbols`)을 앞에 두는 것으로 대신한다.
+    """
+    if not first:
+        return items
+    rank = {s.upper(): i for i, s in enumerate(first)}
+    return sorted(items, key=lambda x: rank.get(str(x.get("symbol", "")).upper(),
+                                                len(rank)))
+
+
+def match(items: list[dict], query: str, limit: int = SEARCH_LIMIT) -> list[dict]:
+    """전체 목록에서 검색어에 맞는 것을 고른다.
+
+    순서는 **완전일치 → 앞부분 일치 → 부분 일치**. 같은 등급이면 **목록이 담아 온
+    순서**를 그대로 쓴다 — 거기에 이미 그 시장의 우선순위가 들어 있다(바이낸스는
+    USDT 쌍 먼저, 업비트는 KRW 마켓 먼저). 길이로 다시 줄 세우면 `BTC` 를 쳤을 때
+    `BTCUSDT` 대신 `BTCTRY` 가 위로 올라온다 — 실제로 그랬다.
+
+    한글은 대소문자 변환을 하면 안 되므로 원문으로도 한 번 본다.
+    """
+    needle = query.strip()
+    if not needle:
+        return items[:limit]
+    upper = needle.upper()
+    scored: list[tuple[int, int, dict]] = []
+    for order, entry in enumerate(items):
+        symbol = str(entry.get("symbol", "")).upper()
+        name = str(entry.get("name", ""))
+        haystack = f"{symbol} {name.upper()}"
+        # `KRW-BTC` 의 `BTC`, `BTC/USDT` 의 `USDT` 처럼 구분자 뒤도 앞부분으로 친다.
+        # 안 그러면 "BTC" 를 쳤을 때 BTC 마켓(BTC-WOM…)만 걸리고 정작 비트코인이
+        # 부분일치로 밀린다 — 실제로 그랬다.
+        parts = symbol.replace("/", "-").split("-")
+        if upper == symbol or upper in parts:
+            grade = 0
+        elif (symbol.startswith(upper) or name.upper().startswith(upper)
+              or any(p.startswith(upper) for p in parts)):
+            grade = 1
+        elif upper in haystack or needle in name:
+            grade = 2
+        else:
+            continue
+        scored.append((grade, order, entry))
+    scored.sort(key=lambda row: row[:2])
+    return [row[2] for row in scored[:limit]]
 
 
 class ProviderError(RuntimeError):
@@ -38,6 +107,9 @@ class ProviderInfo:
     realtime: bool = True
     note: str = ""
     default_symbols: tuple[str, ...] = ()
+    # 전체 종목 목록을 줄 수 있나. 야후·KIS 처럼 못 주는 곳은 '검색만 되는 시장'이고,
+    # 그건 오류가 아니라 상태다 — 화면이 목록을 부르기 전에 이걸 보고 말해 준다.
+    lists_symbols: bool = False
 
 
 class Provider(abc.ABC):
@@ -68,11 +140,68 @@ class Provider(abc.ABC):
         raise ProviderUnavailable(f"{self.info.name} 은 실시간을 지원하지 않는다")
         yield  # pragma: no cover - 위에서 항상 터진다
 
-    async def search(self, query: str) -> list[dict]:
+    async def catalog(self) -> list[dict]:
+        """이 시장의 전체 종목. 빈 리스트면 '검색만 되는 시장'이라는 뜻이다."""
         return []
+
+    async def search(self, query: str) -> list[dict]:
+        """기본 구현 — 전체 목록에서 걸러 낸다.
+
+        목록이 있는 프로바이더는 이걸 그대로 쓴다. 목록 코드를 두 벌 두면
+        검색 결과와 목록 화면이 서로 다른 종목을 보여주게 된다.
+        """
+        return match(await self.catalog(), query)
 
     async def close(self) -> None:
         return None
+
+
+class SymbolCatalog:
+    """전체 종목 목록 캐시. 세 가지를 한다.
+
+    1. **TTL** — 상장·폐지는 하루에 몇 번 안 바뀐다. 기본 12시간.
+    2. **한 번만 나간다** — 동시 요청이 열 개 와도 거래소에는 한 번만 간다.
+       통합 검색이 모든 프로바이더를 한꺼번에 때리므로 이건 실제로 일어나고,
+       토스의 429 를 부르는 정확한 구조다.
+    3. **낡은 값이라도 준다** — 갱신에 실패하면 마지막 성공분을 `stale` 로 돌려준다.
+       429 때문에 화면이 통째로 비는 것보다 하루 지난 목록이 낫다.
+    """
+
+    def __init__(self, ttl: float = 12 * 3600) -> None:
+        self._ttl = ttl
+        self._items: list[dict] = []
+        self._at = 0.0
+        self._task: asyncio.Task | None = None
+
+    @property
+    def fresh(self) -> bool:
+        return bool(self._items) and time.time() - self._at < self._ttl
+
+    async def _run(self, build) -> list[dict]:
+        found = await build()
+        self._items, self._at = found, time.time()
+        return found
+
+    async def get(self, build) -> tuple[list[dict], bool]:
+        """(목록, 낡았는지). `build` 는 실제로 받아 오는 async 함수.
+
+        **적재를 작업으로 띄우고 `shield` 로 감싼다.** 부르는 쪽이 시간 초과로
+        취소돼도 적재는 계속 돌아 캐시를 채운다. 안 그러면 통합 검색이 2.5초에
+        잘릴 때마다 적재까지 같이 죽어서, 몇 번을 쳐도 영원히 차갑다 —
+        토스는 목록이 4천 건이라 첫 적재가 그 시간을 넘는다.
+        """
+        if self.fresh:
+            return self._items, False
+        if self._task is None or self._task.done():
+            self._task = asyncio.create_task(self._run(build))
+        try:
+            return await asyncio.shield(self._task), False
+        except asyncio.CancelledError:
+            raise
+        except Exception:                                           # noqa: BLE001
+            if self._items:
+                return self._items, True                            # 낡아도 없는 것보단 낫다
+            raise
 
 
 class CandleAggregator:
@@ -156,6 +285,7 @@ def describe() -> list[dict]:
             "available": p.available,
             "reason": p.unavailable_reason,
             "defaultSymbols": list(p.info.default_symbols),
+            "listsSymbols": p.info.lists_symbols,
         }
         for p in all_providers()
     ]
