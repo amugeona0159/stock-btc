@@ -144,3 +144,163 @@ export interface Requested {
   key: string;
   params: Record<string, unknown>;
 }
+
+// --- 예측·이벤트·근거 -------------------------------------------------------
+
+export interface PathPoint {
+  time: number;
+  value: number;
+}
+
+export interface AnalogPath {
+  id: string;
+  source: string;
+  ts: number;
+  distance: number;
+  weight: number;
+  outcome: number;
+  windowStartTs: number;
+  windowEndTs: number;
+  points: PathPoint[];
+}
+
+export interface Projection {
+  available: boolean;
+  reason?: string;
+  horizon?: number;
+  last?: number;
+  lastTs?: number;
+  targetTs?: number;
+  sampleCount: number;
+  paths: AnalogPath[];
+  bands: Record<string, PathPoint[]>;
+  median?: number;
+  expectedMovePct?: number;
+  probUp?: number;
+  diagnostics: {
+    coverage: number | null;
+    nominalCoverage: number;
+    widenFactor: number;
+    distanceMin: number;
+    distanceMedian: number;
+    distanceMax: number;
+    reliable: boolean;
+  };
+  citations?: Evidence[];
+}
+
+export interface EventMark {
+  id: string;
+  ts: number;
+  kind: string;
+  kindLabel: string;
+  title: string;
+  source: string;
+  sourceLabel: string;
+  scope: string;
+  severity: number;
+  scheduled: boolean;
+  url: string;
+  tags: string[];
+  note: string;
+}
+
+export interface EventStudy {
+  available: boolean;
+  reason?: string;
+  label?: string;
+  count?: number;
+  before?: number;
+  after?: number;
+  offsets?: number[];
+  meanCar?: number[];
+  medianCar?: number[];
+  carLow?: number[];
+  carHigh?: number[];
+  tStat?: number[];
+  finalCarPct?: number;
+  finalTStat?: number;
+  hitRate?: number;
+  significant?: boolean;
+  overlapping?: boolean;
+  events?: Array<EventMark & { carPct: number; immediatePct: number }>;
+}
+
+export interface Source {
+  title: string;
+  authors: string;
+  year: number;
+  venue: string;
+  url: string;
+}
+
+export interface Evidence {
+  key: string;
+  field: string;
+  fieldLabel: string;
+  claim: string;
+  effect: string;
+  limits: string;
+  confidence: "strong" | "moderate" | "weak" | "contested";
+  confidenceLabel: string;
+  usedBy: string[];
+  sources: Source[];
+}
+
+export interface ScenarioForm {
+  horizon_hours: number;
+  horizon_text: string;
+  event_kinds: string[];
+  event_tags: string[];
+  require_volatility: number | null;
+  require_trend: number | null;
+  emphasis: string[];
+  context_weight: number;
+  direction_hint: number | null;
+  interpretation: string;
+}
+
+export interface ScenarioView {
+  question: string;
+  timeframe: string;
+  horizon: number;
+  horizonHours: number;
+  horizonText: string;
+  eventKinds: string[];
+  eventTags: string[];
+  requireVolatility: number | null;
+  requireVolatilityLabel: string | null;
+  requireTrend: number | null;
+  requireTrendLabel: string | null;
+  emphasis: string[];
+  contextWeight: number;
+  directionHint: number | null;
+  interpretation: string;
+  parsedBy: "rule" | "llm" | "form";
+  notes: string[];
+}
+
+export interface Situation {
+  available: boolean;
+  calendar?: { iso: string; text: string };
+  regime?: {
+    volatility: number;
+    volatilityLabel: string;
+    trend: number;
+    trendLabel: string;
+    volPercentile: number;
+    adx: number | null;
+  };
+}
+
+export interface AskResult {
+  scenario: ScenarioView;
+  situation: Situation;
+  projection: Projection;
+  eventStudy: EventStudy;
+  eventPath: PathPoint[] | null;
+  matchedEvents: EventMark[];
+  answer: string;
+  citations: Evidence[];
+  eventSources: Record<string, { count: number; ok: boolean; error: string }>;
+}

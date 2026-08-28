@@ -17,6 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24"]
 ml = ["scikit-learn>=1.5", "lightgbm>=4.5", "pyarrow>=17.0"]
+# 자연어 질문 해석. 없으면 규칙 파서만 쓴다.
+llm = ["anthropic>=0.40"]
 
 [build-system]
 requires = ["setuptools>=68"]

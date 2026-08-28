@@ -6,13 +6,15 @@ import 하는 순서가 곧 화면에 뜨는 순서다. 키 없이 바로 도는
 from __future__ import annotations
 
 from .base import (Provider, ProviderError, ProviderInfo, ProviderUnavailable,
-                   all_providers, describe, get, register)
+                   SymbolNotFound, all_providers, describe, get, register)
 
 from . import binance as _binance  # noqa: F401
 from . import upbit as _upbit  # noqa: F401
-from . import composite as _composite  # noqa: F401  (미국주식 = Stooq + Finnhub)
+from . import composite as _composite  # noqa: F401  (미국주식 = 야후 + Finnhub)
+from . import yahoo as _yahoo  # noqa: F401
 from . import kis as _kis  # noqa: F401
 from . import csv_file as _csv  # noqa: F401
 
 __all__ = ["Provider", "ProviderInfo", "ProviderError", "ProviderUnavailable",
+           "SymbolNotFound",
            "all_providers", "describe", "get", "register"]

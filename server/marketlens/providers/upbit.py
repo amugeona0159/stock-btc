@@ -14,7 +14,8 @@ import pandas as pd
 
 from ..core.candle import Candle, to_frame
 from ..core.timeframe import to_ms
-from .base import CandleAggregator, Provider, ProviderError, ProviderInfo, register
+from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
+                   SymbolNotFound, register)
 
 REST = "https://api.upbit.com/v1"
 WS = "wss://api.upbit.com/websocket/v1"
@@ -69,8 +70,16 @@ class UpbitProvider(Provider):
                     res = await client.get(url, params=params)
                     res.raise_for_status()
                     batch = res.json()
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code in (400, 404):
+                        raise SymbolNotFound(
+                            f"Upbit 에 '{symbol.upper()}' 마켓이 없다 (예: KRW-BTC)"
+                        ) from exc
+                    raise ProviderError(
+                        f"Upbit 응답 오류 ({exc.response.status_code})"
+                    ) from exc
                 except httpx.HTTPError as exc:
-                    raise ProviderError(f"Upbit 캔들 요청 실패: {exc}") from exc
+                    raise ProviderError(f"Upbit 에 연결하지 못했다: {exc}") from exc
                 if not batch:
                     break
                 rows = [self._row(c, step, now) for c in reversed(batch)] + rows

@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "내장 사건 사전. 코드가 아니라 데이터라서 여기 줄을 더하면 바로 반영된다.",
+    "확실한 것만 넣는다 - 날짜가 틀린 사건은 이벤트 스터디를 통째로 오염시킨다.",
+    "최근 사건은 여기 넣지 말고 뉴스 소스(GDELT/Finnhub)나 직접 등록으로 받는다.",
+    "ts 는 UTC ISO8601. severity 는 0..1 로 사람이 매긴 체감 크기다."
+  ],
+  "events": [
+    {"at": "2012-11-28T00:00:00Z", "kind": "crypto", "title": "비트코인 1차 반감기",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["halving", "supply"]},
+    {"at": "2016-07-09T00:00:00Z", "kind": "crypto", "title": "비트코인 2차 반감기",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["halving", "supply"]},
+    {"at": "2020-05-11T00:00:00Z", "kind": "crypto", "title": "비트코인 3차 반감기",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["halving", "supply"]},
+    {"at": "2024-04-20T00:00:00Z", "kind": "crypto", "title": "비트코인 4차 반감기",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["halving", "supply"]},
+
+    {"at": "2017-12-17T00:00:00Z", "kind": "crypto", "title": "2017년 강세장 고점",
+     "scope": "market:crypto", "severity": 0.8, "tags": ["cycle", "top"]},
+    {"at": "2018-12-15T00:00:00Z", "kind": "crypto", "title": "2018년 약세장 저점",
+     "scope": "market:crypto", "severity": 0.7, "tags": ["cycle", "bottom"]},
+    {"at": "2021-04-14T00:00:00Z", "kind": "crypto", "title": "2021년 1차 고점 (코인베이스 상장일)",
+     "scope": "market:crypto", "severity": 0.7, "tags": ["cycle", "top"]},
+    {"at": "2021-11-10T00:00:00Z", "kind": "crypto", "title": "2021년 사상 최고가",
+     "scope": "market:crypto", "severity": 0.8, "tags": ["cycle", "top"]},
+    {"at": "2022-06-18T00:00:00Z", "kind": "crypto", "title": "2022년 약세장 저점권",
+     "scope": "market:crypto", "severity": 0.7, "tags": ["cycle", "bottom"]},
+
+    {"at": "2020-03-12T00:00:00Z", "kind": "macro", "title": "코로나 충격 (블랙 목요일)",
+     "scope": "global", "severity": 1.0, "tags": ["crash", "liquidity", "pandemic"]},
+    {"at": "2020-03-23T00:00:00Z", "kind": "macro", "title": "연준 무제한 양적완화 발표",
+     "scope": "global", "severity": 0.9, "tags": ["monetary", "easing"]},
+    {"at": "2022-03-16T00:00:00Z", "kind": "macro", "title": "연준 금리 인상 사이클 시작",
+     "scope": "global", "severity": 0.8, "scheduled": true, "tags": ["monetary", "tightening"]},
+    {"at": "2023-03-10T00:00:00Z", "kind": "macro", "title": "실리콘밸리은행 파산",
+     "scope": "global", "severity": 0.9, "tags": ["bank", "credit"]},
+
+    {"at": "2021-05-21T00:00:00Z", "kind": "regulation", "title": "중국 채굴·거래 규제 강화",
+     "scope": "market:crypto", "severity": 0.9, "tags": ["china", "ban", "mining"]},
+    {"at": "2022-05-09T00:00:00Z", "kind": "crypto", "title": "테라·루나 붕괴",
+     "scope": "market:crypto", "severity": 1.0, "tags": ["stablecoin", "contagion"]},
+    {"at": "2022-09-15T00:00:00Z", "kind": "crypto", "title": "이더리움 머지 (PoS 전환)",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["ethereum", "upgrade"]},
+    {"at": "2022-11-08T00:00:00Z", "kind": "crypto", "title": "FTX 붕괴",
+     "scope": "market:crypto", "severity": 1.0, "tags": ["exchange", "contagion", "insolvency"]},
+    {"at": "2024-01-11T00:00:00Z", "kind": "regulation", "title": "미국 비트코인 현물 ETF 거래 개시",
+     "scope": "market:crypto", "severity": 0.9, "scheduled": true, "tags": ["etf", "inflow"]},
+    {"at": "2024-07-23T00:00:00Z", "kind": "regulation", "title": "미국 이더리움 현물 ETF 거래 개시",
+     "scope": "market:crypto", "severity": 0.7, "scheduled": true, "tags": ["etf", "inflow"]},
+
+    {"at": "2008-09-15T00:00:00Z", "kind": "macro", "title": "리먼 브라더스 파산",
+     "scope": "global", "severity": 1.0, "tags": ["crash", "credit"]},
+    {"at": "2018-02-05T00:00:00Z", "kind": "macro", "title": "변동성 급등 (볼마겟돈)",
+     "scope": "global", "severity": 0.8, "tags": ["volatility", "crash"]},
+    {"at": "2022-02-24T00:00:00Z", "kind": "macro", "title": "러시아-우크라이나 전쟁 개시",
+     "scope": "global", "severity": 0.9, "tags": ["geopolitics", "energy"]}
+  ]
+}

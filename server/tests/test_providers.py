@@ -13,7 +13,7 @@ from marketlens.providers import base, describe, get
 from marketlens.providers.base import CandleAggregator
 from marketlens.providers.binance import BinanceProvider
 from marketlens.providers.kis import KisProvider
-from marketlens.providers.stooq import StooqProvider
+from marketlens.providers.yahoo import YahooProvider
 from marketlens.providers.upbit import UpbitProvider, _parse_utc
 from tests.conftest import make_candles
 
@@ -103,16 +103,15 @@ def test_upbit_row_normalizes_field_names():
     assert row["closed"] is True
 
 
-def test_stooq_appends_the_us_suffix():
-    from marketlens.providers.stooq import _to_stooq
-    assert _to_stooq("AAPL") == "aapl.us"
-    # 이미 시장 접미사가 붙어 있으면 그대로 둔다 - 미국 밖 종목이 .us 로 망가지면 안 된다.
-    assert _to_stooq("wig20.pl") == "wig20.pl"
+def test_yahoo_refuses_unknown_timeframe():
+    provider = YahooProvider()
+    assert provider.supports("1d") and provider.supports("5m")
+    assert not provider.supports("3m")
 
 
-def test_stooq_refuses_intraday():
-    provider = StooqProvider()
-    assert not provider.supports("5m")
+def test_yahoo_is_history_only():
+    """실시간이 없다고 표시돼야 화면이 '실시간 없음' 을 안내한다."""
+    assert YahooProvider().info.realtime is False
 
 
 def test_kis_is_unavailable_without_keys(monkeypatch):

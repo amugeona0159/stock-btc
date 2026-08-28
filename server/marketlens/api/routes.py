@@ -11,11 +11,16 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from .. import analog, events, research, scenario
 from .. import forecast as forecast_layer
 from ..backtest import engine as backtest_engine
+from ..context import features as context_features
+from ..core.candle import closed_only
+from ..core.text import with_josa
 from ..core.series import IndicatorRequest, candles_payload, compute_requests
 from ..indicators import catalog, patterns
-from ..providers import ProviderError, ProviderUnavailable, describe, get as get_provider
+from ..providers import (ProviderError, ProviderUnavailable, SymbolNotFound,
+                         describe, get as get_provider)
 from ..signals.engine import evaluate
 from ..store.cache import cache
 
@@ -27,13 +32,17 @@ MAX_LIMIT = 5000
 async def load_candles(provider_key: str, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
     provider = _provider(provider_key)
     if not provider.supports(timeframe):
-        raise HTTPException(400, f"{provider.info.name} 은 {timeframe} 봉을 주지 않는다")
+        raise HTTPException(
+            400, f"{with_josa(provider.info.name, '은는')} {timeframe} 봉을 주지 않는다"
+        )
 
     cached = cache.get(provider_key, symbol, timeframe, limit)
     if cached is not None:
         return cached
     try:
         df = await provider.history(symbol, timeframe, limit)
+    except SymbolNotFound as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ProviderUnavailable as exc:
         raise HTTPException(400, str(exc)) from exc
     except ProviderError as exc:
@@ -108,9 +117,10 @@ async def analyze(body: AnalyzeBody) -> dict:
         for i, raw in enumerate(body.indicators or [dict(d) for d in catalog.DEFAULT_SET])
     ]
     # 시그널과 예측은 무거워서 CPU 를 오래 문다. 이벤트 루프를 막지 않게 스레드로 뺀다.
-    signal, prediction = await asyncio.gather(
+    signal, prediction, situation = await asyncio.gather(
         asyncio.to_thread(evaluate, df),
         asyncio.to_thread(forecast_layer.combined, df, body.timeframe, body.horizon, body.model),
+        asyncio.to_thread(context_features.describe, closed_only(df)),
     )
     return {
         "provider": body.provider,
@@ -121,6 +131,9 @@ async def analyze(body: AnalyzeBody) -> dict:
         "signal": signal.to_dict(),
         "forecast": prediction,
         "patterns": patterns.latest(df, lookback=5),
+        # 질문하기 전에도 화면이 지금 상황을 말해 줘야 한다. 빈 입력창만 있는 첫 화면은
+        # 무엇을 물어야 할지 모르게 만든다.
+        "situation": situation,
     }
 
 
@@ -148,6 +161,173 @@ async def backtest(body: BacktestBody) -> dict:
     payload["symbol"] = body.symbol
     payload["timeframe"] = body.timeframe
     return payload
+
+
+class ProjectBody(BaseModel):
+    provider: str
+    symbol: str
+    timeframe: str = "1h"
+    # 사례를 찾으려면 히스토리가 깊어야 한다. 500봉으로는 비슷한 구간이 몇 개 안 나온다.
+    limit: int = Field(3000, ge=300, le=MAX_LIMIT)
+    window: int = Field(48, ge=8, le=400)
+    horizon: int = Field(24, ge=1, le=400)
+    top_k: int = Field(20, ge=3, le=100)
+    context_weight: float = Field(0.5, ge=0.0, le=1.0)
+    group_weights: dict[str, float] | None = None
+    peers: list[str] = Field(default_factory=list)
+
+
+@router.post("/project")
+async def project(body: ProjectBody) -> dict:
+    """지금과 비슷했던 과거를 찾아 앞으로의 경로를 그린다."""
+    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
+    closed = closed_only(df)
+    if len(closed) < body.window + body.horizon + 30:
+        raise HTTPException(400, "사례를 찾을 만큼 과거가 없다 — 기간을 늘리거나 창을 줄일 것")
+
+    sources = [analog.Series(f"{body.symbol}-{body.timeframe}", closed)]
+    # 다른 종목까지 뒤지면 사례가 늘지만, 그만큼 '남의 상황'이 섞인다. 기본은 자기 과거만.
+    for peer in body.peers[:5]:
+        if peer.upper() == body.symbol.upper():
+            continue
+        try:
+            peer_df = closed_only(
+                await load_candles(body.provider, peer, body.timeframe, body.limit)
+            )
+        except HTTPException:
+            continue
+        if len(peer_df) >= body.window + body.horizon + 30:
+            sources.append(analog.Series(f"{peer}-{body.timeframe}", peer_df))
+
+    matches = await asyncio.to_thread(
+        analog.search, closed, sources, body.window, body.horizon,
+        body.top_k, body.context_weight, body.group_weights,
+    )
+    projection = await asyncio.to_thread(
+        analog.project, closed, matches, body.horizon, body.timeframe
+    )
+    situation = await asyncio.to_thread(context_features.describe, closed)
+
+    return {
+        "provider": body.provider,
+        "symbol": body.symbol,
+        "timeframe": body.timeframe,
+        "window": body.window,
+        "situation": situation,
+        "projection": projection,
+        "matches": [m.to_dict() for m in matches],
+    }
+
+
+class AskBody(BaseModel):
+    provider: str
+    symbol: str
+    timeframe: str = "1h"
+    question: str = ""
+    limit: int = Field(3000, ge=300, le=MAX_LIMIT)
+    window: int = Field(48, ge=8, le=400)
+    top_k: int = Field(20, ge=3, le=100)
+    # 폼에서 고친 값. 있으면 자연어 해석보다 이쪽이 이긴다 — 사람이 마지막 결정권을 갖는다.
+    form: dict | None = None
+    use_llm: bool = True
+    event_sources: list[str] | None = None
+
+
+@router.post("/ask")
+async def ask(body: AskBody) -> dict:
+    """질문 하나로 조건을 잡고, 그 조건에 맞는 과거를 찾아 앞을 그린다."""
+    if not body.question.strip() and not body.form:
+        raise HTTPException(400, "질문이나 조건 중 하나는 있어야 한다")
+
+    provider_info = _provider(body.provider).info
+    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
+
+    if body.form is not None:
+        try:
+            plan = scenario.from_form(body.form, body.question, body.timeframe)
+        except Exception as exc:  # pydantic 검증 실패를 사용자 오류로 돌려준다
+            raise HTTPException(400, f"조건이 올바르지 않다: {exc}") from exc
+    else:
+        plan = await scenario.parse(body.question, body.timeframe, body.use_llm)
+
+    sources = tuple(body.event_sources) if body.event_sources else events.DEFAULT_SOURCES
+    found, status = await events.collect(df, body.symbol, provider_info.market, sources)
+
+    result = await asyncio.to_thread(
+        scenario.run, df, body.symbol, provider_info.market, plan, found,
+        body.window, body.top_k,
+    )
+    result["eventSources"] = status
+    result["symbol"] = body.symbol
+    result["provider"] = body.provider
+    return result
+
+
+class EventsBody(BaseModel):
+    provider: str
+    symbol: str
+    timeframe: str = "1h"
+    limit: int = Field(2000, ge=300, le=MAX_LIMIT)
+    sources: list[str] | None = None
+    gdelt_query: str | None = None
+
+
+@router.post("/events")
+async def list_events(body: EventsBody) -> dict:
+    """구간에 걸린 사건 전부. 차트 위에 표시하고, 클릭하면 그때로 간다."""
+    provider_info = _provider(body.provider).info
+    df = await load_candles(body.provider, body.symbol, body.timeframe, body.limit)
+    sources = tuple(body.sources) if body.sources else events.DEFAULT_SOURCES
+    found, status = await events.collect(df, body.symbol, provider_info.market,
+                                         sources, body.gdelt_query)
+    relevant = events.relevant(found, body.symbol, provider_info.market)
+    return {
+        "sources": status,
+        "available": list(events.ALL_SOURCES),
+        "count": len(relevant),
+        # 사건이 수백 건이면 화면이 못 읽는다. 굵직한 것부터 자른다.
+        "events": [e.to_dict() for e in sorted(relevant, key=lambda e: -e.severity)[:300]],
+    }
+
+
+class UserEventBody(BaseModel):
+    at: str                      # ISO8601
+    title: str
+    kind: str = "user"
+    scope: str = "global"
+    severity: float = Field(0.5, ge=0.0, le=1.0)
+    scheduled: bool = False
+    url: str = ""
+    tags: list[str] = Field(default_factory=list)
+    note: str = ""
+
+
+@router.post("/events/user")
+def add_user_event(body: UserEventBody) -> dict:
+    """사용자가 아는 사건을 직접 등록한다. 어떤 API 보다 정확한 자료다."""
+    try:
+        event = events.store.add(body.model_dump())
+    except Exception as exc:
+        raise HTTPException(400, f"사건을 저장하지 못했다: {exc}") from exc
+    return {"event": event.to_dict()}
+
+
+@router.delete("/events/user/{event_id}")
+def delete_user_event(event_id: str) -> dict:
+    if not events.store.remove(event_id):
+        raise HTTPException(404, "그런 사건이 없다")
+    return {"removed": event_id}
+
+
+@router.get("/events/user")
+def list_user_events() -> dict:
+    return {"events": [e.to_dict() for e in events.store.all_events()]}
+
+
+@router.get("/research")
+def research_library() -> dict:
+    """근거 등록부 전체. 화면의 '근거' 패널이 이걸 그대로 그린다."""
+    return {"entries": [e.to_dict() for e in research.all_entries()]}
 
 
 class TrainBody(BaseModel):

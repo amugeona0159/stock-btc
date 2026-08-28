@@ -68,6 +68,8 @@ button:disabled { opacity: 0.4; cursor: default; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral); }
 .dot[data-state="live"] { background: var(--up); }
 .dot[data-state="error"] { background: var(--down); }
+/* 실시간이 원래 없는 경우는 고장이 아니다. 빨강이 아니라 중립색으로. */
+.dot[data-state="static"] { background: var(--warn); }
 
 .charts { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 .pane { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
@@ -148,3 +150,92 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .tag[data-dir="1"] { border-color: var(--up); color: var(--up); }
 .tag[data-dir="-1"] { border-color: var(--down); color: var(--down); }
+
+/* --- 탭 --- */
+.tabs { display: flex; gap: 4px; }
+.tabs button { flex: 1; padding: 6px 4px; }
+
+/* --- 질문 --- */
+.ask-form { display: flex; gap: 6px; }
+.ask-form input { flex: 1; min-width: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.chip {
+  padding: 3px 8px; font-size: 11px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--line); color: var(--text-dim);
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip[data-active="true"] { border-color: var(--accent); color: var(--accent); }
+
+.answer { margin: 0 0 10px; line-height: 1.6; }
+
+.interpretation {
+  display: grid; gap: 2px; padding: 8px 10px;
+  background: var(--panel-2); border-radius: 6px; margin-bottom: 8px;
+}
+.interpretation span { font-size: 11px; color: var(--text-dim); }
+.interpretation b { font-weight: 500; line-height: 1.45; }
+
+/* 조건을 풀었다는 통지는 눈에 띄어야 한다. 조용히 지나가면
+   사용자는 조건이 먹은 줄 안다. */
+.note {
+  margin: 6px 0 0; padding: 6px 9px; font-size: 12px; line-height: 1.5;
+  border-left: 2px solid var(--line); color: var(--text-dim);
+  background: var(--panel-2); border-radius: 0 5px 5px 0;
+}
+.note.warn { border-left-color: var(--warn); color: var(--text); }
+
+.link {
+  background: none; border: none; padding: 0; margin-left: 8px;
+  color: var(--accent); font-size: 11px; text-decoration: underline;
+}
+.link:hover { border: none; }
+
+.card h2 { display: flex; align-items: baseline; }
+
+.form-grid { display: grid; gap: 10px; margin-top: 10px; }
+.form-grid label { display: grid; gap: 4px; }
+.form-grid label > span { font-size: 11px; color: var(--text-dim); }
+.form-grid input[type="range"] { padding: 0; accent-color: var(--accent); }
+
+/* --- 근거 --- */
+.evidence { border-bottom: 1px solid var(--line); padding: 6px 0; }
+.evidence:last-child { border-bottom: none; }
+.evidence summary { cursor: pointer; line-height: 1.5; }
+.evidence summary::marker { color: var(--text-dim); }
+.evidence p { margin: 6px 0 0; }
+.evidence p b { color: var(--text); }
+
+.badge {
+  display: inline-block; margin-right: 6px; padding: 1px 6px;
+  font-size: 10px; border-radius: 999px; border: 1px solid var(--line);
+}
+
+.sources { margin: 6px 0 0; padding-left: 16px; font-size: 11px; color: var(--text-dim); }
+.sources li { line-height: 1.5; margin-bottom: 3px; }
+.sources a { color: var(--accent); }
+.sources em { font-style: normal; opacity: 0.8; }
+
+/* --- 사건 목록 --- */
+.event-row {
+  display: flex; gap: 8px; align-items: baseline;
+  padding: 3px 4px; border-radius: 4px; font-size: 12px;
+}
+.event-row:hover { background: var(--panel-2); }
+.event-row b { flex: none; font-variant-numeric: tabular-nums; color: var(--text-dim); font-weight: 400; }
+.event-row span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-row em { flex: none; font-style: normal; font-size: 10px; color: var(--text-dim); }
+
+/* 차트 위 범례. 무슨 선인지 사이드 패널을 스크롤해서 찾게 하면 안 된다. */
+.chart-legend {
+  position: absolute; top: 6px; right: 76px; z-index: 3;
+  display: flex; flex-wrap: wrap; gap: 10px;
+  padding: 4px 8px; border-radius: 6px;
+  background: rgba(13, 17, 23, 0.72);
+  font-size: 11px; color: var(--text-dim); pointer-events: none;
+}
+.chart-legend span { display: flex; align-items: center; gap: 5px; }
+.chart-legend i { display: block; width: 14px; height: 2px; border-radius: 1px; }
+.chart-legend i.dashed {
+  height: 0; border-top: 2px dashed currentColor; background: none !important;
+}

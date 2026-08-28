@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Candle, IndicatorResult, Requested, Signal } from "./types";
 
-export type Status = "idle" | "connecting" | "live" | "error";
+export type Status = "idle" | "connecting" | "live" | "error" | "static";
 
 interface Options {
   provider: string;
@@ -93,6 +93,10 @@ export function useLive({ provider, symbol, timeframe, indicators, enabled }: Op
         case "streamError":
           // 실시간만 끊긴 것이다. 이미 받은 차트는 그대로 두고 표시만 바꾼다.
           setState((s) => ({ ...s, status: "error", error: message.reason }));
+          break;
+        case "streamStopped":
+          // 더 시도하지 않는다. 오류가 아니라 상태다 — 빨간불로 깜빡이면 안 된다.
+          setState((s) => ({ ...s, status: "static", error: message.reason }));
           break;
         case "error":
           setState((s) => ({ ...s, status: "error", error: message.reason }));

@@ -24,6 +24,10 @@ class ProviderUnavailable(ProviderError):
     """키가 없거나 설정이 빠져 쓸 수 없다. 앱은 죽지 않고 이 프로바이더만 꺼진다."""
 
 
+class SymbolNotFound(ProviderError):
+    """그런 종목이 없다. 사용자 잘못이지 서버 잘못이 아니므로 502 로 나가면 안 된다."""
+
+
 @dataclass(frozen=True)
 class ProviderInfo:
     key: str
@@ -158,7 +162,7 @@ def describe() -> list[dict]:
 
 
 __all__ = [
-    "Provider", "ProviderInfo", "ProviderError", "ProviderUnavailable",
+    "Provider", "ProviderInfo", "ProviderError", "ProviderUnavailable", "SymbolNotFound",
     "CandleAggregator", "register", "get", "all_providers", "describe",
     "empty_frame", "field",
 ]

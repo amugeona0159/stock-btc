@@ -1,4 +1,13 @@
-import type { Forecast, IndicatorSpec, PatternHit, Requested, Signal } from "../types";
+import type {
+  EventMark,
+  Evidence,
+  Forecast,
+  IndicatorSpec,
+  PatternHit,
+  Requested,
+  Signal,
+  Situation,
+} from "../types";
 
 function price(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "—";
@@ -174,6 +183,153 @@ export function FormulaCard({ specs, selected }: { specs: IndicatorSpec[]; selec
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+export function SituationCard({ situation }: { situation: Situation | null }) {
+  if (!situation?.available || !situation.regime) return null;
+  const r = situation.regime;
+  return (
+    <section className="card">
+      <h2>지금 상황</h2>
+      <div className="rows">
+        <div className="row">
+          <span>레짐</span>
+          <b>
+            {r.volatilityLabel} · {r.trendLabel}
+          </b>
+        </div>
+        <div className="row">
+          <span>변동성 백분위</span>
+          <b>{(r.volPercentile * 100).toFixed(0)}%</b>
+        </div>
+        <div className="row">
+          <span>ADX</span>
+          <b>{r.adx ?? "—"}</b>
+        </div>
+        <div className="row">
+          <span>시점</span>
+          <b>{situation.calendar?.text}</b>
+        </div>
+      </div>
+      <p className="formula" style={{ marginBottom: 0 }}>
+        유사구간을 찾을 때 이 축들을 조건으로 쓴다. 요일·시간대가 수익률을 만든다는 뜻이
+        아니라, 비슷한 자리를 고르는 기준이라는 뜻이다.
+      </p>
+    </section>
+  );
+}
+
+export function EventsCard({
+  events,
+  sources,
+}: {
+  events: EventMark[];
+  sources: Record<string, { count: number; ok: boolean; error: string }>;
+}) {
+  const failed = Object.entries(sources).filter(([, v]) => !v.ok);
+  return (
+    <section className="card">
+      <h2>사건 ({events.length})</h2>
+      <div className="chips" style={{ marginBottom: 8 }}>
+        {Object.entries(sources).map(([key, value]) => (
+          <span
+            className="tag"
+            key={key}
+            title={value.error || undefined}
+            data-dir={value.ok ? undefined : -1}
+          >
+            {key} {value.ok ? value.count : "실패"}
+          </span>
+        ))}
+      </div>
+      {failed.length > 0 && (
+        <p className="note warn">
+          {failed.map(([key]) => key).join(", ")} 소스를 못 읽었다. 나머지 소스로만
+          계산한 결과다.
+        </p>
+      )}
+      <div className="indicator-list">
+        {events.slice(0, 60).map((event) => (
+          <div className="event-row" key={event.id}>
+            <b style={{ opacity: 0.4 + event.severity * 0.6 }}>
+              {new Date(event.ts).toISOString().slice(0, 10)}
+            </b>
+            <span>{event.title}</span>
+            <em>{event.sourceLabel}</em>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const CONFIDENCE_COLOR: Record<Evidence["confidence"], string> = {
+  strong: "var(--up)",
+  moderate: "var(--accent)",
+  weak: "var(--warn)",
+  contested: "var(--down)",
+};
+
+export function EvidenceLibrary({ entries }: { entries: Evidence[] }) {
+  const fields = Array.from(new Set(entries.map((e) => e.field)));
+  return (
+    <section className="card">
+      <h2>근거 등록부 ({entries.length})</h2>
+      <p className="formula" style={{ marginTop: 0 }}>
+        이 프로그램이 쓰는 방법론과 그 출처다. '논쟁 중' 표시는 실제로 반대 결론을 낸
+        연구가 있다는 뜻이다 — 감추지 않는다.
+      </p>
+      {fields.map((field) => (
+        <div key={field}>
+          <div className="group-label">
+            {entries.find((e) => e.field === field)?.fieldLabel}
+          </div>
+          {entries
+            .filter((e) => e.field === field)
+            .map((item) => (
+              <details key={item.key} className="evidence">
+                <summary>
+                  <span
+                    className="badge"
+                    style={{
+                      borderColor: CONFIDENCE_COLOR[item.confidence],
+                      color: CONFIDENCE_COLOR[item.confidence],
+                    }}
+                  >
+                    {item.confidenceLabel}
+                  </span>
+                  {item.claim}
+                </summary>
+                <p className="formula">
+                  <b>효과</b> {item.effect}
+                </p>
+                <p className="formula">
+                  <b>한계</b> {item.limits}
+                </p>
+                <ul className="sources">
+                  {item.sources.map((source) => (
+                    <li key={source.title}>
+                      {source.url ? (
+                        <a href={source.url} target="_blank" rel="noreferrer">
+                          {source.title}
+                        </a>
+                      ) : (
+                        source.title
+                      )}
+                      <em>
+                        {" "}
+                        — {source.authors} ({source.year}
+                        {source.venue ? `, ${source.venue}` : ""})
+                      </em>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))}
+        </div>
+      ))}
     </section>
   );
 }

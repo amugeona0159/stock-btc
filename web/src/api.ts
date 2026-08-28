@@ -38,5 +38,41 @@ export const api = {
     timeframe: string;
     horizon: number;
     indicators: Requested[];
-  }) => post<{ forecast: Forecast; patterns: PatternHit[] }>("/api/analyze", body),
+  }) =>
+    post<{
+      forecast: Forecast;
+      patterns: PatternHit[];
+      situation: import("./types").Situation;
+    }>("/api/analyze", body),
+};
+
+export const research = {
+  library: () => get<{ entries: import("./types").Evidence[] }>("/api/research"),
+};
+
+export const predict = {
+  ask: (body: {
+    provider: string;
+    symbol: string;
+    timeframe: string;
+    question: string;
+    window?: number;
+    limit?: number;
+    form?: import("./types").ScenarioForm | null;
+    use_llm?: boolean;
+  }) => post<import("./types").AskResult>("/api/ask", body),
+
+  events: (body: {
+    provider: string;
+    symbol: string;
+    timeframe: string;
+    limit?: number;
+    sources?: string[];
+  }) =>
+    post<{
+      count: number;
+      events: import("./types").EventMark[];
+      sources: Record<string, { count: number; ok: boolean; error: string }>;
+      available: string[];
+    }>("/api/events", body),
 };

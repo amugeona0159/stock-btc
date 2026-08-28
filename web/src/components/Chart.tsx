@@ -10,7 +10,13 @@ import {
   type Time,
 } from "lightweight-charts";
 
-import type { Candle, IndicatorResult, SeriesOutput } from "../types";
+import type {
+  Candle,
+  EventMark,
+  IndicatorResult,
+  Projection,
+  SeriesOutput,
+} from "../types";
 
 /** 지표 스펙은 색을 이름으로 넘긴다. 그 이름이 실제 색이 되는 곳은 여기 하나다. */
 function token(name: string): string {
@@ -42,6 +48,18 @@ function chartOptions(height: number, attribution = false) {
 }
 
 type SeriesMap = Map<string, ISeriesApi<"Line" | "Histogram">>;
+
+/** 예측 오버레이. 밴드는 얇고 흐리게, 중앙값은 점선, 사례 경로는 더 흐리게 —
+ *  한 화면에 스무 줄이 들어오므로 굵기와 진하기로 층을 나누지 않으면 아무것도 안 읽힌다. */
+const MAX_MARKERS = 20;
+
+const BAND_STYLE: Record<string, { width: 1 | 2; opacity: string; dashed: boolean }> = {
+  p10: { width: 1, opacity: "88", dashed: false },
+  p25: { width: 1, opacity: "55", dashed: false },
+  p50: { width: 2, opacity: "ff", dashed: true },
+  p75: { width: 1, opacity: "55", dashed: false },
+  p90: { width: 1, opacity: "88", dashed: false },
+};
 
 /** 한 출력 시리즈를 차트에 붙인다. draw 종류가 곧 그리는 방법이다. */
 function addOutput(chart: IChartApi, output: SeriesOutput): ISeriesApi<"Line" | "Histogram"> {
@@ -107,14 +125,25 @@ function syncSeries(chart: IChartApi, map: SeriesMap, items: Array<{ id: string;
 interface Props {
   candles: Candle[];
   indicators: IndicatorResult[];
+  projection?: Projection | null;
+  eventPath?: Array<{ time: number; value: number }> | null;
+  events?: EventMark[];
+  onEventClick?: (mark: EventMark) => void;
 }
 
-export function ChartStack({ candles, indicators }: Props) {
+export function ChartStack({
+  candles,
+  indicators,
+  projection,
+  eventPath,
+  events,
+}: Props) {
   const mainRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const priceRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const volumeRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const overlayRef = useRef<SeriesMap>(new Map());
+  const forecastRef = useRef<SeriesMap>(new Map());
 
   const subRefs = useRef<Map<string, { chart: IChartApi; series: SeriesMap; node: HTMLDivElement }>>(
     new Map(),
@@ -172,6 +201,7 @@ export function ChartStack({ candles, indicators }: Props) {
       chart.remove();
       chartRef.current = null;
       overlayRef.current.clear();
+      forecastRef.current.clear();
     };
   }, []);
 
@@ -201,6 +231,118 @@ export function ChartStack({ candles, indicators }: Props) {
     if (!chartRef.current) return;
     syncSeries(chartRef.current, overlayRef.current, outputsFor(indicators, "price"));
   }, [indicators]);
+
+  // --- 예측 오버레이 ---
+  // 마지막 봉 이후 시각에 점을 찍는다. lightweight-charts 는 미래 시각도 그냥 그린다 —
+  // 캔들이 없는 구간이라 축이 알아서 늘어난다.
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const map = forecastRef.current;
+    const wanted = new Set<string>();
+
+    const draw = (
+      id: string,
+      points: Array<{ time: number; value: number }>,
+      color: string,
+      width: 1 | 2 | 3,
+      dashed: boolean,
+    ) => {
+      if (points.length < 2) return;
+      wanted.add(id);
+      let series = map.get(id);
+      if (!series) {
+        series = chart.addLineSeries({
+          color,
+          lineWidth: width,
+          lineStyle: dashed ? LineStyle.Dashed : LineStyle.Solid,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+          // 예측선은 세로축 계산에 끼지 않는다. 끼면 사례 하나가 +20% 로 뻗은 순간
+          // 축이 통째로 늘어나 정작 봐야 할 캔들이 아래에 눌린다.
+          autoscaleInfoProvider: () => null,
+        });
+        map.set(id, series);
+      }
+      series.applyOptions({ color, lineWidth: width });
+      series.setData(points as Array<{ time: Time; value: number }>);
+    };
+
+    if (projection?.available) {
+      // 사례 경로 먼저(제일 흐리게) → 밴드 → 중앙값 순으로 얹어야 위층이 보인다.
+      for (const path of projection.paths) {
+        draw(`path-${path.id}`, path.points, `${token("neutral")}38`, 1, false);
+      }
+      for (const [key, points] of Object.entries(projection.bands)) {
+        const style = BAND_STYLE[key];
+        if (!style) continue;
+        draw(`band-${key}`, points, `${token("accent")}${style.opacity}`,
+             style.width, style.dashed);
+      }
+    }
+    if (eventPath && eventPath.length > 1) {
+      draw("event-path", eventPath, token("warn"), 2, true);
+    }
+
+    for (const [key, series] of map) {
+      if (!wanted.has(key)) {
+        chart.removeSeries(series);
+        map.delete(key);
+      }
+    }
+  }, [projection, eventPath]);
+
+  // --- 사건 마커 ---
+  useEffect(() => {
+    const series = priceRef.current;
+    if (!series) return;
+    if (!events || events.length === 0) {
+      series.setMarkers([]);
+      return;
+    }
+    // 캔들 범위 밖의 사건은 마커를 못 붙인다. 붙이면 축이 통째로 늘어나 차트가 찌그러진다.
+    const first = candles[0]?.time ?? 0;
+    const last = candles.at(-1)?.time ?? 0;
+    const visible = events.filter((e) => {
+      const t = Math.floor(e.ts / 1000);
+      return t >= first && t <= last;
+    });
+    // 화면에 마커가 스무 개를 넘으면 캔들이 안 보인다. 굵직한 것부터 자른다.
+    const shown = visible
+      .sort((a, b) => b.severity - a.severity)
+      .slice(0, MAX_MARKERS)
+      .sort((a, b) => a.ts - b.ts);
+
+    // 같은 봉에 여러 사건이 있으면 하나로 합친다. 시각이 겹친 마커는
+    // lightweight-charts 가 하나만 그리고 나머지를 조용히 버린다.
+    const byBar = new Map<number, EventMark[]>();
+    for (const e of shown) {
+      const t = Math.floor(e.ts / 1000);
+      const bucket = byBar.get(t);
+      if (bucket) bucket.push(e);
+      else byBar.set(t, [e]);
+    }
+
+    series.setMarkers(
+      Array.from(byBar.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([time, group]) => {
+          const lead = group.reduce((a, b) => (b.severity > a.severity ? b : a));
+          const extra = group.length > 1 ? ` +${group.length - 1}` : "";
+          return {
+            time: time as Time,
+            position: "aboveBar" as const,
+            color: lead.severity >= 0.7 ? token("down") : token("warn"),
+            shape: lead.scheduled ? ("square" as const) : ("circle" as const),
+            // 라벨은 굵직한 것에만. 전부 붙이면 글자끼리 겹쳐 아무것도 못 읽는다.
+            text: lead.severity >= 0.6
+              ? `${lead.title.length > 16 ? `${lead.title.slice(0, 16)}…` : lead.title}${extra}`
+              : "",
+          };
+        }),
+    );
+  }, [events, candles]);
 
   // --- 서브 패널 ---
   useEffect(() => {
@@ -277,9 +419,30 @@ export function ChartStack({ candles, indicators }: Props) {
     return () => window.removeEventListener("resize", resize);
   }, [subPanes]);
 
+  const showLegend = Boolean(projection?.available) || Boolean(eventPath?.length);
+
   return (
     <div className="charts">
-      <div className="pane main" ref={mainRef} />
+      <div className="pane main" ref={mainRef}>
+        {showLegend && (
+          <div className="chart-legend">
+            <span>
+              <i style={{ background: token("neutral") }} /> 과거 사례 경로
+            </span>
+            <span>
+              <i className="dashed" style={{ background: token("accent") }} /> 사례 중앙값
+            </span>
+            <span>
+              <i style={{ background: token("accent"), opacity: 0.55 }} /> 10~90% 구간
+            </span>
+            {eventPath?.length ? (
+              <span>
+                <i className="dashed" style={{ background: token("warn") }} /> 같은 사건 이후 평균
+              </span>
+            ) : null}
+          </div>
+        )}
+      </div>
       {subPanes.map((pane) => (
         <div className="pane sub" key={pane.id}>
           <span className="pane-label">{pane.name}</span>

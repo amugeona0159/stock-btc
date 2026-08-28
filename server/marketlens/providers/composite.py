@@ -12,7 +12,7 @@ import pandas as pd
 from ..core.candle import Candle
 from .base import Provider, ProviderInfo, register
 from .finnhub import FinnhubProvider
-from .stooq import StooqProvider
+from .yahoo import YahooProvider
 
 
 class CompositeProvider(Provider):
@@ -45,7 +45,7 @@ class CompositeProvider(Provider):
         return await self._history.search(query)
 
 
-_history = StooqProvider()
+_history = YahooProvider()
 _stream = FinnhubProvider()
 
 register(CompositeProvider(
@@ -53,10 +53,10 @@ register(CompositeProvider(
         key="us_stock",
         name="미국주식",
         market="us",
-        # Stooq 가 대는 일·주봉까지만. 분봉 히스토리는 무료로 오는 데가 없다.
-        timeframes=("1d", "1w"),
+        # 야후가 분봉 히스토리까지 준다. 다만 야후의 상한(1분봉 7일, 5~30분봉 60일)이 있다.
+        timeframes=("1m", "5m", "15m", "30m", "1h", "1d", "1w"),
         requires_key=True,
-        note="과거 캔들은 Stooq(키 불필요), 실시간 체결은 Finnhub(무료 키)",
+        note="과거 캔들은 야후(키 불필요), 실시간 체결은 Finnhub(무료 키)",
         default_symbols=("AAPL", "MSFT", "NVDA", "TSLA"),
     ),
     history_from=_history,

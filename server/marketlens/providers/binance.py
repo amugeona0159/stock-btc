@@ -14,7 +14,8 @@ import pandas as pd
 
 from ..core.candle import Candle, to_frame
 from ..core.timeframe import to_ms
-from .base import Provider, ProviderError, ProviderInfo, register
+from .base import (Provider, ProviderError, ProviderInfo, SymbolNotFound,
+                   register)
 
 REST = "https://api.binance.com"
 WS = "wss://stream.binance.com:9443/ws"
@@ -64,8 +65,17 @@ class BinanceProvider(Provider):
                     res = await client.get(f"{REST}/api/v3/klines", params=params)
                     res.raise_for_status()
                     batch = res.json()
+                except httpx.HTTPStatusError as exc:
+                    # 400 은 대개 없는 심볼이다. 사용자에게 502 를 보여줄 이유가 없다.
+                    if exc.response.status_code in (400, 404):
+                        raise SymbolNotFound(
+                            f"Binance 에 '{symbol.upper()}' 종목이 없다"
+                        ) from exc
+                    raise ProviderError(
+                        f"Binance 응답 오류 ({exc.response.status_code})"
+                    ) from exc
                 except httpx.HTTPError as exc:
-                    raise ProviderError(f"Binance 캔들 요청 실패: {exc}") from exc
+                    raise ProviderError(f"Binance 에 연결하지 못했다: {exc}") from exc
                 if not batch:
                     break
                 rows = [self._row(k, step, now) for k in batch] + rows
@@ -120,7 +130,7 @@ class BinanceProvider(Provider):
                                            params={"permissions": "SPOT"})
                     res.raise_for_status()
                 except httpx.HTTPError as exc:
-                    raise ProviderError(f"Binance 종목 목록 실패: {exc}") from exc
+                    raise ProviderError(f"Binance 종목 목록을 못 받았다: {exc}") from exc
             self._symbols = [
                 {"symbol": s["symbol"], "label": f"{s['baseAsset']}/{s['quoteAsset']}"}
                 for s in res.json().get("symbols", [])
