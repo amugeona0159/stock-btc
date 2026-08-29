@@ -14,7 +14,7 @@ import {
   SignalCard,
   SituationCard,
 } from "./components/Panels";
-import { ScreenPanel } from "./components/ScreenPanel";
+import { RECOMMEND_TIMEFRAME, ScreenPanel } from "./components/ScreenPanel";
 import { SymbolPicker } from "./components/SymbolPicker";
 import { useLive } from "./useLive";
 import type {
@@ -34,10 +34,6 @@ import type {
 const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
-// **아침 추천이 선 봉.** `scripts/recommend.py` 가 `recommend-<시장>-1d-<일수>` 로
-// 굽는다 — 여기를 바꾸려면 그쪽도 같이 바꿔야 한다. 추천에서 종목을 열 때 이 봉으로
-// 맞추고, 종합 판단이 다른 봉을 보고 있으면 화면이 그렇다고 말한다.
-export const RECOMMEND_TIMEFRAME = "1d";
 
 type Tab = "signal" | "predict" | "screen" | "learn" | "indicators" | "research";
 

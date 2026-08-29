@@ -13,6 +13,8 @@
 """
 from __future__ import annotations
 
+from . import coins
+
 UNIVERSE: dict[str, tuple[str, ...]] = {
     # 시가총액 상위 위주. 유동성이 없으면 봉이 비어 팩터가 잡음이 된다.
     "binance": ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "BNBUSDT", "DOGEUSDT",
@@ -54,8 +56,14 @@ def symbols(provider: str) -> tuple[str, ...]:
 
 
 def buyable(provider: str) -> tuple[str, ...]:
-    """매수 후보. 살 수 없는 것은 뺀다 — 기준선(후보 평균)에서도 빠진다."""
-    return tuple(s for s in symbols(provider) if s not in NOT_BUYABLE)
+    """매수 후보. 살 수 없는 것은 뺀다 — 기준선(후보 평균)에서도 빠진다.
+
+    코인은 **원화로 살 수 있는 것만** 남는다. 추천을 원화로 내기로 했으므로
+    (`coins.py`), 원화 마켓이 없는 코인은 "오늘 살 만한 것" 에 올릴 수가 없다.
+    지수를 빼는 것과 같은 이치이고, 학습에서는 `symbols()` 로 그대로 쓴다.
+    """
+    return tuple(s for s in symbols(provider)
+                 if s not in NOT_BUYABLE and coins.sellable_in_krw(s))
 
 
 def providers() -> tuple[str, ...]:

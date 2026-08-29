@@ -495,6 +495,16 @@ export interface GateStatus {
 export interface RecommendItem {
   symbol: string;
   last: number | null;
+  /** 한글 이름(솔라나). 표에 없는 코인이면 없다 — 지어내지 않는다. */
+  name?: string | null;
+  /** 거래쌍을 뗀 코인 기호(SOL). 주식이면 심볼 그대로다. */
+  ticker?: string | null;
+  /**
+   * 원화 실거래가. **환산가가 아니라 업비트 원화 마켓의 실제 종가**다 —
+   * 환율을 곱한 값은 김치 프리미엄만큼 어긋나 그 값에 살 수가 없다.
+   * 주식이거나 옛 파일이면 없다.
+   */
+  krw?: { symbol: string; last: number; ts: number } | null;
   /** 그 지평의 기대 수익률(%). 예측 분포의 중앙값이지 평균이 아니다. */
   expected: number | null;
   /** 80% 구간 [아래, 위] (%). */

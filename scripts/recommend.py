@@ -77,7 +77,7 @@ from marketlens.api.routes import _symbol_data                    # noqa: E402
 from marketlens.core.candle import closed_only                    # noqa: E402
 from marketlens.forecast.ml import model as ml                    # noqa: E402
 from marketlens.providers import get as get_provider              # noqa: E402
-from marketlens.screen import universe                            # noqa: E402
+from marketlens.screen import coins, universe                            # noqa: E402
 
 # `daily.py`·`screen.py`·`study.py` 와 같은 규칙.
 LEARNING = Path(os.environ.get("MARKET_LENS_LEARNING") or ROOT / "learning")
@@ -119,6 +119,38 @@ async def load_market(provider: str) -> tuple[list, list[dict]]:
         if provider.startswith(("toss", "upbit")):
             await asyncio.sleep(1.2)          # 호출 한도가 있다
     return loaded, skipped
+
+
+async def krw_prices(symbols: list[str]) -> dict[str, dict]:
+    """코인의 **업비트 원화 실거래가.** 심볼 → {"symbol", "last"}.
+
+    **환율로 환산하지 않는다.** 바이낸스 달러 가격에 환율을 곱하면 숫자는 나오지만
+    국내 시세는 김치 프리미엄만큼 따로 놀아서 **그 값에 살 수가 없다.** 투자 판단에
+    쓰는 화면에서 못 사는 가격을 적는 건 틀린 것보다 나쁘다.
+
+    **추천이 딛고 선 봉과 같은 날 종가**를 쓴다. 지금 시세를 넣으면 얼린 파일 안에서
+    가격만 시간에 따라 달라져, 같은 파일을 언제 열었느냐로 값이 바뀐다.
+
+    실패하면 그 종목만 빠진다 — 원화 가격이 없다고 추천을 안 낼 일은 아니다.
+    """
+    wanted = {s: m for s in symbols if (m := coins.krw_market(s))}
+    if not wanted:
+        return {}
+    provider = get_provider("upbit")
+    out: dict[str, dict] = {}
+    for symbol, market in wanted.items():
+        try:
+            frame = await provider.history(market, "1d", 5)
+            closed = frame[frame["closed"]] if "closed" in frame else frame
+            if closed.empty:
+                continue
+            row = closed.iloc[-1]
+            out[symbol] = {"symbol": market, "last": float(row["close"]),
+                           "ts": int(row["ts"])}
+        except Exception as exc:                                   # noqa: BLE001
+            print(f"    원화 시세 실패 {market}: {str(exc)[:60]}")
+        await asyncio.sleep(0.15)             # 업비트는 호출 한도가 있다
+    return out
 
 
 def look(data, name: str, day: int) -> dict | None:
@@ -241,6 +273,17 @@ async def pick(provider: str) -> dict | None:
         mark = " · 모델 안 씀(사실상 변동성 순서)" if degenerate else ""
         print(f"  {provider} {day}일: {order[0]} {found[order[0]]['expected']:+.2f}% "
               f"· skill {by_day[str(day)]['skill']}{mark}")
+
+    # **원화 시세만 얼린다.** 이름·티커는 `coins.py` 표에서 바로 나오므로 저장하지
+    # 않는다 — 저장해 두면 표를 고쳐도 옛 파일이 옛 이름을 계속 들고 있게 된다.
+    # 시세는 그날 값이라 저장해야 한다(나중에 읽으면 다른 값이 나온다).
+    priced = await krw_prices([s for s in rows if not s.startswith("KRW-")])
+    for symbol, row in rows.items():
+        if symbol.startswith("KRW-"):
+            # 업비트는 원래 원화라 그대로가 실거래가다.
+            row["krw"] = {"symbol": symbol, "last": row["last"], "ts": row["lastTs"]}
+        elif symbol in priced:
+            row["krw"] = priced[symbol]
 
     if not by_day:
         return None
@@ -441,10 +484,23 @@ async def main() -> None:
     if not picked:
         print("\n낼 게 없다 — 파일을 만들지 않는다")
         return
+    # **오늘 파일에 이미 있던 시장은 지우지 않는다.** 이 스크립트는 넘겨받은 시장만
+    # 뽑는데 그대로 덮어쓰면 `--force --provider binance` 한 번에 국내주식·미국주식이
+    # 통째로 사라진다. 다시 뽑은 시장만 갈아 끼운다.
+    kept: dict[str, dict] = {}
+    if path.is_file():
+        try:
+            kept = json.loads(path.read_text(encoding="utf-8")).get("providers") or {}
+        except (OSError, ValueError):
+            kept = {}
+    if (survived := sorted(p for p in kept if p not in picked)):
+        print(f"  그대로 둔 시장: {', '.join(survived)}")
+
     OUT.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(
         {"date": date, "generatedAt": now(), "timeframe": "1d", "days": list(DAYS),
-         "providers": picked}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+         "providers": {**kept, **picked}}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8")
     print(f"\n얼렸다: {path.relative_to(ROOT)}")
 
 

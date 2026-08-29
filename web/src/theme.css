@@ -345,3 +345,10 @@ button:disabled { opacity: 0.4; cursor: default; }
   padding: 4px 6px; border-radius: 5px;
 }
 .picker-row:hover, .picker-row[data-active="true"] { background: var(--panel-2); }
+
+/* 코인 티커. 이름 뒤에 작게 붙어 "솔라나 SOL" 로 읽힌다 — 이름만 있으면 검색이
+   안 되고, 티커만 있으면 외운 사람만 읽는다. */
+.ticker {
+  font-style: normal; font-size: 11px; color: var(--text-dim);
+  letter-spacing: 0.02em;
+}

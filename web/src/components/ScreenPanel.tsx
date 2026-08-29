@@ -16,13 +16,27 @@ const DAYS = [
   { label: "사흘 뒤", value: 3 },
 ];
 
-// 추천은 언제나 일봉으로 잰다. 위 차트의 봉과 무관하다.
-const TIMEFRAME = "1d";
+/**
+ * **아침 추천이 선 봉.** `scripts/recommend.py` 가 `recommend-<시장>-1d-<일수>` 로
+ * 굽는다 — 여기를 바꾸려면 그쪽도 같이 바꿔야 한다.
+ *
+ * 추천 화면이 이 값의 주인이고, `App` 이 가져다 쓴다(종목을 열 때 이 봉으로 맞추고,
+ * 종합 판단이 다른 봉을 보고 있으면 그렇다고 알린다). 두 벌로 두면 갈라진다.
+ */
+export const RECOMMEND_TIMEFRAME = "1d";
 
 function signed(value: number | null | undefined, digits = 2): string {
   return value === null || value === undefined || !Number.isFinite(value)
     ? "—"
     : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
+}
+
+/** 원화. 코인은 값의 자릿수가 천차만별이라(비트코인 1억, 도지 300원) 자리를 고정하면
+ *  한쪽은 잘리고 한쪽은 0 만 늘어난다. 1,000원 위로는 소수점을 버린다. */
+function won(value: number | null | undefined): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "";
+  const digits = value >= 1000 ? 0 : value >= 1 ? 1 : 4;
+  return `₩${value.toLocaleString("ko-KR", { maximumFractionDigits: digits })}`;
 }
 
 function pct(value: number | null | undefined, digits = 1): string {
@@ -194,14 +208,30 @@ function Row({
       <span>
         <button className="linky" onClick={onPick} title="이 종목으로 차트를 옮긴다">
           {rank ? `${rank}. ` : "· "}
-          {item.symbol}
+          {/* **거래쌍 이름(SOLUSDT)을 쓰지 않는다.** 원화로 사는 사람에게 달러 쌍
+              이름은 자기가 치를 값과 무관하다. 이름이 표에 없으면 티커만 나간다 —
+              없는 이름을 지어내면 다른 코인과 헷갈린다. */}
+          {item.name ? (
+            <>
+              {item.name} <em className="ticker">{item.ticker ?? item.symbol}</em>
+            </>
+          ) : (
+            item.ticker ?? item.symbol
+          )}
         </button>
-        {/* 피하라 목록에는 확신도를 안 적는다 — 거기서는 읽을 이유가 없다. */}
-        {item.confidence && !down && (
-          <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-            {CONFIDENCE[item.confidence] ?? item.confidence}
-          </span>
-        )}
+        <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
+          {/* 원화 실거래가(업비트) + 확신도. **가운뎃점으로 끊는다** — 붙여 두면
+              "₩144,400 확신 높음" 이 한 덩어리로 읽히고 줄이 바뀔 때 라벨 가운데가
+              잘린다. 피하라 목록에는 확신도를 안 적는다(거기서는 읽을 이유가 없다). */}
+          {[
+            item.krw ? won(item.krw.last) : null,
+            item.confidence && !down
+              ? CONFIDENCE[item.confidence] ?? item.confidence
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
       </span>
       <b style={{ textAlign: "right" }}>
         <span style={{ color: good ? "var(--up)" : "var(--down)" }}>
@@ -306,7 +336,7 @@ function WatchCard({ provider }: { provider: string }) {
 
   const load = useCallback(() => {
     screen
-      .rank({ provider, timeframe: TIMEFRAME, horizon: 3, limit: 6 })
+      .rank({ provider, timeframe: RECOMMEND_TIMEFRAME, horizon: 3, limit: 6 })
       .then(setFound)
       .catch(() => setFound(null));
   }, [provider]);
