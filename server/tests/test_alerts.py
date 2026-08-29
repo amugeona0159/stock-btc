@@ -80,7 +80,18 @@ def test_touch_uses_the_bar_extremes_not_the_close():
     assert watch.touched(up, low=90.0, high=101.0) == 101.0      # 고가로 닿았다
 
 
-def test_a_rule_fires_only_once():
+@pytest.fixture
+def daytime(monkeypatch):
+    """벽시계를 낮으로 고정한다.
+
+    아래 두 판이 보는 건 "한 번만 나가는가" 와 "하나가 죽어도 나머지가 나가는가"
+    지 시각이 아니다. 그런데 한밤중(23~07 KST)에는 급하지 않은 알림을 모아 뒀다
+    아침에 보내므로, 벽시계를 그대로 쓰면 **새벽에 돌린 사람만** 이 둘이 빨개진다.
+    """
+    monkeypatch.setattr(watch, "quiet_now", lambda *_args, **_kwargs: False)
+
+
+def test_a_rule_fires_only_once(daytime):
     """**폭주 방지.** 경계에서 가격이 떨어도 한 번만 나가야 한다."""
     rule = store.add(Rule(provider="upbit", symbol="KRW-SOL",
                           kind="buy_below", price=100.0))
@@ -102,7 +113,7 @@ def test_a_rule_fires_only_once():
     assert rule.id == store.rules()[0].id
 
 
-def test_a_broken_symbol_does_not_stop_the_others():
+def test_a_broken_symbol_does_not_stop_the_others(daytime):
     """프로바이더 하나가 죽었다고 **나머지 알림까지 죽으면 안 된다.**"""
     store.add(Rule(provider="nosuch", symbol="BAD", kind="buy_below", price=100.0))
     store.add(Rule(provider="upbit", symbol="KRW-SOL", kind="buy_below", price=100.0))

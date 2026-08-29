@@ -49,7 +49,7 @@ def quiet_now(at: datetime | None = None) -> bool:
     return hour >= start or hour < end
 
 
-def _label(symbol: str) -> str:
+def label(symbol: str) -> str:
     found = names.of(symbol)
     return f"{found} {names.ticker(symbol)}" if found else symbol
 
@@ -60,7 +60,7 @@ def message(rule: Rule, price: float) -> dict:
     **"사세요" 라고 쓰지 않는다.** 이 도구가 아는 것은 "설정한 값에 닿았다" 까지고,
     살지 말지는 사람이 정한다. 방향 적중이 55% 인 모델로 명령형을 쓰면 안 된다.
     """
-    what = _label(rule.symbol)
+    what = label(rule.symbol)
     head = {
         "buy_below": f"{what} · 매수 지켜보던 값에 닿았다",
         "sell_above": f"{what} · 매도 지켜보던 값에 닿았다",
@@ -219,7 +219,7 @@ def from_recommendation(provider: str, days: int, body: dict) -> list[Rule]:
 
 def as_dict(rule: Rule) -> dict:
     out = asdict(rule)
-    out["label"] = _label(rule.symbol)
+    out["label"] = label(rule.symbol)
     return out
 
 

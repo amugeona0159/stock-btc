@@ -11,7 +11,8 @@ import { alerts } from "../api";
 import { installed, isIos, register, subscribe } from "../push";
 import type { AlertFired, AlertRule, AlertsView } from "../types";
 
-const KIND: Record<string, string> = {
+/** 종류 이름표. **기록 화면도 이걸 쓴다** — 두 벌이 되면 같은 알림이 화면마다 달리 읽힌다. */
+export const KIND: Record<string, string> = {
   buy_below: "내려와 닿으면",
   stop_below: "손절선 이탈",
   sell_above: "올라가 닿으면",

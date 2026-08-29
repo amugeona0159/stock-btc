@@ -32,12 +32,19 @@ const SHOTS = [
   // 종목 고르기. 4,300종목을 그리면 브라우저가 멎으므로 잘라 놓았는데, 실제로
   // 잘렸는지와 한글 종목명이 읽히는지는 그림으로만 확인된다.
   { name: "symbols", width: 1600, height: 950, indicators: [], picker: "삼성" },
+  // 기록은 날짜별로 묶여 하루치가 한 눈에 내려가는지를 본다. 시각이 왼쪽에 자로
+  // 서 있는지, 뒷값 부호가 읽히는지는 그림으로만 확인된다.
+  { name: "log", width: 1600, height: 950, indicators: [], tab: "기록",
+    click: "그 뒤 값 보기", waitFor: "text=최근" },
 ];
+
+// 한 장만 다시 찍고 싶을 때. 전부 찍으면 시세를 열세 번 받아 오느라 오래 걸린다.
+const ONLY = process.env.SHOT_ONLY;
 
 mkdirSync(OUT, { recursive: true });
 const browser = await chromium.launch();
 
-for (const shot of SHOTS) {
+for (const shot of SHOTS.filter((s) => !ONLY || s.name === ONLY)) {
   const page = await browser.newPage({
     viewport: { width: shot.width, height: shot.height },
     deviceScaleFactor: 1,
@@ -81,6 +88,11 @@ for (const shot of SHOTS) {
     // 유사구간 검색은 몇 초 걸린다. 답이 뜰 때까지 기다린다.
     await page.waitForSelector(".answer", { timeout: 90000 });
     await page.waitForTimeout(1200);
+  }
+
+  if (shot.click) {
+    // 눌러야 값이 오는 화면이 있다(기록의 뒷값). 안 누르면 빈 자리만 찍힌다.
+    await page.locator(".chip", { hasText: shot.click }).first().click();
   }
 
   if (shot.waitFor) {

@@ -168,6 +168,46 @@ def fired(limit: int = 200) -> list[dict]:
     return rows[-limit:][::-1]           # 최근 것이 위로
 
 
+def log(*, since: str | None = None, symbol: str | None = None,
+        kind: str | None = None, include_archived: bool = True,
+        limit: int | None = None) -> list[dict]:
+    """조건에 맞는 기록. 최근 것이 위로.
+
+    `fired()` 는 알림함이 쓰는 함수라 최근 200건에서 끊는다. 기록은 **끊으면 기록이
+    아니다** — 여기서는 상한 없는 것이 기본이고, 화면이 원할 때만 limit 을 준다.
+
+    `since` 를 문자열 그대로 비교하는 건 `at` 이 전부 `now()` 가 만든 같은 모양
+    (초 단위 UTC ISO)이라서다. 줄마다 파싱하면 비용만 붙고 얻는 게 없다.
+    """
+    if not FIRED.is_file():
+        return []
+    rows = []
+    for line in FIRED.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if since and str(row.get("at") or "") < since:
+            continue
+        if symbol and row.get("symbol") != symbol:
+            continue
+        if kind and row.get("kind") != kind:
+            continue
+        if not include_archived and row.get("archived"):
+            continue
+        rows.append(row)
+    rows.reverse()                       # 최근 것이 위로
+    return rows[:limit] if limit else rows
+
+
+def count() -> int:
+    """남아 있는 기록 줄 수. 걸러낸 화면이 "뭘 숨겼는지" 말할 수 있어야 한다."""
+    if not FIRED.is_file():
+        return 0
+    return sum(1 for line in FIRED.read_text(encoding="utf-8").splitlines()
+               if line.strip())
+
+
 def mark(entry_id: str, **changes) -> bool:
     """읽음·보관 표시. 줄을 지우지 않고 다시 써서 상태만 바꾼다."""
     if not FIRED.is_file():

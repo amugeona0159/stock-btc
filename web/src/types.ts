@@ -606,3 +606,43 @@ export interface AlertsView {
   quiet: boolean;
   push: { available: boolean; publicKey: string };
 }
+
+export interface AlertLogSummary {
+  /** 지금 걸러진 목록의 건수. */
+  total: number;
+  /** 파일에 남아 있는 전체 건수. 필터가 뭘 숨겼는지 말하려면 둘 다 필요하다. */
+  stored: number;
+  unread: number;
+  archived: number;
+  kinds: Record<string, number>;
+  symbols: Array<{ symbol: string; label: string; count: number }>;
+  first: string | null;
+  last: string | null;
+}
+
+export interface AlertLogView {
+  entries: AlertFired[];
+  summary: AlertLogSummary;
+}
+
+/** 알림 뒤의 값 하나. **맞았다는 판정이 아니라 변화율이다.** */
+export interface AlertOutcomePoint {
+  at: string;
+  price: number;
+  changePct: number;
+}
+
+export interface AlertOutcome {
+  /** 알림이 나갈 때 닿은 값. 설정값이 아니라 시장에 실제로 있던 값이다. */
+  base: number;
+  /** 며칠 뒤(일봉 기준) → 그때 종가. 주식은 거래일로 세어진다. */
+  after: Record<string, AlertOutcomePoint>;
+  latest: AlertOutcomePoint | null;
+}
+
+export interface AlertOutcomes {
+  outcomes: Record<string, AlertOutcome>;
+  /** `provider:symbol` → 왜 못 쟀는지. 뒷값이 없어도 기록은 떠 있어야 한다. */
+  failed: Record<string, string>;
+  horizons: number[];
+}

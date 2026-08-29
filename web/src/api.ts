@@ -93,6 +93,18 @@ export const alerts = {
       `/api/alerts/from-recommendation?provider=${provider}&days=${days}`, {}),
   test: () => post<{ sent: number; subscriptions: number; push: boolean }>(
     "/api/alerts/test", {}),
+
+  /** 기록. 알림함과 달리 **보관한 것도 기본으로 들어온다.** `days: 0` 이 전체다. */
+  log: (query: { days: number; symbol?: string; kind?: string; archived?: boolean }) => {
+    const params = new URLSearchParams({ days: String(query.days) });
+    if (query.symbol) params.set("symbol", query.symbol);
+    if (query.kind) params.set("kind", query.kind);
+    if (query.archived === false) params.set("archived", "false");
+    return get<import("./types").AlertLogView>(`/api/alerts/log?${params}`);
+  },
+  /** 보고 있는 기록의 뒷값만 물어본다. 느리고 실패도 하는 조회라 따로 부른다. */
+  outcome: (ids: string[]) =>
+    post<import("./types").AlertOutcomes>("/api/alerts/log/outcome", { ids }),
 };
 
 export const api = {

@@ -5,10 +5,13 @@
 """
 from __future__ import annotations
 
+from collections import Counter
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..alerts import push, store, watch
+from ..alerts import followup, push, store, watch
 from ..alerts.store import Rule
 from . import recommend as recommend_layer
 
@@ -86,6 +89,64 @@ def read(entry_id: str) -> dict:
 def archive(entry_id: str) -> dict:
     """화면에서 치운다. **기록은 지우지 않는다** — 알림이 맞았는지 나중에 재야 한다."""
     return {"ok": store.mark(entry_id, archived=True, read=True)}
+
+
+@router.get("/log")
+def log(days: int = 30, symbol: str | None = None, kind: str | None = None,
+        archived: bool = True, limit: int = 2000) -> dict:
+    """알림 기록. **알림함과 따로 둔다.**
+
+    알림함은 "지금 봐야 할 것"이고 기록은 "그때 뭐가 왔었나"다. 한 목록에 두면
+    읽고 보관하는 순간 눈앞에서 사라지는데, 정작 뒤에 세어 볼 것은 그것들이다.
+    그래서 여기는 **보관한 것도 기본으로 보인다.**
+
+    `days=0` 은 전체다.
+    """
+    if kind is not None and kind not in store.KINDS:
+        raise HTTPException(400, f"모르는 종류: {kind} (가능: {', '.join(store.KINDS)})")
+    since = None
+    if days > 0:
+        since = (datetime.now(timezone.utc) - timedelta(days=days)) \
+            .isoformat(timespec="seconds")
+
+    entries = store.log(since=since, symbol=symbol, kind=kind,
+                        include_archived=archived, limit=limit)
+    by_symbol = Counter(e["symbol"] for e in entries if e.get("symbol"))
+    return {
+        "entries": entries,
+        "summary": {
+            "total": len(entries),
+            # 필터가 뭘 숨겼는지 화면이 말할 수 있어야 한다. 안 그러면 "기록이
+            # 세 건뿐" 으로 읽힌다.
+            "stored": store.count(),
+            "unread": sum(1 for e in entries if not e.get("read")),
+            "archived": sum(1 for e in entries if e.get("archived")),
+            "kinds": dict(Counter(e["kind"] for e in entries if e.get("kind"))),
+            "symbols": [{"symbol": s, "label": watch.label(s), "count": n}
+                        for s, n in by_symbol.most_common()],
+            # 목록이 최근 것부터라 처음과 끝이 뒤집혀 있다.
+            "first": entries[-1]["at"] if entries else None,
+            "last": entries[0]["at"] if entries else None,
+        },
+    }
+
+
+class OutcomeAsk(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=200)
+
+
+@router.post("/log/outcome")
+async def outcome(body: OutcomeAsk) -> dict:
+    """기록들의 뒷값. 화면이 보고 있는 것만 물어본다.
+
+    목록을 열 때마다 부르지 않는 건, 시세 조회가 프로바이더를 타서 느리고 실패도
+    하기 때문이다. **뒷값이 안 와도 기록 자체는 떠 있어야 한다.**
+    """
+    want = set(body.ids)
+    entries = [e for e in store.log() if e.get("id") in want]
+    if not entries:
+        return {"outcomes": {}, "failed": {}, "horizons": list(followup.HORIZONS)}
+    return await followup.measure(entries)
 
 
 @router.post("/from-recommendation")
