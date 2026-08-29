@@ -117,6 +117,16 @@ def ticker(symbol: str) -> str:
     return symbol if symbol in _STOCKS else coins.base(symbol)
 
 
+def label(symbol: str) -> str:
+    """이름과 기호를 붙인 한 줄 — `솔라나 SOL`. 표에 없으면 심볼 그대로.
+
+    알림 문구·포지션·기록이 전부 이걸 쓴다. 이름을 붙이는 자리가 셋으로 갈리면
+    같은 종목이 화면마다 다르게 불린다.
+    """
+    found = of(symbol)
+    return f"{found} {ticker(symbol)}" if found else symbol
+
+
 def table() -> dict[str, dict[str, str]]:
     """화면이 부팅할 때 받아 갈 표. **심볼 그대로가 열쇠다.**
 

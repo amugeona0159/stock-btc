@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { recommend, screen } from "../api";
+import { positions, recommend, screen } from "../api";
 import type {
   ProviderInfo,
   Recommend,
@@ -167,8 +167,8 @@ export function ScreenPanel({ provider, providers, onPick, onProvider, names }: 
 
           <div className="rows">
             {result.buy.map((item, i) => (
-              <Row key={item.symbol} item={item} rank={i + 1}
-                   onPick={() => onPick(item.symbol)} />
+              <Row key={item.symbol} item={item} rank={i + 1} days={days}
+                   provider={provider} onPick={() => onPick(item.symbol)} />
             ))}
           </div>
 
@@ -204,17 +204,25 @@ function Row({
   item,
   rank,
   down,
+  days,
+  provider,
   onPick,
 }: {
   item: RecommendItem;
   rank?: number;
   down?: boolean;
+  days?: number;
+  provider?: string;
   onPick: () => void;
 }) {
   const good = (item.expected ?? 0) >= 0 && !down;
+  const [buying, setBuying] = useState(false);
+  // 행과 매수 칸은 **형제**다. 행 안에 넣으면 세 번째 flex 칸이 되어 종목 이름을
+  // 짓누른다 — 실제로 "솔라/나 SOL" 로 쪼개졌다. `.rows` 가 격자라 형제가 제 줄을 갖는다.
   return (
+    <>
     <div className="row" style={{ alignItems: "flex-start" }}>
-      <span>
+      <span style={{ flex: 1, minWidth: 0 }}>
         <button className="linky" onClick={onPick} title="이 종목으로 차트를 옮긴다">
           {rank ? `${rank}. ` : "· "}
           {/* **거래쌍 이름(SOLUSDT)을 쓰지 않는다.** 원화로 사는 사람에게 달러 쌍
@@ -242,7 +250,7 @@ function Row({
             .join(" · ")}
         </span>
       </span>
-      <b style={{ textAlign: "right" }}>
+      <b style={{ textAlign: "right", flex: "none" }}>
         <span style={{ color: good ? "var(--up)" : "var(--down)" }}>
           {signed(item.expected)}%
         </span>
@@ -256,6 +264,79 @@ function Row({
           </span>
         )}
       </b>
+      {!down && provider && (
+        <button className="chip" style={{ flex: "none", alignSelf: "flex-start" }}
+                onClick={() => setBuying((v) => !v)}>
+          {buying ? "접기" : "샀다"}
+        </button>
+      )}
+    </div>
+    {buying && provider && (
+      <BuyForm item={item} days={days} provider={provider}
+               onDone={() => setBuying(false)} />
+    )}
+    </>
+  );
+}
+
+/**
+ * 산 것을 장부에 적는다.
+ *
+ * **원화 마켓이 있으면 그쪽으로 연다.** 추천은 바이낸스 모델로 나오지만 사람이 실제로
+ * 치른 값은 업비트 원화다. 거기서 열어야 손익이 자기가 낸 돈으로 난다 — 환율로 환산한
+ * 달러 값은 살 수도 팔 수도 없는 숫자다(`screen/coins.py`).
+ *
+ * 밴드는 **비율**이라 어느 통화에 붙여도 뜻이 같다. 그래서 근거는 그대로 넘어간다.
+ */
+function BuyForm({ item, days, provider, onDone }: {
+  item: RecommendItem; days?: number; provider: string; onDone: () => void;
+}) {
+  const krw = item.krw;
+  const suggested = krw?.last ?? item.last;
+  const [entry, setEntry] = useState(suggested ? String(suggested) : "");
+  const [shares, setShares] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  const submit = () => {
+    const price = Number(entry.replace(/,/g, ""));
+    const count = Number(shares.replace(/,/g, ""));
+    if (!(price > 0) || !(count > 0)) {
+      setNote("진입가와 주수를 숫자로 넣어라");
+      return;
+    }
+    setBusy(true);
+    positions.open({
+      provider: krw ? "upbit" : provider,
+      symbol: krw ? krw.symbol : item.symbol,
+      entry: price, shares: count,
+      band: item.band ?? null, expected: item.expected ?? null,
+      days: days ?? null, source: "recommend",
+    })
+      .then((r) => {
+        setNote(r.warning || "보유 탭에 적었다. 손절·목표에 알림을 걸었다.");
+        setShares("");
+        window.setTimeout(onDone, 1500);
+      })
+      .catch((e) => setNote(String(e.message ?? e)))
+      .finally(() => setBusy(false));
+  };
+
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="ask-form">
+        <input inputMode="decimal" placeholder="진입가"
+               value={entry} onChange={(e) => setEntry(e.target.value)} />
+        <input inputMode="decimal" placeholder="주수"
+               value={shares} onChange={(e) => setShares(e.target.value)} />
+        <button onClick={submit} disabled={busy}>적기</button>
+      </div>
+      <p className="formula" style={{ marginTop: 4, marginBottom: 0 }}>
+        {krw
+          ? `업비트 ${krw.symbol} 로 적는다 — 실제로 치른 값이 그쪽이다.`
+          : "손절·목표는 이 추천의 80% 밴드에서 나온다."}
+      </p>
+      {note && <p className="note" style={{ marginTop: 6 }}>{note}</p>}
     </div>
   );
 }

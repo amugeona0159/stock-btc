@@ -49,18 +49,13 @@ def quiet_now(at: datetime | None = None) -> bool:
     return hour >= start or hour < end
 
 
-def label(symbol: str) -> str:
-    found = names.of(symbol)
-    return f"{found} {names.ticker(symbol)}" if found else symbol
-
-
 def message(rule: Rule, price: float) -> dict:
     """알림 문구.
 
     **"사세요" 라고 쓰지 않는다.** 이 도구가 아는 것은 "설정한 값에 닿았다" 까지고,
     살지 말지는 사람이 정한다. 방향 적중이 55% 인 모델로 명령형을 쓰면 안 된다.
     """
-    what = label(rule.symbol)
+    what = names.label(rule.symbol)
     head = {
         "buy_below": f"{what} · 매수 지켜보던 값에 닿았다",
         "sell_above": f"{what} · 매도 지켜보던 값에 닿았다",
@@ -166,6 +161,14 @@ class Watcher:
         # **먼저 표시하고 보낸다.** 보내기가 느려서 다음 주기가 돌면 두 번 나간다.
         store.update(rule.id, fired_at=store.now())
         store.record_fired(entry)
+        # 포지션이 건 규칙이면 장부에도 "닿았다"를 적는다. **여기서 팔지는 않는다** —
+        # 실제로 팔았는지는 사람만 안다. 늦게 가져오는 건 순환 import 를 끊으려는 것이다.
+        try:
+            from ..positions.manage import on_fired
+            on_fired(rule, entry)
+        except Exception:                     # noqa: BLE001
+            # 장부가 터져도 알림은 나가야 한다. 알림이 이 기능의 본체다.
+            log.exception("포지션 갱신 실패 — 알림은 그대로 나간다")
 
         urgent = rule.kind == "stop_below"
         if quiet_now() and not urgent:
@@ -219,7 +222,7 @@ def from_recommendation(provider: str, days: int, body: dict) -> list[Rule]:
 
 def as_dict(rule: Rule) -> dict:
     out = asdict(rule)
-    out["label"] = label(rule.symbol)
+    out["label"] = names.label(rule.symbol)
     return out
 
 

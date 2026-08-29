@@ -60,6 +60,8 @@ class Rule:
     # 그 규칙이 딛고 선 근거. 알림에 그대로 실어 보낸다.
     band: list[float] | None = None
     days: int | None = None
+    # 어느 포지션이 건 규칙인가. 이게 있어야 알림이 울렸을 때 장부를 찾아간다.
+    position_id: str | None = None
 
     def hits(self, price: float) -> bool:
         if self.kind in ("buy_below", "stop_below"):

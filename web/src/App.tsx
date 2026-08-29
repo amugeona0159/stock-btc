@@ -16,6 +16,7 @@ import {
 } from "./components/Panels";
 import { AlertLog } from "./components/AlertLog";
 import { AlertsPanel } from "./components/AlertsPanel";
+import { PositionsPanel } from "./components/PositionsPanel";
 import { RECOMMEND_TIMEFRAME, ScreenPanel } from "./components/ScreenPanel";
 import { SymbolPicker } from "./components/SymbolPicker";
 import { useLive } from "./useLive";
@@ -38,7 +39,7 @@ const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
 
-type Tab = "signal" | "predict" | "screen" | "alerts" | "log" | "learn"
+type Tab = "signal" | "predict" | "screen" | "hold" | "alerts" | "log" | "learn"
   | "indicators" | "research";
 
 // **되는 것부터 보이게 둔다.** 이 도구가 실제로 잘하는 건 "얼마나 움직일까"(밴드
@@ -46,6 +47,8 @@ type Tab = "signal" | "predict" | "screen" | "alerts" | "log" | "learn"
 // 8시간 · 27,664판으로 잰 결과다 — docs/STUDY.md.
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "screen", label: "추천" },
+  // 들고 있는 것이 추천 바로 뒤다. 추천에서 사고 여기서 따라가는 순서 그대로.
+  { key: "hold", label: "보유" },
   // 알림은 폰에서 제일 자주 여는 화면이라 앞에 둔다.
   { key: "alerts", label: "알림" },
   // 기록은 알림 바로 옆이다. 알림함에서 보관하면 사라지는데, 뒤에 세어 볼 것이
@@ -391,6 +394,11 @@ export default function App() {
             names={symbolNames}
             onProvider={(key) => switchProvider(key)}
           />
+        )}
+
+        {tab === "hold" && (
+          <PositionsPanel provider={provider} symbol={symbol}
+                          onPick={(s) => selectSymbol(provider, s, RECOMMEND_TIMEFRAME)} />
         )}
 
         {tab === "alerts" && (

@@ -26,6 +26,7 @@ from ..signals.engine import evaluate  # noqa: E402
 from ..alerts import push as push_layer  # noqa: E402
 from ..alerts.watch import Watcher  # noqa: E402
 from .alerts import router as alerts_router  # noqa: E402
+from .positions import router as positions_router  # noqa: E402
 from .auth import guard  # noqa: E402
 from .routes import load_candles, router  # noqa: E402
 from .ws import hub  # noqa: E402
@@ -74,6 +75,7 @@ app.add_middleware(
 app.middleware("http")(guard)
 app.include_router(router)
 app.include_router(alerts_router)
+app.include_router(positions_router)
 
 
 @app.get("/api/health")

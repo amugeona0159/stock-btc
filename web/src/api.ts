@@ -107,6 +107,30 @@ export const alerts = {
     post<import("./types").AlertOutcomes>("/api/alerts/log/outcome", { ids }),
 };
 
+export const positions = {
+  list: () => get<import("./types").PositionsView>("/api/positions"),
+  open: (body: {
+    provider: string; symbol: string; entry: number; shares: number;
+    band?: [number, number] | null; expected?: number | null;
+    days?: number | null; source?: string; note?: string;
+  }) => post<{ position: import("./types").Position; warning: string }>(
+    "/api/positions", body),
+  /** 실제로 판 만큼 덜어낸다. 다 팔면 닫힌다. */
+  sold: (id: string, body: { price: number; shares: number; reason?: string }) =>
+    post<{ position: import("./types").Position }>(`/api/positions/${id}/sold`, body),
+  /** 닿았는데 안 팔았다 — 손절선을 올려 다시 건다. */
+  held: (id: string) =>
+    post<{ position: import("./types").Position }>(`/api/positions/${id}/held`, {}),
+  close: (id: string, reason = "manual") =>
+    post<{ position: import("./types").Position }>(
+      `/api/positions/${id}/close?reason=${reason}`, {}),
+  retarget: (id: string, body: { stop?: number; targets?: unknown[] }) =>
+    send<{ position: import("./types").Position }>(`/api/positions/${id}`, "PATCH", body),
+  remove: (id: string) => send<{ ok: boolean }>(`/api/positions/${id}`, "DELETE"),
+  advice: (id: string, days = 1) =>
+    get<import("./types").PositionAdvice>(`/api/positions/${id}/advice?days=${days}`),
+};
+
 export const api = {
   providers: () => get<{ providers: ProviderInfo[] }>("/api/providers"),
 

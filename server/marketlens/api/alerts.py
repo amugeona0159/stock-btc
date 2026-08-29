@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..alerts import followup, push, store, watch
+from ..screen import names
 from ..alerts.store import Rule
 from . import recommend as recommend_layer
 
@@ -122,7 +123,7 @@ def log(days: int = 30, symbol: str | None = None, kind: str | None = None,
             "unread": sum(1 for e in entries if not e.get("read")),
             "archived": sum(1 for e in entries if e.get("archived")),
             "kinds": dict(Counter(e["kind"] for e in entries if e.get("kind"))),
-            "symbols": [{"symbol": s, "label": watch.label(s), "count": n}
+            "symbols": [{"symbol": s, "label": names.label(s), "count": n}
                         for s, n in by_symbol.most_common()],
             # 목록이 최근 것부터라 처음과 끝이 뒤집혀 있다.
             "first": entries[-1]["at"] if entries else None,

@@ -237,8 +237,11 @@ button:disabled { opacity: 0.4; cursor: default; }
 .tag[data-dir="-1"] { border-color: var(--down); color: var(--down); }
 
 /* --- 탭 --- */
-.tabs { display: flex; gap: 4px; }
-.tabs button { flex: 1; padding: 6px 4px; }
+/* 탭이 아홉이다. `flex: 1` 만 두면 320px 띠에서 칸이 34px 까지 눌려 두 글자짜리
+   라벨이 **세로로 쪼개진다**("보/유"). 줄을 바꾸는 편이 낫다 — 한 줄에 욱여넣어
+   글자가 서는 것보다 두 줄로 눕는 게 읽힌다. */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs button { flex: 1 1 auto; min-width: 46px; padding: 6px 4px; white-space: nowrap; }
 
 /* --- 질문 --- */
 .ask-form { display: flex; gap: 6px; }

@@ -29,9 +29,15 @@ const SHOTS = [
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
     timeframe: "1d", waitFor: "text=사라 ·" },
+  // 추천 줄의 「샀다」를 눌러 진입가·주수 칸이 열리는지. 여기서 장부로 넘어간다.
+  { name: "screen-buy", width: 1600, height: 950, indicators: [], tab: "추천",
+    timeframe: "1d", waitFor: "text=사라 ·", click: "샀다" },
   // 종목 고르기. 4,300종목을 그리면 브라우저가 멎으므로 잘라 놓았는데, 실제로
   // 잘렸는지와 한글 종목명이 읽히는지는 그림으로만 확인된다.
   { name: "symbols", width: 1600, height: 950, indicators: [], picker: "삼성" },
+  // 보유는 "닿았다 — 팔았나?" 가 맨 위에 서는지, 손익이 원화로 읽히는지를 본다.
+  { name: "hold", width: 1600, height: 950, indicators: [], tab: "보유",
+    waitFor: "text=평가손익" },
   // 기록은 날짜별로 묶여 하루치가 한 눈에 내려가는지를 본다. 시각이 왼쪽에 자로
   // 서 있는지, 뒷값 부호가 읽히는지는 그림으로만 확인된다.
   { name: "log", width: 1600, height: 950, indicators: [], tab: "기록",

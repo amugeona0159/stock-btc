@@ -646,3 +646,85 @@ export interface AlertOutcomes {
   failed: Record<string, string>;
   horizons: number[];
 }
+
+/** 목표 하나. 닿았는지(`hitAt`)와 사람이 정했는지(`settledAt`)는 다른 일이다. */
+export interface PositionTarget {
+  price: number;
+  portion: number;
+  label: string;
+  ruleId: string | null;
+  hitAt: string | null;
+  settledAt: string | null;
+  filledShares: number;
+  filledPrice: number | null;
+}
+
+export interface PositionEvent {
+  at: string;
+  kind: string;
+  text: string;
+  price?: number;
+  shares?: number;
+  gain?: number;
+}
+
+/** 들고 있는 것 하나. **통화는 그 시장이 정한다** — 환율로 환산하지 않는다. */
+export interface Position {
+  id: string;
+  provider: string;
+  symbol: string;
+  label: string;
+  currency: "KRW" | "USD";
+  entry: number;
+  shares: number;
+  sharesLeft: number;
+  openedAt: string;
+  note: string;
+  source: string;
+  band: [number, number] | null;
+  days: number | null;
+  stop: number;
+  stopHitAt: string | null;
+  targets: PositionTarget[];
+  realized: number;
+  /** 지금 값. **못 받았으면 null** — 옛 값으로 채우지 않는다. */
+  price: number | null;
+  unrealized: number | null;
+  cost: number;
+  status: "open" | "closed";
+  closedAt: string | null;
+  closeReason: string | null;
+  pending: Array<{ price: number; hitAt: string; label?: string; kind?: string }>;
+  events: PositionEvent[];
+}
+
+export interface PositionRecord {
+  n: number;
+  wins?: number;
+  winRate?: number;
+  byCurrency: Record<string, { n: number; realized: number; avgPct: number | null }>;
+  reasons: Record<string, number>;
+}
+
+export interface PositionsView {
+  positions: Position[];
+  record: PositionRecord;
+  /** 결정이 밀린 판 수. 이 화면의 할 일이다. */
+  waiting: number;
+}
+
+export interface PositionAdvice {
+  reason: string;
+  why: string;
+  rest: string;
+  restWhy: string;
+  reentry: {
+    price: number;
+    last: number | null;
+    band: [number, number] | null;
+    expected: number | null;
+    days: number | null;
+    how: string;
+  } | null;
+  note: string | null;
+}
