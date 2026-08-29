@@ -294,3 +294,23 @@ def test_the_measured_numbers_come_from_the_study_not_the_screen(tmp_path, monke
                      "directionN": 20305}}), encoding="utf-8")
     monkeypatch.setattr(layer, "DIRS", (tmp_path / "repo",))
     assert layer.measured()["directionHit"] == 0.55
+
+
+# --------------------------------------------------------------- 폴더의 주인
+
+def test_actions_folder_never_holds_korean_stocks():
+    """`learning/` 은 Actions 것이고, **Actions 는 토스에 못 닿는다**(IP 허용 목록).
+
+    거기 국내주식이 들어 있으면 PC 에서 만든 파일을 잘못 커밋한 것이다. 실제로 그랬다 —
+    개발 중에 만든 8/29 파일에 toss_kr·toss_us 가 들어간 채 올라갔다.
+    합쳐 읽을 때 로컬이 이기니 화면은 멀쩡해 보이는데, 저장소만 보면 Actions 가
+    국내주식을 뽑은 것처럼 읽힌다. PC 를 안 켠 사람에게는 그게 사실이 아니다.
+    """
+    import json
+    from pathlib import Path
+
+    folder = Path(__file__).resolve().parents[2] / "learning" / "recommend"
+    for path in sorted(folder.glob("20*.json")):
+        body = json.loads(path.read_text(encoding="utf-8"))
+        found = sorted(p for p in (body.get("providers") or {}) if p.startswith("toss"))
+        assert not found, f"{path.name}: Actions 폴더에 {found} — learning-local 로 가야 한다"
