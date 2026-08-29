@@ -17,6 +17,16 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24"]
 ml = ["scikit-learn>=1.5", "lightgbm>=4.5", "pyarrow>=17.0"]
+# 검정 도구. `scripts/` 의 연구용 스크립트만 쓴다 — 부트스트랩 블록 길이(Politis &
+# White), 모델 신뢰집합(MCS), 우월예측능력(SPA).
+#
+# **`ml` 에 넣지 않는다.** Actions 의 야간 작업 둘은 `.[ml]` 만 설치하는데, 거기서
+# 쓰는 `forecast/overfit.py` 는 순수 계산이라 이게 필요 없다. 야간 경로를
+# statsmodels 까지 끌고 무겁게 만들 이유가 없다.
+#
+# arch 는 NCSA 라이선스(퍼미시브)다. GPL/AGPL 인 volatility-trading·openbb-technical
+# 은 공개 저장소에 옮으므로 쓰지 않는다.
+research = ["arch>=7.0"]
 # 자연어 질문 해석. 없으면 규칙 파서만 쓴다.
 llm = ["anthropic>=0.40"]
 

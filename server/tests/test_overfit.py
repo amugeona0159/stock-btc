@@ -170,3 +170,105 @@ def test_uniqueness_is_flat_when_every_bar_has_a_label():
     # 하고 싶은 말은 "전부 같은 값" 이므로 그대로 쓴다.
     assert (inner == inner[0]).all(), "안쪽 고유도가 일정하지 않다"
     assert inner[0] == pytest.approx(1.0 / horizon)
+
+
+# --------------------------------------------------------- 귀무 세계 만들기
+
+def _outcomes():
+    import pandas as pd
+    frame = pd.DataFrame({
+        "c_rsi": range(1200),
+        "direction_hit": [float(v) for v in range(1200)],
+        "realised": [float(v) for v in range(1200)],
+    })
+    return frame
+
+
+def test_block_shuffle_moves_outcomes_and_leaves_conditions():
+    """귀무 세계는 **결과만** 섞은 것이어야 한다. 조건까지 섞으면 다른 실험이 된다."""
+    import pandas as pd
+
+    frame = _outcomes()
+    mixed = overfit.block_shuffle(frame, ("direction_hit", "realised"), 100, seed=1)
+
+    pd.testing.assert_series_equal(mixed["c_rsi"], frame["c_rsi"])
+    assert sorted(mixed["direction_hit"]) == sorted(frame["direction_hit"])
+    assert not mixed["direction_hit"].equals(frame["direction_hit"]), "섞이지 않았다"
+
+
+def test_block_shuffle_keeps_outcomes_on_the_same_row():
+    """같이 움직이는 결과들은 **같은 순서로** 섞여야 한다.
+
+    따로 섞으면 '방향은 맞고 밴드는 틀린' 판이 없던 조합으로 만들어진다.
+    """
+    frame = _outcomes()
+    mixed = overfit.block_shuffle(frame, ("direction_hit", "realised"), 100, seed=2)
+    assert (mixed["direction_hit"].to_numpy() == mixed["realised"].to_numpy()).all()
+
+
+def test_block_shuffle_keeps_neighbours_together():
+    """**덩어리째** 섞는다는 것이 이 함수의 존재 이유다.
+
+    한 줄씩 섞으면 적중이 시간에 뭉쳐 다니는 성질이 사라져 귀무 세계가 실제보다
+    깨끗해지고, 문턱이 너무 낮게 잡힌다. 실제로 답이 뒤집힌 적이 있다.
+    """
+    import numpy as np
+
+    frame = _outcomes()
+    mixed = overfit.block_shuffle(frame, ("direction_hit",), 100, seed=3)
+    values = mixed["direction_hit"].to_numpy()
+    # 덩어리 안에서는 값이 1씩 이어져야 한다. 대부분의 이웃이 그래야 한다.
+    steps = np.diff(values)
+    assert np.mean(steps == 1.0) > 0.9, "덩어리가 유지되지 않았다"
+
+
+def test_block_shuffle_ignores_columns_that_are_not_there():
+    """표마다 있는 결과 열이 다르다. 없는 열을 넘겨도 죽으면 안 된다."""
+    frame = _outcomes()
+    mixed = overfit.block_shuffle(frame, ("direction_hit", "없는열"), 100, seed=4)
+    assert "없는열" not in mixed.columns
+
+
+def test_pick_block_follows_the_autocorrelation():
+    """뭉쳐 다니는 계열은 덩어리가 길고, 잡음은 짧다.
+
+    손으로 고른 200 을 버린 이유다 — 실제 계열은 그보다 훨씬 길게 뭉쳐 있었다.
+    """
+    import numpy as np
+
+    rng = np.random.default_rng(0)
+    white = rng.standard_normal(20000)
+    slow = np.convolve(rng.standard_normal(20300), np.ones(300) / 300, "valid")[:20000]
+    assert overfit.pick_block(white) < overfit.pick_block(slow)
+
+
+def test_the_nightly_path_does_not_need_arch(monkeypatch):
+    """**야간 작업이 `arch` 없이 돌아야 한다.**
+
+    Actions 의 `daily`·`recommend` 는 `.[ml]` 만 설치한다. `overfit` 을 모듈째
+    무겁게 만들면 그 두 작업이 같이 죽는다 — `arch` 는 `pick_block` 안에서만 부른다.
+    """
+    import builtins
+    import importlib
+
+    import pandas as pd
+
+    real = builtins.__import__
+
+    def blocked(name, *args, **kwargs):
+        if name.split(".")[0] == "arch":
+            raise ImportError("arch 없음(모의)")
+        return real(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
+    module = importlib.reload(overfit)
+
+    # 야간 작업이 실제로 쓰는 것들
+    assert module.expected_max(30, 0.0015) > 0
+    assert module.effective_n(30_000, 10) == 3_000
+    frame = pd.DataFrame({"a": range(400), "b": [float(v) for v in range(400)]})
+    assert len(module.block_shuffle(frame, ("b",), 50, 0)) == 400
+
+    # 연구용 함수만 arch 를 요구한다
+    with pytest.raises(ImportError):
+        module.pick_block(frame["b"])

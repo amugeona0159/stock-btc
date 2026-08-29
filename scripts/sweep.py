@@ -119,7 +119,7 @@ def assemble(items: list[Loaded], horizon: int, *, use_market: bool,
         else pd.DataFrame(columns=["ts", "market_ret"])
 
     frames = []
-    for item in items:
+    for index, item in enumerate(items):
         market_frame = market.features(item.closed, series) if use_market else None
         panel = dataset.build(item.closed, item.events, window=WINDOW, horizon=horizon,
                               attention_frame=item.attention, market_frame=market_frame)
@@ -140,6 +140,9 @@ def assemble(items: list[Loaded], horizon: int, *, use_market: bool,
             for column in volatility.RANGE_COLUMNS:
                 frame[column] = ranges[column].to_numpy()
         frame["ts"] = panel["ts"]
+        # 변이끼리 손실을 견줄 때의 열쇠. `ts` 만으로는 같은 시각의 다른 종목이
+        # 구별되지 않아 MCS 가 엉뚱한 행을 짝지운다.
+        frame["sid"] = index
         frame["scale"] = scale
         frame["y"] = y / scale
         # 합성 평가에 필요한 것들. 잔차로 학습하고 **총수익률**로 채점하려면
@@ -180,6 +183,7 @@ def evaluate(pooled: pd.DataFrame, columns: list[str], horizon_ms: int,
     market_fwd = pooled["market_fwd"].to_numpy(dtype="float64") if composed else None
 
     model_loss, base_loss, blend_loss, weights = [], [], [], []
+    rows_loss: list[pd.DataFrame] = []
     carried = 0.0
     for train, test in folds:
         test_scale = scale[test]
@@ -208,6 +212,19 @@ def evaluate(pooled: pd.DataFrame, columns: list[str], horizon_ms: int,
                 m = beta * (market_q[q] - market_q[0.5])
                 model_pred[q] = (centre + np.sign(q - 0.5) * np.sqrt(a * a + m * m)) * test_scale
 
+        # **행마다의 손실**을 남긴다. 폴드 평균만 접으면 관측이 폴드 수(서넛)뿐이라
+        # MCS·SPA 에 넣을 수가 없다. 저장은 섞은 예측(실제로 쓰는 것) 기준이다.
+        blended = {q: carried * model_pred[q] + (1 - carried) * base_pred[q]
+                   for q in QUANTILES}
+        per_row = np.mean([
+            np.maximum(q * (truth - blended[q]), (q - 1.0) * (truth - blended[q]))
+            for q in QUANTILES], axis=0)
+        rows_loss.append(pd.DataFrame({
+            "sid": pooled["sid"].to_numpy()[test],
+            "ts": pooled["ts"].to_numpy()[test],
+            "loss": per_row,
+        }))
+
         model_loss.append(np.mean([ml.pinball(truth, model_pred[q], q) for q in QUANTILES]))
         base_loss.append(np.mean([ml.pinball(truth, base_pred[q], q) for q in QUANTILES]))
         blend_loss.append(np.mean([
@@ -231,6 +248,8 @@ def evaluate(pooled: pd.DataFrame, columns: list[str], horizon_ms: int,
         "loss": float(np.mean(blend_loss)),
         "baseLoss": base,
         "rows": len(pooled),
+        # 행별 손실. MCS·SPA 가 이걸 (sid, ts) 로 맞춰 견준다.
+        "perRow": pd.concat(rows_loss, ignore_index=True) if rows_loss else None,
     }
 
 
@@ -278,6 +297,86 @@ async def run_block(label: str, specs: list[Spec], timeframe: str, bars: int,
                   f"{result['rows']:7,d}행 {time.time() - t0:5.0f}s")
 
 
+async def compare_block(label: str, specs: list[Spec], timeframe: str, bars: int,
+                        horizon: int, step_ms: int) -> None:
+    """변이들을 **검정으로** 견준다. 손으로 칸을 세지 않는다.
+
+    지금까지는 표를 눈으로 보고 "평균 +0.0003, 이긴 칸 7/10" 이라고 판정했다.
+    그건 "이 차이가 잡음인가" 에 답하지 못한다.
+
+    - **MCS**(Hansen, Lunde & Nason 2011) — 최고와 **구별이 안 되는** 변이의 집합.
+      기준선이 없다. 살아남은 게 여럿이면 그중 무엇을 고르든 근거가 없다는 뜻이다.
+    - **SPA**(Hansen 2005) — "N개를 시험해 본 끝의 최고가 기준선을 정말 이겼나."
+      `overfit.expected_max` 가 정규분포로 근사하는 그 질문을, 가정 없이 부트스트랩으로.
+
+    둘 다 **행별 손실**을 먹는다(작을수록 좋다). 변이마다 표에서 빠지는 행이 달라서
+    `(sid, ts)` 로 교집합을 잡는다 — 다른 행끼리 견주면 아무 뜻이 없다.
+    """
+    from arch.bootstrap import MCS, SPA
+
+    bar = "=" * 82
+    print(f"\n{bar}\n{label} · 변이 비교(MCS·SPA) · 지평 {horizon}봉\n{bar}")
+    items = [x for x in [await load(s, timeframe, bars) for s in specs] if x is not None]
+    if not items:
+        print("  쓸 수 있는 종목이 없다")
+        return
+
+    parts: dict[str, pd.Series] = {}
+    for name, options in VARIANTS:
+        options = dict(options)
+        composed = options.pop("composed", False)
+        # **목표가 다른 변이는 뺀다.** 잔차 학습은 시장을 뺀 알파를 맞히므로 손실이
+        # 다른 값에 대한 것이다. 처음 돌렸을 때 그게 0.0139 대 0.0248 로 혼자 낮아
+        # MCS 가 "얘만 살아남았다" 고 답했다 — 잘 맞힌 게 아니라 **쉬운 문제를 푼**
+        # 것이다. 합성(`composed`)은 총수익률로 되돌려 채점하므로 남는다.
+        if options.get("residual") and not composed:
+            print(f"    {name:24s} 목표가 달라 비교에서 뺀다")
+            continue
+        pooled, columns = assemble(items, horizon, **options)
+        if pooled.empty or len(pooled) < 1000:
+            print(f"    {name:24s} 표본 부족")
+            continue
+        got = evaluate(pooled, columns, horizon * step_ms, composed=composed)
+        if got.get("perRow") is None:
+            continue
+        parts[name] = (got["perRow"].set_index(["sid", "ts"])["loss"]
+                       .rename(name).sort_index())
+        print(f"    {name:24s} 손실 {got['loss']:.6f} · {got['rows']:,}행")
+
+    if len(parts) < 4:
+        print("\n  변이가 4개는 있어야 순위가 뜻을 가진다")
+        return
+
+    losses = pd.concat(parts.values(), axis=1, join="inner").dropna()
+    print(f"\n  같은 행으로 맞춘 뒤 {len(losses):,}개 관측 · 변이 {losses.shape[1]}개")
+
+    # 손실도 시간에 뭉쳐 다닌다. 블록 길이를 데이터가 정하게 한다.
+    from marketlens.forecast import overfit
+    size = overfit.pick_block(losses.iloc[:, 0])
+
+    mcs = MCS(losses, size=0.10, reps=1000, block_size=size, method="max")
+    mcs.compute()
+    print(f"\n  --- MCS (신뢰수준 90% · 블록 {size}) ---")
+    print("  살아남음:", ", ".join(mcs.included) or "없음")
+    print("  탈락:    ", ", ".join(mcs.excluded) or "없음")
+    if len(mcs.included) > 1:
+        print("  → 살아남은 것들끼리는 **구별이 안 된다.** 그중 아무거나 골라도 근거가 없다.")
+
+    base = next(iter(parts))          # `VARIANTS` 의 첫 줄이 기준이다
+    rest = losses.drop(columns=[base])
+    if not rest.empty:
+        spa = SPA(losses[base], rest, block_size=size, reps=1000)
+        spa.compute()
+        print(f"\n  --- SPA (기준 = {base} · 블록 {size}) ---")
+        print(f"  p 값(consistent) {float(spa.pvalues['consistent']):.4f}")
+        # `better_models` 는 이름이 아니라 **자리 번호**를 돌려줄 수 있다.
+        # 그대로 이으면 터진다 — 이름으로 바꿔서 읽는다.
+        better = [rest.columns[i] if isinstance(i, (int, np.integer)) else str(i)
+                  for i in spa.better_models(0.10)]
+        print("  기준을 이긴 변이:", ", ".join(better) or "없음")
+        print("  → p 가 크면 **N개를 시험한 끝의 최고도 기준선을 못 넘은 것**이다.")
+
+
 async def scale_block(label: str, specs: list[Spec], timeframe: str, bars: int,
                       horizons: list[int], step_ms: int) -> None:
     """목표값을 무엇으로 나눌 것인가.
@@ -322,10 +421,17 @@ async def main() -> None:
     parser.add_argument("--daily", action="store_true")
     # 정규화 자 비교(ATR / Garman-Klass / Parkinson). 절대 손실로만 잰다.
     parser.add_argument("--scale", action="store_true")
+    # 변이 비교를 검정으로. 손으로 칸을 세지 않는다.
+    parser.add_argument("--compare", action="store_true")
     args = parser.parse_args()
 
     if args.quick:
         await run_block("암호화폐 1시간봉", CRYPTO[:4], "1h", 4000, [6, 24], 3_600_000)
+        return
+
+    if args.compare:
+        await compare_block("일봉 (암호화폐)", CRYPTO, "1d", 3000, 5, 86_400_000)
+        await compare_block("일봉 (미국주식)", STOCKS, "1d", 3000, 5, 86_400_000)
         return
 
     if args.scale:

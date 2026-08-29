@@ -360,3 +360,67 @@ add(Evidence(
         Source("一目均衡表", "細田悟一 (一目山人)", 1969, ""),
     ),
 ))
+
+
+# ------------------------------------------------- 여러 번 시험할 때의 검정
+
+add(Evidence(
+    key="block_bootstrap_length",
+    field="validation",
+    claim="시계열을 섞어 귀무 분포를 만들 때는 **덩어리째** 섞어야 하고, 덩어리 크기는 "
+          "계열의 자기상관이 정한다. 손으로 고르면 안 된다.",
+    effect="이 저장소에서 실제로 답이 바뀌었다. 손으로 고른 200판 대신 데이터가 고른 "
+           "405판을 쓰자 규칙 탐색의 귀무 95% 가 3.8%p → 6.3%p 로 넓어졌다. "
+           "덩어리를 작게 잡으면 귀무 세계가 실제보다 깨끗해져 문턱이 낮게 잡힌다.",
+    limits="최적 블록 길이는 정상성(stationarity)을 가정한 근사다. 시장 국면이 바뀌는 "
+           "구간에서는 그 가정이 깨진다. 또 덩어리가 커질수록 섞을 수 있는 경우의 수가 "
+           "줄어 귀무 분포 자체가 거칠어진다.",
+    confidence="strong",
+    used_by=("forecast/overfit.py: pick_block", "scripts/overfitcheck.py",
+             "scripts/metalabel.py"),
+    sources=(
+        Source("Automatic Block-Length Selection for the Dependent Bootstrap",
+               "Politis, D. N. & White, H.", 2004, "Econometric Reviews 23(1), 53-70",
+               "https://doi.org/10.1081/ETC-120028836"),
+    ),
+))
+
+add(Evidence(
+    key="model_confidence_set",
+    field="validation",
+    claim="여러 모델을 견줄 때 '1등' 을 고르는 것으로는 부족하다. **1등과 구별이 안 되는 "
+          "집합**을 내야 한다 — 그 집합이 여럿이면 그중 무엇을 고르든 근거가 없다.",
+    effect="변이 비교를 눈으로 세는 대신 검정이 답한다. 이 저장소는 그전까지 "
+           "'평균 +0.0003, 이긴 칸 7/10' 같은 손 계산으로 판정하고 있었다.",
+    limits="표본이 적으면 거의 모든 후보가 살아남아 아무 말도 못 한다. 반대로 손실이 "
+           "거의 같은 후보들에서는 순위가 잡음에 크게 흔들린다.",
+    confidence="strong",
+    used_by=("scripts/sweep.py: compare_block",),
+    sources=(
+        Source("The Model Confidence Set",
+               "Hansen, P. R., Lunde, A. & Nason, J. M.", 2011, "Econometrica 79(2), 453-497",
+               "https://doi.org/10.3982/ECTA5771"),
+    ),
+))
+
+add(Evidence(
+    key="superior_predictive_ability",
+    field="validation",
+    claim="N개를 시험한 끝의 최고가 기준선을 이겼다고 말하려면, **N개를 시험했다는 사실**을 "
+          "검정에 넣어야 한다. 안 그러면 잡음의 최고값을 실력으로 읽는다.",
+    effect="`overfit.expected_max` 가 정규분포로 근사하는 질문을 부트스트랩으로 직접 "
+           "답한다. 가설이 서로 상관돼 있어도 그 상관이 자동으로 반영된다.",
+    limits="기준선을 무엇으로 두느냐에 답이 달라진다. 기준선이 약하면 아무나 이긴다. "
+           "White 의 Reality Check 보다 낫지만 여전히 표본이 적으면 검정력이 낮다.",
+    confidence="strong",
+    used_by=("scripts/sweep.py: compare_block",),
+    sources=(
+        Source("A Test for Superior Predictive Ability",
+               "Hansen, P. R.", 2005,
+               "Journal of Business & Economic Statistics 23(4), 365-380",
+               "https://doi.org/10.1198/073500105000000063"),
+        Source("A Reality Check for Data Snooping",
+               "White, H.", 2000, "Econometrica 68(5), 1097-1126",
+               "https://doi.org/10.1111/1468-0262.00152"),
+    ),
+))

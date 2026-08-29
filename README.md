@@ -65,7 +65,7 @@ npm run dev
   학습해 부채꼴을 그린다. 목표값은 ATR 단위(무차원)라 변동성 레짐이 바뀌어도 성립한다.
   기준선 둘(단순 · 변동성)과 견주고, **변동성 기준선을 못 넘으면 모델을 쓰지 않고
   그 사실을 화면에 쓴다**. 검증은 퍼징 워크포워드, 밴드는 컨포멀로 보정한다(적중률 80.0%)
-- **근거 등록부** — 이 프로그램이 기대는 방법론 19건의 출처·효과·**한계**.
+- **근거 등록부** — 이 프로그램이 기대는 방법론 22건의 출처·효과·**한계**.
   기술적 분석처럼 논쟁적인 것은 '논쟁 중'으로 표시한다
 - **지표 35종** — 일목균형표, 피셔 변환, 피보나치 되돌림, MACD, ADX/DMI, 슈퍼트렌드,
   파라볼릭 SAR, 볼린저·켈트너·돈치안, TTM 스퀴즈, RSI·스토캐스틱·CCI·MFI·TSI,
@@ -130,7 +130,7 @@ npm run dev
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 461개
+.venv/Scripts/python -m pytest server/tests -q      # 465개
 cd web; npx tsc -b                                # 타입체크
 cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
@@ -142,6 +142,7 @@ cd web; npm run shot                              # 실제 화면 PNG (서버 2�
 .venv/Scripts/python scripts/recommend.py --dry-run  # 아침 추천 한 바퀴 (저장 없이)
 .venv/Scripts/python scripts/overfitcheck.py         # 규칙 탐색이 잡음을 줍는지 (섞어서 200번)
 .venv/Scripts/python scripts/metalabel.py            # "맞을 자리인가" 를 따로 배워 본다 (메타 라벨링)
+.venv/Scripts/python scripts/sweep.py --compare      # 변이 비교를 검정으로 (MCS·SPA)
 ```
 
 **as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):

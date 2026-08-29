@@ -53,8 +53,6 @@ import study  # noqa: E402
 TRAIN = 0.70
 # 남길 판의 최소 비율. 이걸 안 두면 "제일 확신하는 두 판만 남기고 100%" 가 이긴다.
 MIN_COVERAGE = 0.30
-# 덩어리 크기. 적중이 시간에 뭉쳐 다니는 성질을 귀무 세계에도 남긴다.
-BLOCK = 200
 OUTCOMES = ("direction_hit", "band_hit", "error_atr",
             "baseline_error_atr", "realised", "moved")
 
@@ -116,17 +114,9 @@ def run_once(frame: pd.DataFrame, columns: list[str]) -> dict | None:
     }
 
 
-def shuffled(frame: pd.DataFrame, seed: int) -> pd.DataFrame:
-    """결과만 **덩어리째** 섞는다. 조건은 그대로 둔다."""
-    out = frame.copy()
-    rng = np.random.default_rng(seed)
-    blocks = [np.arange(s, min(s + BLOCK, len(out)))
-              for s in range(0, len(out), BLOCK)]
-    order = np.concatenate([blocks[i] for i in rng.permutation(len(blocks))])
-    for column in OUTCOMES:
-        if column in out.columns:
-            out[column] = out[column].to_numpy()[order]
-    return out
+def shuffled(frame: pd.DataFrame, seed: int, block: int) -> pd.DataFrame:
+    """결과만 덩어리째 섞는다. 규칙과 근거는 `overfit.block_shuffle`."""
+    return overfit.block_shuffle(frame, OUTCOMES, block, seed)
 
 
 def main() -> None:
@@ -150,10 +140,12 @@ def main() -> None:
     print(f"  남긴 판의 상승 예측 비율 {real['upShare']:.1%}"
           f" (전체 {real['baseUpShare']:.1%})")
 
-    print(f"\n결과를 섞어 같은 절차를 {args.rounds}번 돌린다...")
+    # 덩어리 크기는 데이터가 정한다(Politis & White). 손으로 고른 200 이 아니다.
+    block = overfit.pick_block(called["direction_hit"])
+    print(f"\n결과를 {block}판씩 덩어리로 섞어 같은 절차를 {args.rounds}번 돌린다...")
     null = []
     for i in range(args.rounds):
-        got = run_once(shuffled(frame, i), columns)
+        got = run_once(shuffled(frame, i, block), columns)
         if got:
             null.append(got["gain"])
         if (i + 1) % 25 == 0:

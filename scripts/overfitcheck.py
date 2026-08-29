@@ -85,31 +85,11 @@ def search_once(frame: pd.DataFrame) -> tuple[float, int, dict | None]:
 
 OUTCOMES = ("direction_hit", "band_hit", "error_atr",
             "baseline_error_atr", "realised", "moved")
-BLOCK = 200      # 한 덩어리의 판 수. 21,000판이면 100덩어리쯤 된다.
 
 
-def shuffled(frame: pd.DataFrame, seed: int, block: int = BLOCK) -> pd.DataFrame:
-    """**결과만 섞는다.** 조건은 그대로 두어야 가설의 수와 모양이 안 변한다.
-
-    같이 움직이는 열은 **같은 순서로** 섞는다 — `direction_hit` 만 섞고 `error_atr`
-    을 두면 탐색이 남은 쪽으로 새어 들어간다.
-
-    **한 줄씩이 아니라 덩어리째 섞는다.** 적중은 시간에 뭉쳐 다닌다(잘 맞는 몇 주가
-    있고 안 맞는 몇 주가 있다). 한 줄씩 섞으면 그 뭉침이 사라져서 귀무 세계가 실제보다
-    깨끗해지고, 문턱이 **너무 낮게** 잡힌다. 규칙이 헛것을 잡는 제일 흔한 경로가
-    "좋았던 시기를 고른 것" 인데 그걸 지워 버리면 재는 뜻이 없다.
-    """
-    out = frame.copy()
-    rng = np.random.default_rng(seed)
-
-    edges = np.arange(0, len(out), block)
-    blocks = [np.arange(s, min(s + block, len(out))) for s in edges]
-    order = np.concatenate([blocks[i] for i in rng.permutation(len(blocks))])
-
-    for column in OUTCOMES:
-        if column in out.columns:
-            out[column] = out[column].to_numpy()[order]
-    return out
+def shuffled(frame: pd.DataFrame, seed: int, block: int) -> pd.DataFrame:
+    """결과만 덩어리째 섞는다. 규칙과 근거는 `overfit.block_shuffle`."""
+    return overfit.block_shuffle(frame, OUTCOMES, block, seed)
 
 
 def main() -> None:
@@ -132,10 +112,13 @@ def main() -> None:
           f"  ({real * 100:+.2f}%p)")
     print(f"  남긴 판의 상승 예측 비율 {detail['upShare']:.1%} (전체 {detail['baseUpShare']:.1%})")
 
-    print(f"\n결과를 섞어 같은 탐색을 {args.rounds}번 돌린다...")
+    # **덩어리 크기를 데이터가 정한다.** 손으로 200 을 골랐던 자리다 — 근거가 없었고,
+    # 재 보니 실제 자기상관이 그보다 훨씬 길었다(적중은 시간에 뭉쳐 다닌다).
+    block = overfit.pick_block(called["direction_hit"])
+    print(f"\n결과를 {block}판씩 덩어리로 섞어 같은 탐색을 {args.rounds}번 돌린다...")
     null = []
     for i in range(args.rounds):
-        gain, _, _ = search_once(shuffled(frame, i))
+        gain, _, _ = search_once(shuffled(frame, i, block))
         if np.isfinite(gain):
             null.append(gain)
         if (i + 1) % 50 == 0:

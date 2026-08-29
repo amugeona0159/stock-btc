@@ -193,3 +193,55 @@ def effective_n(rows: int, horizon: int) -> int:
     if rows <= 0 or horizon <= 1:
         return max(rows, 0)
     return max(1, int(rows / horizon))
+
+
+# --- 귀무 세계 만들기 --------------------------------------------------------
+#
+# 결과를 섞으면 조건과 결과의 관계가 끊긴다. 거기서 나오는 이득은 전부 운이므로,
+# 그 분포가 곧 "이만큼은 그냥 나온다" 의 답이다.
+#
+# **한 줄씩 섞으면 안 된다.** 적중은 시간에 뭉쳐 다닌다(잘 맞는 몇 주가 있고 안 맞는
+# 몇 주가 있다). 한 줄씩 섞으면 그 뭉침이 사라져 귀무 세계가 실제보다 깨끗해지고,
+# 문턱이 너무 낮게 잡힌다. 실제로 답이 뒤집힌 적이 있다 — `docs/STUDY.md`.
+
+def pick_block(series) -> int:
+    """덩어리를 얼마나 크게 잡을지 **데이터가 정하게** 한다.
+
+    처음에는 200 이라는 숫자를 손으로 골랐다. 근거가 없었고, 두 스크립트에 복사돼
+    있었다. p 값이 그 임의의 숫자 위에 서 있던 셈이다.
+
+    Politis & White (2004) 의 최적 블록 길이를 쓴다. 계열의 자기상관을 보고 정하므로
+    뭉침이 강하면 길어지고 약하면 짧아진다.
+
+    **`arch` 를 함수 안에서 부른다.** 이 모듈은 `daily.py` 가 매일 부르는데 거기서는
+    이 함수를 안 쓴다 — 야간 작업이 `arch` 없이도 돌아야 한다.
+    """
+    from arch.bootstrap import optimal_block_length
+
+    values = np.asarray(series, dtype="float64")
+    values = values[np.isfinite(values)]
+    if values.size < 50:
+        return max(1, values.size // 4)
+    # 'stationary' 는 기하분포 블록, 'circular' 는 고정 길이 블록의 최적값이다.
+    # 우리는 고정 길이로 자르므로 circular 쪽을 쓴다.
+    best = float(optimal_block_length(values)["circular"].iloc[0])
+    # 계열의 1/4 을 넘으면 덩어리가 너무 커서 섞을 게 없어진다.
+    return int(max(1, min(round(best), values.size // 4)))
+
+
+def block_shuffle(frame, columns, block: int, seed: int):
+    """결과 열만 **덩어리째** 섞은 사본. 조건 열은 그대로 둔다.
+
+    `columns` 는 같이 움직이는 결과 열 전부여야 한다. 하나만 섞고 나머지를 두면
+    탐색이 남은 쪽으로 새어 들어가고, 따로따로 섞으면 "방향은 맞고 밴드는 틀린"
+    판이 실제로는 없던 조합으로 만들어진다. **같은 순서로 한꺼번에** 옮긴다.
+    """
+    out = frame.copy()
+    rng = np.random.default_rng(seed)
+    step = max(1, int(block))
+    blocks = [np.arange(s, min(s + step, len(out))) for s in range(0, len(out), step)]
+    order = np.concatenate([blocks[i] for i in rng.permutation(len(blocks))])
+    for column in columns:
+        if column in out.columns:
+            out[column] = out[column].to_numpy()[order]
+    return out

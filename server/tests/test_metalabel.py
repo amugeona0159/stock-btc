@@ -48,25 +48,3 @@ def test_a_mostly_empty_condition_is_dropped():
     frame = _frame()
     frame["c_sparse"] = [1.0, None, None, None]
     assert "c_sparse" not in metalabel.features(frame)
-
-
-def test_shuffle_moves_outcomes_and_leaves_conditions():
-    """귀무 세계는 **결과만** 섞은 것이어야 한다. 조건까지 섞으면 다른 실험이 된다."""
-    frame = pd.concat([_frame()] * 200, ignore_index=True)
-    frame["c_rsi"] = range(len(frame))
-    mixed = metalabel.shuffled(frame, seed=1)
-
-    pd.testing.assert_series_equal(mixed["c_rsi"], frame["c_rsi"])
-    assert sorted(mixed["direction_hit"]) == sorted(frame["direction_hit"])
-
-
-def test_shuffle_keeps_outcomes_on_the_same_row():
-    """같이 움직이는 결과들은 **같은 순서로** 섞여야 한다.
-
-    따로 섞으면 '방향은 맞고 밴드는 틀린' 판이 없던 조합으로 만들어진다.
-    """
-    frame = pd.concat([_frame()] * 200, ignore_index=True)
-    frame["direction_hit"] = range(len(frame))
-    frame["realised"] = [float(v) for v in range(len(frame))]
-    mixed = metalabel.shuffled(frame, seed=2)
-    assert (mixed["direction_hit"].to_numpy() == mixed["realised"].to_numpy()).all()
