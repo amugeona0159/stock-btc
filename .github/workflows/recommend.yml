@@ -27,6 +27,10 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 얕은 클론이면 `git pull --rebase` 가 못 붙는다. 이 두 워크플로는
+          # 결과를 되밀어 넣으므로 전체 이력이 있어야 한다.
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -52,4 +56,16 @@ jobs:
           git add learning/recommend
           git diff --cached --quiet && echo "바뀐 게 없다" && exit 0
           git commit -m "chore: 아침 추천 $(TZ=Asia/Seoul date +%Y-%m-%d)"
-          git push
+          # **밀어내지 말고 얹는다.** 그냥 `git push` 하면 그 사이 사람이 main 에
+          # 한 줄만 올려도 거절당하고, 밤새 학습한 결과가 러너와 함께 사라진다.
+          # 실제로 그렇게 하루치를 잃었다(2026-08-29 daily-learn 실패).
+          # `if` 안이라 -e 에 안 걸린다. 세 번까지 다시 시도한다 — 재시도 사이에
+          # 또 누가 올릴 수 있고, 그것 때문에 버릴 이유가 없다.
+          for i in 1 2 3; do
+            if git pull --rebase --autostash origin main && git push; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "푸시를 세 번 시도했지만 못 했다"
+          exit 1

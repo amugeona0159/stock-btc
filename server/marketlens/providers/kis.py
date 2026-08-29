@@ -162,15 +162,17 @@ class KisProvider(Provider):
         for item in body.get("output2") or []:
             if not item.get("stck_bsop_date"):
                 continue
-            day = datetime.strptime(item["stck_bsop_date"], "%Y%m%d").replace(tzinfo=KST)
-            # 장중에도 그날 봉이 온다. 무조건 확정으로 넘기면 마지막 봉이 계속
-            # 바뀌면서 그 위에서 잰 성적이 전부 거짓이 된다(리페인팅).
-            # 마감 판정은 **현지 날짜**로 한다 — 아래 `ts` 는 KST 자정이라
-            # UTC 로는 전날 15:00 이고, 그걸 그대로 넘기면 하루 일찍 닫힌다.
+            # **일봉 시각은 현지 달력 날짜를 UTC 자정으로 찍는다.** 이 저장소의
+            # 약속이고 `toss._local_day_ms`·야후가 같은 격자에 선다. 여기만 KST
+            # 자정(=UTC 전날 15:00)을 쓰던 시절이 있었는데, 그러면 같은 삼성전자
+            # 일봉이 프로바이더마다 다른 시각에 찍혀 나란히 놓을 수가 없었다.
+            # 마감 판정도 그 격자를 벗어나 `stck_bsop_date` 를 따로 봐야 했다.
             local_day = int(datetime.strptime(item["stck_bsop_date"], "%Y%m%d")
                             .replace(tzinfo=timezone.utc).timestamp() * 1000)
+            # 장중에도 그날 봉이 온다. 무조건 확정으로 넘기면 마지막 봉이 계속
+            # 바뀌면서 그 위에서 잰 성적이 전부 거짓이 된다(리페인팅).
             rows.append({
-                "ts": int(day.timestamp() * 1000),
+                "ts": local_day,
                 "open": float(item["stck_oprc"]),
                 "high": float(item["stck_hgpr"]),
                 "low": float(item["stck_lwpr"]),

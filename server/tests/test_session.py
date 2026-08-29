@@ -13,6 +13,8 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -120,3 +122,27 @@ def test_korean_daily_bar_is_closed_the_same_evening():
     day28 = at("2026-08-28 00:00:00+00:00")
     morning29 = at("2026-08-29 00:00:00+09:00")          # 29일 09:00 KST
     assert bar_closed(day28, "1d", morning29, "kr") is True
+
+
+# --- 일봉 격자: 프로바이더가 하나의 약속 위에 선다 -----------------------
+
+def test_daily_bars_all_stand_on_the_utc_midnight_grid():
+    """**일봉 시각은 현지 달력 날짜를 UTC 자정으로 찍는다.**
+
+    KIS 만 KST 자정(=UTC 전날 15:00)을 쓰던 시절이 있었다. 그러면 같은 삼성전자
+    일봉이 토스와 KIS 에서 다른 시각에 찍혀 나란히 놓을 수가 없고, 마감 판정도
+    격자를 벗어나 `stck_bsop_date` 를 따로 봐야 했다.
+    """
+    source = (Path(__file__).resolve().parents[1]
+              / "marketlens" / "providers" / "kis.py").read_text(encoding="utf-8")
+    daily = source.split("async def _daily")[1].split("async def _minutes")[0]
+    assert '"ts": local_day' in daily, "KIS 일봉이 격자를 벗어났다"
+    assert "tzinfo=KST" not in daily, "일봉 시각을 KST 자정으로 찍고 있다"
+
+
+def test_the_grid_makes_the_close_rule_readable():
+    """격자 위에 서면 `bar_closed` 에 그 ts 를 그대로 넣을 수 있다 — 프로바이더가
+    날짜 필드를 따로 들고 다닐 이유가 없어진다."""
+    day = at("2026-08-28 00:00:00+00:00")          # 현지 8/28 을 UTC 자정으로
+    assert bar_closed(day, "1d", at("2026-08-28 06:00:00+00:00"), "kr") is False
+    assert bar_closed(day, "1d", at("2026-08-28 07:00:00+00:00"), "kr") is True

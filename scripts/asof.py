@@ -38,6 +38,7 @@ from marketlens.core.timeframe import to_ms  # noqa: E402
 from marketlens.events.sources import attention  # noqa: E402
 from marketlens.forecast.ml import model as ml  # noqa: E402
 from marketlens.providers import get as get_provider  # noqa: E402
+from marketlens.screen import universe  # noqa: E402
 
 WINDOW = 48
 # 학습을 몇 개 origin 마다 다시 할지. 매번 하면 너무 비싸고, 한 번만 하면 미래를 본다.
@@ -180,10 +181,21 @@ def to_log_path(points: list[dict], last: float) -> np.ndarray:
 
 
 async def run(symbol: str, provider: str, market_name: str, timeframe: str,
-              horizon: int, bars: int, origins: int) -> None:
+              horizon: int, bars: int, origins: int,
+              peers: list[Slice] | None = None) -> None:
+    """`peers` 는 **학습에만** 쓰는 동료 종목이다(첫 번째가 이 종목 자신).
+
+    한 종목만으로 학습하면 표본이 몇천 행이라 실력을 실제보다 낮게 재게 된다.
+    `scripts/sweep.py` 가 잰 것이 정확히 그거였다 — 같은 코드가 6종목 4천봉에서
+    skill −0.11, 12종목 1.2만봉에서 +0.010 이었다. **"시간봉은 안 된다"가 아니라
+    "몇천 행으로는 안 된다"였다.** 여기서 한 종목만 쓰면 그 함정을 다시 판다.
+
+    예측은 그대로 이 종목의 잘린 시세로만 한다. 동료는 학습 표를 키울 뿐이다.
+    """
     full = await load(symbol, provider, timeframe, bars, market_name)
     if full is None:
         return
+    pool = [full] + [p for p in (peers or []) if p.symbol != full.symbol]
     closed = full.closed
     step = to_ms(timeframe)
     n = len(closed)
@@ -226,7 +238,10 @@ async def run(symbol: str, provider: str, market_name: str, timeframe: str,
         # --- 학습 (origin 이전 데이터로만 학습한다) ---
         if order - trained_at >= RETRAIN_EVERY:
             try:
-                ml.train([ml.SymbolData(view.symbol, view.closed, view.events, view.attention)],
+                # **동료도 같이 자른다.** 하나라도 안 자르면 그 종목의 미래가
+                # 학습 표로 새고, 그러면 이 파일이 재는 것이 아무 뜻도 없어진다.
+                ml.train([ml.SymbolData(s.symbol, s.closed, s.events, s.attention)
+                          for s in (cut(p, origin_ts) for p in pool)],
                          model_name, horizon=horizon, window=WINDOW, folds=3,
                          timeframe=timeframe)
                 trained_at = order
@@ -266,6 +281,8 @@ async def main() -> None:
     parser.add_argument("--origins", type=int, default=30)
     parser.add_argument("--bars", type=int, default=3000)
     parser.add_argument("--symbols", default="")
+    # 학습 동료 수. 0 이면 예전처럼 한 종목만 쓴다 — 비교용으로 남긴다.
+    parser.add_argument("--peers", type=int, default=12)
     args = parser.parse_args()
 
     default = {
@@ -281,9 +298,26 @@ async def main() -> None:
     print("  밴드적중: 실제가 p10~p90 안에 든 비율 (목표 80%)")
     print("  방향적중: 실제가 0.25 ATR 이상 움직인 경우만")
     print("  DTW: 경로 모양 거리 (작을수록 닮음) · 오차/ATR: 변동성 단위 오차")
+
+    # **동료 종목을 시장마다 한 번만 받아 돌려 쓴다.** 종목마다 다시 받으면 같은
+    # 시세를 열두 번씩 내려받게 된다. 여기 담긴 것은 **학습 표를 키우는 데만** 쓰이고,
+    # origin 마다 다시 잘려서 들어간다(`run` 참조).
+    pools: dict[str, list[Slice]] = {}
+    for _, provider, market_name in default:
+        if provider in pools or args.peers == 0:
+            continue
+        wanted = [s for s in universe.symbols(provider)][:args.peers]
+        loaded = []
+        for peer in wanted:
+            got = await load(peer, provider, args.tf, args.bars, market_name)
+            if got is not None:
+                loaded.append(got)
+        pools[provider] = loaded
+        print(f"\n  {provider}: 학습 동료 {len(loaded)}종목")
+
     for symbol, provider, market_name in default:
         await run(symbol, provider, market_name, args.tf, args.horizon,
-                  args.bars, args.origins)
+                  args.bars, args.origins, pools.get(provider))
 
 
 if __name__ == "__main__":
