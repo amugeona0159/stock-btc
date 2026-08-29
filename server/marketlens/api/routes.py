@@ -24,7 +24,7 @@ from ..providers import (ProviderError, ProviderUnavailable, SymbolNotFound,
 from ..screen import universe
 from ..signals.engine import evaluate
 from ..store.cache import cache
-from . import learning, screening
+from . import learning, recommend as recommend_layer, screening
 from . import search as search_layer
 
 router = APIRouter(prefix="/api")
@@ -529,6 +529,22 @@ async def screen(body: ScreenBody) -> dict:
 def screen_status() -> dict:
     """무엇을 언제 쟀는지. 화면이 '아직 안 쟀다'를 설명하는 데 쓴다."""
     return screening.status()
+
+
+@router.get("/recommend")
+def recommend(provider: str, days: int = Query(1, ge=1, le=3)) -> dict:
+    """오늘 아침의 매수 추천. **여기서 계산하지 않는다** — 07:30 에 얼려 둔 것을 읽는다.
+
+    같은 날 몇 번을 물어도 같은 답이 나온다. 누를 때마다 달라지면 그건 추천이 아니다.
+    """
+    _provider(provider)                        # 없는 키면 404
+    return recommend_layer.today(provider, days)
+
+
+@router.get("/recommend/status")
+def recommend_status() -> dict:
+    """어느 시장의 추천이 언제 것으로 있는지."""
+    return recommend_layer.status()
 
 
 @router.get("/gate")

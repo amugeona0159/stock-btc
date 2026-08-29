@@ -131,7 +131,9 @@ async def build(load_candles, provider: str, timeframe: str, horizon: int,
 
     series = market.market_series({s: c for s, c, _, _ in loaded})
     latest: dict[str, pd.Series] = {}
-    prices: dict[str, tuple[float, float]] = {}
+    # **전날 등락률을 안 낸다.** 앞을 보는 화면에 지나간 값을 큰 숫자로 띄우면
+    # 그게 예측인 줄로 읽힌다 — 실제로 그렇게 읽혔다. 마지막 종가만 넘긴다.
+    prices: dict[str, float] = {}
     for symbol, closed, found, attn in loaded:
         panel = factors.panel(closed, found, horizon=horizon, attention_frame=attn,
                               market_frame=market.features(closed, series))
@@ -139,10 +141,7 @@ async def build(load_candles, provider: str, timeframe: str, horizon: int,
             continue
         row = factors.with_relative(panel).iloc[-1]
         latest[symbol] = row.drop(labels=["ts"], errors="ignore")
-        close = closed["close"].astype("float64")
-        prices[symbol] = (round(float(close.iloc[-1]), 6),
-                          round(float(close.iloc[-1] / close.iloc[-2] - 1) * 100, 3)
-                          if len(close) > 1 else 0.0)
+        prices[symbol] = round(float(closed["close"].astype("float64").iloc[-1]), 6)
 
     result = rank.build(latest, measured, horizon, limit, prices)
     result["provider"] = provider

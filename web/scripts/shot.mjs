@@ -28,7 +28,7 @@ const SHOTS = [
   // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
-    timeframe: "1d" },
+    timeframe: "1d", waitFor: "text=사라 ·" },
   // 종목 고르기. 4,300종목을 그리면 브라우저가 멎으므로 잘라 놓았는데, 실제로
   // 잘렸는지와 한글 종목명이 읽히는지는 그림으로만 확인된다.
   { name: "symbols", width: 1600, height: 950, indicators: [], picker: "삼성" },

@@ -1,0 +1,55 @@
+name: morning-recommend
+
+# 아침 매수 추천을 하루 한 번 뽑아 얼린다.
+#
+# `daily.yml` 에 스텝을 붙이지 않는다. 거긴 UTC 20:00 에 시작해 최대 5시간을 쓰므로
+# 실제 실행 시각이 매일 흔들린다 — "아침 07:30" 은 벽시계 보장이라 자기 트리거가 있어야 한다.
+#
+# **토스(국내주식)는 여기서 못 돈다**(IP 허용 목록). 암호화폐·미국주식만 낸다.
+# 국내주식은 PC 쪽 작업 스케줄러(`market-lens-recommend`, 07:30 KST)가 맡고,
+# 화면은 두 폴더를 프로바이더 단위로 합쳐 읽는다(`api/recommend.py`).
+
+on:
+  schedule:
+    - cron: "30 22 * * *"      # UTC 22:30 = KST 07:30
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: morning-recommend
+  cancel-in-progress: false
+
+jobs:
+  recommend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -e ".[ml]"
+
+      - name: 지난 추천 채점 + 오늘 뽑기
+        env:
+          # 위키미디어는 연락처 없는 User-Agent 를 403 으로 막는다.
+          MARKET_LENS_CONTACT: https://github.com/${{ github.repository }}
+        # 채점이 먼저 돈다(스크립트 안에서). 뽑기가 터진 날에도 '지난 성적'은 최신이어야 한다.
+        run: >-
+          python scripts/recommend.py
+          --provider binance --provider upbit --provider yahoo
+
+      - name: 추천만 커밋
+        run: |
+          # 모델(.pkl)은 커밋하지 않는다. 무겁고, 어차피 매일 다시 굽는다.
+          git config user.name "morning-recommend"
+          git config user.email "actions@github.com"
+          git add learning/recommend
+          git diff --cached --quiet && echo "바뀐 게 없다" && exit 0
+          git commit -m "chore: 아침 추천 $(TZ=Asia/Seoul date +%Y-%m-%d)"
+          git push

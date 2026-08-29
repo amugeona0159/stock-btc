@@ -38,9 +38,24 @@ UNIVERSE: dict[str, tuple[str, ...]] = {
 # 횡단면 순위가 의미를 가지려면 같은 시각에 이만큼은 있어야 한다.
 MIN_BREADTH = 5
 
+# 매수 후보에서 빼는 것. 지수는 살 수 있는 물건이 아니다.
+#
+# **표를 쪼개지 않는다.** 지수는 학습 동료로는 그대로 쓴다 — "시장이 통째로 밀린 날"과
+# "이 종목만 밀린 날"을 가르는 축이라 빼면 손해다. 여기서는 같은 표를 거른 **한 갈래**를
+# 돌려줄 뿐이다.
+#
+# 접두사(`^`)로 거르지 않는다. 그건 프로바이더 일곱 곳의 표기 규칙에 대한 추측이다.
+NOT_BUYABLE: frozenset[str] = frozenset({"^GSPC", "^IXIC"})
+
 
 def symbols(provider: str) -> tuple[str, ...]:
+    """적재·학습에 쓰는 전체 목록."""
     return UNIVERSE.get(provider, ())
+
+
+def buyable(provider: str) -> tuple[str, ...]:
+    """매수 후보. 살 수 없는 것은 뺀다 — 기준선(후보 평균)에서도 빠진다."""
+    return tuple(s for s in symbols(provider) if s not in NOT_BUYABLE)
 
 
 def providers() -> tuple[str, ...]:

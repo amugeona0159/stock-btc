@@ -420,7 +420,6 @@ export interface ScreenItem {
   direction: number | null;
   why: Array<{ factor: string; label: string; z: number }>;
   last: number | null;
-  changePct: number | null;
 }
 
 export interface ScreenQuality {
@@ -490,4 +489,55 @@ export interface GateStatus {
   holdoutLooks: number | null;
   trials: number | null;
   updated: string | null;
+}
+
+/** 오늘 아침의 매수 추천. `GET /api/recommend`. 07:30 에 얼린 것을 읽을 뿐이다. */
+export interface RecommendItem {
+  symbol: string;
+  last: number | null;
+  /** 그 지평의 기대 수익률(%). 예측 분포의 중앙값이지 평균이 아니다. */
+  expected: number | null;
+  /** 80% 구간 [아래, 위] (%). */
+  band: [number, number] | null;
+  probUp: number | null;
+  confidence: "low" | "mid" | "high" | null;
+  source: string | null;
+  abstain: boolean | null;
+}
+
+export interface RecommendRecord {
+  n: number;
+  enough: boolean;
+  buyPct?: number;
+  universePct?: number;
+  /** 추천 − 후보 평균. **이게 실력이다.** */
+  edgePct?: number;
+  winRate?: number;
+  bandHit?: number;
+  lastScored?: string;
+}
+
+export interface Recommend {
+  available: boolean;
+  reason?: string;
+  providers?: string[];
+  provider?: string;
+  days?: number;
+  date?: string;
+  generatedAt?: string;
+  basedOn?: string;
+  /** 마지막 확정봉이 어제가 아니면 0보다 크다 — 장이 쉰 날. */
+  staleBars?: number;
+  buy: RecommendItem[];
+  avoid: RecommendItem[];
+  /** 모델을 하나도 안 썼다 — 그때 순위는 사실상 변동성 순서다. */
+  degenerate?: boolean;
+  allNegative?: boolean;
+  learned?: boolean;
+  skill?: number | null;
+  modelStale?: boolean;
+  candidates?: number;
+  record?: RecommendRecord;
+  measured?: { directionHit?: number; bandHit?: number; n?: number; directionN?: number };
+  skipped?: Array<{ symbol: string; reason: string }>;
 }

@@ -1,25 +1,43 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { screen } from "../api";
-import type { ProviderInfo, ScreenResult } from "../types";
+import { recommend, screen } from "../api";
+import type {
+  ProviderInfo,
+  Recommend,
+  RecommendItem,
+  ScreenResult,
+} from "../types";
 
-// **추천은 언제나 일봉으로 잰다.** "하루/이틀/사흘"은 일봉 개념이고, 팩터의 IC 부호도
-// 일봉으로 쟀다. 위 차트의 봉을 그대로 넘기면 1시간봉 화면에서 "하루 뒤"라고 써 놓고
-// 실제로는 1시간 뒤를 재게 된다 — 기본 화면이 1시간봉이라 늘 그 상태였다.
-const TIMEFRAME = "1d";
-
-// 사용자가 물은 그대로 — 하루·이틀·사흘. 봉 단위가 일봉일 때의 이야기다.
+// 사용자가 물은 그대로 — 하루·이틀·사흘. 지평마다 **모델이 따로** 있어서 칩을 바꾸면
+// 그 지평 모델의 답이 나온다. 다시 뽑는 게 아니라 이미 뽑아 둔 다른 답을 보는 것이다.
 const DAYS = [
   { label: "하루 뒤", value: 1 },
   { label: "이틀 뒤", value: 2 },
   { label: "사흘 뒤", value: 3 },
 ];
 
+// 추천은 언제나 일봉으로 잰다. 위 차트의 봉과 무관하다.
+const TIMEFRAME = "1d";
+
 function signed(value: number | null | undefined, digits = 2): string {
   return value === null || value === undefined || !Number.isFinite(value)
     ? "—"
     : `${value >= 0 ? "+" : ""}${value.toFixed(digits)}`;
 }
+
+function pct(value: number | null | undefined, digits = 1): string {
+  return value === null || value === undefined || !Number.isFinite(value)
+    ? "—"
+    : `${(value * 100).toFixed(digits)}%`;
+}
+
+// 확신도는 `move_atr` 3분위다. **줄마다 긴 문장을 반복하지 않는다** — 짧은 라벨에
+// 숫자만 붙이고, 그 숫자가 무슨 뜻인지는 카드 아래에 한 번만 적는다.
+const CONFIDENCE: Record<string, string> = {
+  high: "확신 높음 · 64.7%",
+  mid: "보통",
+  low: "확신 낮음 · 47.5%",
+};
 
 interface Props {
   provider: string;
@@ -29,66 +47,58 @@ interface Props {
 }
 
 export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) {
-  const [horizon, setHorizon] = useState(1);
-  const [result, setResult] = useState<ScreenResult | null>(null);
+  const [days, setDays] = useState(1);
+  const [result, setResult] = useState<Recommend | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const run = useCallback(() => {
+  useEffect(() => {
     setBusy(true);
     setError(null);
-    screen
-      .rank({ provider, timeframe: TIMEFRAME, horizon, limit: 10 })
+    setResult(null);
+    recommend
+      .today(provider, days)
       .then(setResult)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false));
-  }, [provider, horizon]);
-
-  // 종목·봉·지평이 바뀌면 다시 뽑는다. 이 화면은 목록이 전부라 빈 채로 두면 쓸모가 없다.
-  useEffect(() => {
-    setResult(null);
-    run();
-  }, [run]);
-
-  const quality = result?.quality;
+  }, [provider, days]);
 
   return (
     <>
       <section className="card">
-        <h2>관심있게 볼 종목</h2>
+        <h2>오늘 살 만한 것</h2>
         <p className="formula" style={{ marginTop: 0 }}>
-          같은 시각에 후보 종목을 팩터로 줄 세운 순위와, 그 뒤 실제로 간 결과의 순위가
-          얼마나 맞았는지를 먼저 재고(<b>랭크 IC</b>), <b>폴드마다 부호가 일관된 축만</b>
-          점수에 넣는다. 축의 부호도 미리 정하지 않고 잰 값을 따른다.
+          모델이 <b>앞으로</b>를 보고 낸 기대 수익률 순서다. 지평마다 모델이 따로 있어
+          칩을 바꾸면 그 지평 모델의 답이 나온다 — <b>다시 뽑는 게 아니다.</b>
         </p>
         <p className="note" style={{ marginTop: 0 }}>
-          추천은 <b>일봉</b>으로 잰다. 위 차트의 봉과 무관하다.
+          {result?.date
+            ? `${result.date} 아침에 뽑았다 · 오늘은 다시 눌러도 안 바뀐다`
+            : "아침에 한 번 뽑아 그날은 고정된다"}
         </p>
         <div className="chips">
           {DAYS.map((item) => (
             <button
               key={item.value}
               className="chip"
-              data-active={horizon === item.value}
+              data-active={days === item.value}
               disabled={busy}
-              onClick={() => setHorizon(item.value)}
+              onClick={() => setDays(item.value)}
             >
               {item.label}
             </button>
           ))}
         </div>
-        <button style={{ marginTop: 10, width: "100%" }} disabled={busy} onClick={run}>
-          {busy ? "뽑는 중" : "다시 뽑기"}
-        </button>
+        {busy && <p className="note">불러오는 중…</p>}
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
         {result && !result.available && (
           <>
             <p className="note warn">{result.reason}</p>
-            {(result.measuredProviders?.length ?? 0) > 0 && (
+            {(result.providers?.length ?? 0) > 0 && (
               <>
-                <div className="group-label">지금 재 둔 시장</div>
+                <div className="group-label">추천이 있는 시장</div>
                 <div className="chips">
-                  {result.measuredProviders!.map((key) => (
+                  {result.providers!.map((key) => (
                     <button key={key} className="chip" onClick={() => onProvider(key)}>
                       {providers.find((p) => p.key === key)?.name ?? key}
                     </button>
@@ -102,132 +112,237 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
 
       {result?.available && (
         <section className="card">
-          <h2>얼마나 움직일까 · {horizon}일</h2>
-          {/* 이 문장이 이 화면에서 제일 중요하다. 순위를 '오를 순서'로 읽으면 해롭다. */}
-          <p className="note warn" style={{ marginTop: 0 }}>{result.note}</p>
-          <div className="rows">
-            {result.items.map((item, i) => (
-              <div className="row" key={item.symbol}>
-                <span>
-                  <button
-                    className="linky"
-                    onClick={() => onPick(item.symbol)}
-                    title="이 종목으로 차트를 옮긴다"
-                  >
-                    {i + 1}. {item.symbol}
-                  </button>
-                  {item.changePct !== null && item.changePct !== undefined && (
-                    <span
-                      style={{
-                        color: item.changePct >= 0 ? "var(--up)" : "var(--down)",
-                      }}
-                    >
-                      {" "}
-                      {signed(item.changePct)}%
-                    </span>
-                  )}
-                </span>
-                {/* 방향 점수는 여기 안 쓴다. 한 줄에 나란히 두면 같은 무게로 읽히는데,
-                    실제로는 변동이 +0.94%p 를 가르고 방향은 +0.03~0.65%p 다. */}
-                <b style={{ fontSize: 14 }}>{signed(item.move)}</b>
-              </div>
-            ))}
-          </div>
-          {result.items[0]?.why?.length > 0 && (
-            <p className="formula" style={{ marginTop: 10 }}>
-              1위 <b>{result.items[0].symbol}</b> 가 위에 있는 이유:{" "}
-              {result.items[0].why
-                .map((w) => `${w.label} ${signed(w.z, 1)}σ`)
-                .join(" · ")}
+          <h2>사라 · {days}일</h2>
+
+          {/* 모델을 하나도 안 쓴 날이 있다. 그때 순위는 사실상 변동성 순서라
+              "사라"가 아니다 — 목록보다 먼저 말해야 한다. */}
+          {result.degenerate && (
+            <p className="note warn" style={{ marginTop: 0 }}>
+              <b>오늘 {days}일 모델은 기준선만 쓴다.</b> 이 순서는 사실상 변동성
+              순서지 "사라"가 아니다.
+              {result.skill !== null && result.skill !== undefined && (
+                <> 학습 성적 {signed(result.skill, 4)} 로 기준선을 못 넘었다.</>
+              )}
+            </p>
+          )}
+          {result.allNegative && (
+            <p className="note warn" style={{ marginTop: 0 }}>
+              오늘은 후보 전부의 기대가 마이너스다. 그래도 순서는 낸다 —
+              이건 <b>덜 나쁜 셋</b>이지 사라는 뜻이 아니다.
+            </p>
+          )}
+          {(result.staleBars ?? 0) > 0 && (
+            <p className="note" style={{ marginTop: 0 }}>
+              장이 쉬어 {result.basedOn} 종가 기준이다.
+            </p>
+          )}
+          {result.modelStale && (
+            <p className="note warn" style={{ marginTop: 0 }}>
+              오늘 학습이 실패해 어제 모델을 그대로 썼다.
             </p>
           )}
 
-          {/* 방향은 접어 둔다. 지우지는 않는다 — 숨기는 것과 작게 두는 것은 다르고,
-              쓸지 말지는 보는 사람이 정한다. */}
-          <details style={{ marginTop: 8 }}>
-            <summary style={{ cursor: "pointer", color: "var(--text-dim)", fontSize: 12 }}>
-              방향 점수 (약하다 — 펼쳐 보기)
-            </summary>
-            <div className="rows" style={{ marginTop: 6, color: "var(--text-dim)" }}>
-              {result.items.map((item) => (
-                <div className="row" key={`dir-${item.symbol}`}>
-                  <span>{item.symbol}</span>
-                  <b>{signed(item.direction)}</b>
-                </div>
-              ))}
-            </div>
-          </details>
+          <div className="rows">
+            {result.buy.map((item, i) => (
+              <Row key={item.symbol} item={item} rank={i + 1}
+                   onPick={() => onPick(item.symbol)} />
+            ))}
+          </div>
+
+          <div className="group-label">피하라</div>
+          <div className="rows">
+            {result.avoid.map((item) => (
+              <Row key={item.symbol} item={item} down
+                   onPick={() => onPick(item.symbol)} />
+            ))}
+          </div>
+          <p className="note" style={{ marginTop: 6 }}>
+            기대가 제일 낮은 둘이다. 공매도 하라는 말이 아니고, 값이 양수여도
+            <b> 후보 중 꼴찌</b>라는 뜻이다.
+          </p>
+          <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
+            <b>확신</b>은 모델이 얼마나 크게 움직인다고 했는지다. 27,664판을 갈라 보니
+            크게 본 구간에서는 방향을 <b>64.7%</b> 맞혔고, 거의 안 움직인다고 한 구간에서는{" "}
+            <b>47.5%</b> — 동전던지기보다 못했다. 순위를 이걸로 다시 세우지는 않는다.
+          </p>
         </section>
       )}
 
-      {quality && (
-        <section className="card">
-          <h2>이 순위가 과거에 맞았나</h2>
-          <div className="rows">
-            <div className="row">
-              <span>변동 상위−하위</span>
-              <b
-                style={{
-                  fontSize: 15,
-                  color:
-                    quality.move.topMinusBottomPct === null
-                    || quality.move.topMinusBottomPct === undefined
-                      ? "var(--text-dim)"
-                      : quality.move.topMinusBottomPct > 0
-                        ? "var(--up)"
-                        : "var(--down)",
-                }}
-              >
-                {quality.move.topMinusBottomPct === null
-                || quality.move.topMinusBottomPct === undefined
-                  ? "—"
-                  : `${signed(quality.move.topMinusBottomPct)}%p`}
-                <span style={{ color: "var(--text-dim)" }}> · {quality.move.factors}축</span>
-              </b>
-            </div>
-            <div className="row" style={{ color: "var(--text-dim)" }}>
-              <span>방향 상위−하위 (참고)</span>
-              <b>
-                {quality.direction.topMinusBottomPct === null
-                || quality.direction.topMinusBottomPct === undefined
-                  ? "—"
-                  : `${signed(quality.direction.topMinusBottomPct)}%p`}
-                <span> · {quality.direction.factors}축</span>
-              </b>
-            </div>
-            <div className="row">
-              <span>후보 종목</span>
-              <b>{result?.breadth ?? 0}개</b>
-            </div>
-            <div className="row">
-              <span>마지막 측정</span>
-              <b>{result?.measuredAt?.slice(0, 10) ?? "—"}</b>
-            </div>
-          </div>
-          <p className="formula" style={{ marginTop: 10 }}>
-            <b>변동</b>은 "얼마나 움직일까", <b>방향</b>은 "어느 쪽일까"다.{" "}
-            <b>상위−하위</b>는 점수 상위 묶음의 평균 결과에서 하위 묶음의 평균을 뺀 값이고,
-            수수료·슬리피지는 빼지 않았다. 변동 쪽은 크고 일관되지만 방향 쪽은 작다 —
-            숫자를 그대로 읽을 것.
-            <br />
-            점수는 <b>자기 과거 대비</b> 축으로만 만든다. 원값(변동성·베타)은 IC 가 몇 배
-            크지만 "이 종목은 원래 많이 움직인다"는 고정 순위라 매일 같은 답을 낸다.
-          </p>
-          {quality.move.used.length > 0 && (
-            <>
-              <div className="group-label">변동 점수에 쓰인 축</div>
-              <div className="rows">
-                {quality.move.used.slice(0, 6).map((f) => (
-                  <div className="row" key={f.factor}>
-                    <span>{f.label}</span>
-                    <b>IC {signed(f.ic, 4)}</b>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-      )}
+      {result?.available && <RecordCard result={result} days={days} />}
+
+      {/* 예전의 '변동 순위'는 다른 질문에 답한다 — "오늘 뭘 지켜볼까".
+          지우지 않고 접어 둔다. 재 놓은 결과가 있고, 사라는 뜻이 아닐 뿐이다. */}
+      <WatchCard provider={provider} />
     </>
+  );
+}
+
+function Row({
+  item,
+  rank,
+  down,
+  onPick,
+}: {
+  item: RecommendItem;
+  rank?: number;
+  down?: boolean;
+  onPick: () => void;
+}) {
+  const good = (item.expected ?? 0) >= 0 && !down;
+  return (
+    <div className="row" style={{ alignItems: "flex-start" }}>
+      <span>
+        <button className="linky" onClick={onPick} title="이 종목으로 차트를 옮긴다">
+          {rank ? `${rank}. ` : "· "}
+          {item.symbol}
+        </button>
+        {/* 피하라 목록에는 확신도를 안 적는다 — 거기서는 읽을 이유가 없다. */}
+        {item.confidence && !down && (
+          <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
+            {CONFIDENCE[item.confidence] ?? item.confidence}
+          </span>
+        )}
+      </span>
+      <b style={{ textAlign: "right" }}>
+        <span style={{ color: good ? "var(--up)" : "var(--down)" }}>
+          {signed(item.expected)}%
+        </span>
+        {item.band && (
+          <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
+            {signed(item.band[0], 1)}% ~ {signed(item.band[1], 1)}%
+            {/* `probUp` 은 그 지평 모델의 값이라 지평마다 다르다. 그대로 적는다. */}
+            {item.probUp !== null && item.probUp !== undefined && (
+              <> · 오를 확률 {pct(item.probUp, 0)}</>
+            )}
+          </span>
+        )}
+      </b>
+    </div>
+  );
+}
+
+function RecordCard({ result, days }: { result: Recommend; days: number }) {
+  const record = result.record;
+  const measured = result.measured ?? {};
+  return (
+    <section className="card">
+      <h2>이 추천이 과거에 맞았나</h2>
+      {record && record.n > 0 ? (
+        <div className="rows">
+          <div className="row">
+            <span>추천 3종 평균</span>
+            <b>{signed(record.buyPct)}%</b>
+          </div>
+          <div className="row">
+            <span>후보 전체 평균</span>
+            <b>{signed(record.universePct)}%</b>
+          </div>
+          <div className="row">
+            <span>차이 (이게 실력이다)</span>
+            <b
+              style={{
+                fontSize: 15,
+                color: (record.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)",
+              }}
+            >
+              {signed(record.edgePct)}%p
+              <span style={{ color: "var(--text-dim)" }}>
+                {" "}
+                · 이긴 비율 {pct(record.winRate, 0)}
+              </span>
+            </b>
+          </div>
+          <div className="row">
+            <span>80% 밴드 적중</span>
+            <b>{pct(record.bandHit, 1)}</b>
+          </div>
+          <div className="row">
+            <span>채점한 날</span>
+            <b>
+              {record.n}일치
+              {!record.enough && (
+                <span style={{ color: "var(--warn)" }}> · 30일은 있어야 성적이다</span>
+              )}
+            </b>
+          </div>
+        </div>
+      ) : (
+        <p className="note">
+          아직 채점할 판이 없다. 추천을 낸 뒤 {days}일이 지나야 첫 줄이 쌓인다 —
+          그때부터 이 표가 이 기능의 진짜 답이다.
+        </p>
+      )}
+
+      <p className="formula" style={{ marginTop: 10 }}>
+        <b>기준선은 후보 전체 평균이다.</b> 0 과 견주면 고르는 실력이 아니라 시장을
+        재게 된다 — 시장이 다 오른 날 추천도 올랐다는 건 아무 말도 아니다.
+        <br />
+        <b>기대</b>는 예측 분포의 <b>중앙값</b>이지 평균이 아니다. 수수료·슬리피지는
+        빼지 않았다.
+        {measured.directionHit !== undefined && (
+          <>
+            <br />
+            지금까지 채점한 {measured.n?.toLocaleString("ko-KR")}판에서 방향은{" "}
+            <b>{pct(measured.directionHit, 1)}</b>, 80% 밴드는{" "}
+            <b>{pct(measured.bandHit, 1)}</b> 맞았다.{" "}
+            <b>이 도구가 잘하는 건 폭이지 방향이 아니다</b> — 추천은 그 약한 쪽을 쓰는
+            화면이라 숫자를 그대로 읽을 것.
+          </>
+        )}
+      </p>
+    </section>
+  );
+}
+
+/** 예전의 변동 순위. 다른 질문("오늘 뭘 지켜볼까")에 답하고 그쪽이 훨씬 세다 —
+ *  변동 상위−하위 +0.94%p vs 방향 +0.65%p. 지우지 않고 접어 둔다. */
+function WatchCard({ provider }: { provider: string }) {
+  const [open, setOpen] = useState(false);
+  const [found, setFound] = useState<ScreenResult | null>(null);
+
+  useEffect(() => setFound(null), [provider]);
+
+  const load = useCallback(() => {
+    screen
+      .rank({ provider, timeframe: TIMEFRAME, horizon: 3, limit: 6 })
+      .then(setFound)
+      .catch(() => setFound(null));
+  }, [provider]);
+
+  return (
+    <section className="card">
+      <details
+        onToggle={(e) => {
+          const isOpen = (e.currentTarget as HTMLDetailsElement).open;
+          setOpen(isOpen);
+          if (isOpen && !found) load();
+        }}
+      >
+        <summary style={{ cursor: "pointer", color: "var(--text-dim)", fontSize: 12 }}>
+          관심있게 볼 종목 (변동 순 — 사라는 뜻이 아니다)
+        </summary>
+        {open && !found && <p className="note">불러오는 중…</p>}
+        {found?.available && (
+          <>
+            <div className="rows" style={{ marginTop: 8 }}>
+              {found.items.map((item, i) => (
+                <div className="row" key={item.symbol}>
+                  <span>
+                    {i + 1}. {item.symbol}
+                  </span>
+                  <b>{signed(item.move)}</b>
+                </div>
+              ))}
+            </div>
+            <p className="formula" style={{ marginTop: 8 }}>
+              "앞으로 크게 움직일 것 같은 순서"다. 실제로는 이쪽이 더 세다 —
+              상위−하위 {signed(found.quality?.move.topMinusBottomPct)}%p 로 방향
+              쪽({signed(found.quality?.direction.topMinusBottomPct)}%p)의 몇 배다.
+            </p>
+          </>
+        )}
+        {found && !found.available && <p className="note">{found.reason}</p>}
+      </details>
+    </section>
   );
 }

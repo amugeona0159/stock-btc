@@ -107,6 +107,13 @@ export const learn = {
     post<import("./types").Learned>("/api/learned", body),
 };
 
+export const recommend = {
+  /** 오늘 아침의 매수 추천. 서버는 얼린 파일을 읽을 뿐이라 같은 날 답이 안 바뀐다. */
+  today: (provider: string, days: number) =>
+    get<import("./types").Recommend>(
+      `/api/recommend?provider=${encodeURIComponent(provider)}&days=${days}`),
+};
+
 export const screen = {
   /** 오늘 관심있게 볼 종목. 순위는 "크게 움직일 순서"지 "오를 순서"가 아니다. */
   rank: (body: { provider: string; timeframe: string; horizon: number; limit?: number }) =>

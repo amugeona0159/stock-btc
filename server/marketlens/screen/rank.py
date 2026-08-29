@@ -50,13 +50,12 @@ class Ranked:
     # 점수에 가장 크게 기여한 축들. 왜 이 종목이 위에 있는지 보여 준다.
     why: list[dict] = field(default_factory=list)
     last: float | None = None
-    change_pct: float | None = None
 
 
 def _payload(item: Ranked) -> dict:
     """화면으로 나가는 모양. 나머지 API 와 같이 camelCase 로 맞춘다."""
     return {"symbol": item.symbol, "move": item.move, "direction": item.direction,
-            "why": item.why, "last": item.last, "changePct": item.change_pct}
+            "why": item.why, "last": item.last}
 
 
 def _z(values: pd.Series) -> pd.Series:
@@ -92,7 +91,7 @@ def score(rows: pd.DataFrame, usable: dict[str, float], top_reasons: int = 3) ->
 
 
 def build(latest: dict[str, pd.Series], measured: dict, horizon: int,
-          limit: int = 10, prices: dict[str, tuple[float, float]] | None = None) -> dict:
+          limit: int = 10, prices: dict[str, float] | None = None) -> dict:
     """오늘의 순위.
 
     `latest`: 종목 → 마지막 확정봉의 팩터 값
@@ -142,7 +141,7 @@ def build(latest: dict[str, pd.Series], measured: dict, horizon: int,
         elif "why" in out["direction"].columns:
             item.why = out["direction"].loc[symbol, "why"]
         if prices and symbol in prices:
-            item.last, item.change_pct = prices[symbol]
+            item.last = prices[symbol]
         ranked.append(item)
 
     key = "move" if quality["move"]["factors"] else "direction"
