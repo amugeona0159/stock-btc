@@ -8,6 +8,8 @@ const URL = process.env.SHOT_URL ?? "http://localhost:5173/";
 const OUT = "../screenshots";
 
 const SHOTS = [
+  // 확대해도 세 패널이 같은 구간을 보는지. 이건 그림으로만 확인된다.
+  { name: "zoom", width: 1600, height: 950, indicators: [], timeframe: "1d", zoom: 6 },
   { name: "wide", width: 1600, height: 950, indicators: [] },
   { name: "narrow", width: 1280, height: 860, indicators: [] },
   // 일목은 선행스팬이 마지막 봉보다 26봉 앞에 찍혀야 한다. 그건 그림으로만 확인된다.
@@ -86,6 +88,27 @@ for (const shot of SHOTS) {
     // 카드가 없는 그림을 찍어 놓고 "안 나온다"고 오해하게 된다.
     await page.locator(shot.waitFor).first()
       .waitFor({ timeout: 60000 }).catch(() => {});
+  }
+
+  if (shot.zoom) {
+    // 메인 차트를 확대한다. RSI·MACD 가 같은 구간으로 따라오는지는 그림으로만 보인다.
+    const box = await page.locator(".pane.main").boundingBox();
+    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2);
+    for (let i = 0; i < shot.zoom; i += 1) {
+      await page.mouse.wheel(0, -240);
+      await page.waitForTimeout(120);
+    }
+    await page.waitForTimeout(1200);
+    // 세 패널이 실제로 같은 구간을 보고 있는지 숫자로도 남긴다.
+    const axes = await page.$$eval(".pane", (panes) =>
+      panes.map((p) => {
+        const label = p.querySelector(".pane-label")?.textContent ?? "가격";
+        const ticks = Array.from(p.querySelectorAll("td, .tv-lightweight-charts *"))
+          .map((n) => n.textContent ?? "").filter((t) => /\d/.test(t));
+        return { label, first: ticks[0] ?? "", last: ticks.at(-1) ?? "" };
+      }),
+    );
+    console.log("   축:", JSON.stringify(axes));
   }
 
   if (shot.picker) {

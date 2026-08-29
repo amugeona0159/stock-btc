@@ -47,10 +47,26 @@ def candles_payload(df: pd.DataFrame) -> list[dict]:
 
 
 def _points(ts_seconds: np.ndarray, values: np.ndarray) -> list[dict]:
+    """값이 없는 자리는 **시각만** 보낸다(whitespace).
+
+    버리면 안 된다. RSI(14) 는 첫 14봉이 비어 있는데 그걸 빼고 보내면 그 시리즈의
+    첫 점이 캔들 14번째가 되고, lightweight-charts 의 logical 인덱스는 "그 차트의 첫
+    데이터" 기준이라 **메인 차트의 0번과 보조 패널의 0번이 14봉 어긋난다.**
+    그 상태로 같은 범위를 넘기면 보조 패널은 다른 구간을 보여 준다 — 차트를 확대해도
+    RSI·MACD 가 안 맞던 이유가 이것이다. MACD 는 34봉이라 더 심하다.
+
+    whitespace 점도 시간축 인덱스를 차지하므로(`wrapWhitespaceData`), 이렇게 보내면
+    모든 시리즈가 첫 봉부터 같은 개수가 되어 인덱스가 저절로 맞는다.
+
+    중간이 빈 자리도 whitespace 다 — 선이 끊긴다. 이어 그리면 없던 추세가 보인다.
+    """
     finite = np.isfinite(values)
+    if not finite.any():
+        # 하나도 없으면 빈 배열. 화면이 이걸 보고 시리즈를 아예 안 만든다.
+        return []
     return [
-        {"time": int(t), "value": float(v)}
-        for t, v in zip(ts_seconds[finite], values[finite])
+        {"time": int(t), "value": float(v)} if ok else {"time": int(t)}
+        for t, v, ok in zip(ts_seconds, values, finite)
     ]
 
 

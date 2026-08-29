@@ -387,6 +387,34 @@
 - **성적을 문구에 같이 적는다.** "폭이 이 도구가 맞히는 것이다 — 밴드 82.2%, 방향
   55.0%" 처럼. 숫자 없이 "믿지 말 것"만 쓰면 읽는 사람이 얼마나 안 믿을지 모른다.
 
+## 패널 시간축은 맞물려 있어야 한다
+
+차트를 확대하면 RSI·MACD 도 같이 확대돼야 한다. 안 그러면 같은 26일을 같은 선상에서
+못 본다. lightweight-charts **4.2** 라 v5 의 단일 차트 다중 pane 은 못 쓴다 —
+`IChartApi` 를 여러 개 만들어 손으로 맞추는 게 유일한 길이고, 그러려면 셋이 다 맞아야 한다.
+
+- **값이 없는 자리를 버리지 말 것.** `core/series.py: _points` 가 warm-up·결측을
+  **whitespace**(`{time}` 만)로 채운다. 버리면 RSI(14) 의 첫 점이 캔들 14번째가 되고,
+  logical 인덱스는 "그 차트의 첫 데이터" 기준이라 메인의 0번과 보조의 0번이 14봉
+  (MACD 는 34봉) 어긋난다. 같은 범위를 넘겨도 다른 구간이 보인다.
+  값이 하나도 없으면 **빈 배열** — 화면이 그걸 보고 시리즈를 아예 안 만든다.
+- **재진입 가드는 프레임을 넘겨야 한다.** v4 의 `setVisibleLogicalRange` 는 그 자리에서
+  적용되지 않고 다음 페인트에 적용되며 거기서 이벤트가 난다. 같은 틱에서 켰다 끄는
+  플래그로는 되쏘기를 못 막아 핑퐁이 된다. **마지막으로 넘긴 범위를 차트마다 기억해
+  두고 같은 범위면 무시**한다.
+- **구독을 매 틱 다시 걸지 말 것.** deps 는 `paneKey`(패널 id 를 이은 문자열)다.
+  배열을 그대로 쓰면 실시간 틱마다 재구독하면서 범위를 강제로 맞춰, 방금 스크롤한
+  자리가 되돌아간다.
+- 서브 패널에도 **`ResizeObserver`**. `window.resize` 만으로는 탭 전환·패널 추가처럼
+  레이아웃만 변할 때를 못 잡아 서브만 옛 폭을 유지한다.
+- `rightPriceScale.minimumWidth` 로 패널들의 가격축 폭을 맞춘다. 폭이 다르면 같은
+  범위라도 세로선이 어긋난다.
+- 크로스헤어도 같이 움직인다(`subscribeCrosshairMove` → `setCrosshairPosition`).
+  이건 **시각 기준**이라 인덱스가 어긋나도 맞는다 — 그래서 이것만 맞는다고
+  다 된 줄 알면 안 된다.
+- 고쳤으면 확대한 상태로 캡처해 **세 패널의 가로축 눈금이 같은 날짜인지** 눈으로 볼 것.
+  `screenshots/chart-zoom.png`.
+
 ## 화면에서 지킬 것
 
 - **예측선은 세로축 계산에 끼지 않는다**(`autoscaleInfoProvider: () => null`).
@@ -406,7 +434,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 350개
+.venv/Scripts/python -m pytest server/tests -q      # 355개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b

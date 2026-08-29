@@ -15,7 +15,9 @@ export interface Candle {
 
 export interface Point {
   time: number;
-  value: number;
+  /** 값이 없는 자리(warm-up·결측)는 `time` 만 온다 — lightweight-charts 의
+   *  whitespace 다. 버리지 않고 보내야 보조 패널의 시간축 인덱스가 메인과 맞는다. */
+  value?: number;
 }
 
 export type Draw =

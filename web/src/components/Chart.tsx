@@ -7,6 +7,7 @@ import {
   type IChartApi,
   type ISeriesApi,
   type LogicalRange,
+  type MouseEventParams,
   type Time,
 } from "lightweight-charts";
 
@@ -41,7 +42,8 @@ function chartOptions(height: number, attribution = false) {
       vertLines: { color: token("line"), style: LineStyle.Dotted },
       horzLines: { color: token("line"), style: LineStyle.Dotted },
     },
-    rightPriceScale: { borderColor: token("line") },
+    // 패널마다 가격축 폭이 다르면 같은 구간을 보여 줘도 세로선이 어긋난다.
+    rightPriceScale: { borderColor: token("line"), minimumWidth: 64 },
     timeScale: { borderColor: token("line"), timeVisible: true, secondsVisible: false },
     crosshair: { mode: 0 as const },
     localization: { locale: "ko-KR" },
@@ -119,7 +121,8 @@ function syncSeries(chart: IChartApi, map: SeriesMap, items: Array<{ id: string;
       series = addOutput(chart, output);
       map.set(id, series);
     }
-    series.setData(output.data as Array<{ time: Time; value: number }>);
+    // 값이 없는 점은 `{time}` 만 온다(whitespace). 그대로 넘겨야 인덱스가 맞는다.
+    series.setData(output.data as Array<{ time: Time; value?: number }>);
   }
 }
 
@@ -151,8 +154,6 @@ export function ChartStack({
   const subRefs = useRef<Map<string, { chart: IChartApi; series: SeriesMap; node: HTMLDivElement }>>(
     new Map(),
   );
-  const syncing = useRef(false);
-
   // 자기 패널을 쓰는 지표만 아래에 쌓는다.
   const subPanes = useMemo(
     () =>
@@ -161,6 +162,10 @@ export function ChartStack({
         .map((r) => ({ id: r.id, name: r.name ?? r.key })),
     [indicators],
   );
+  // **패널 목록의 정체성은 id 문자열이다.** `subPanes` 배열은 실시간 틱마다 새로
+  // 만들어지므로 그걸 deps 에 쓰면 매 틱 구독을 끊었다 다시 걸고, 그때마다 범위를
+  // 강제로 맞춰 사용자가 방금 스크롤한 자리가 되돌아간다.
+  const paneKey = subPanes.map((p) => p.id).join(",");
 
   // --- 메인 차트는 한 번만 만든다 ---
   useLayoutEffect(() => {
@@ -269,7 +274,7 @@ export function ChartStack({
         map.set(id, series);
       }
       series.applyOptions({ color, lineWidth: width });
-      series.setData(points as Array<{ time: Time; value: number }>);
+      series.setData(points as Array<{ time: Time; value?: number }>);
     };
 
     if (projection?.available) {
@@ -382,43 +387,91 @@ export function ChartStack({
     }
   }, [indicators, subPanes]);
 
-  // --- 시간축 동기화 ---
+  // --- 시간축·크로스헤어 맞물림 ---
+  //
   // 패널마다 따로 움직이면 RSI 를 볼 때 가격이 다른 구간을 보고 있게 된다.
+  // 여기가 되려면 셋이 다 맞아야 한다:
+  //
+  // 1. **인덱스 원점이 같아야 한다.** 서버가 warm-up 자리를 whitespace 로 채워
+  //    보낸다(`core/series.py: _points`). 버리면 RSI 의 0번이 캔들 14번째가 된다.
+  // 2. **가드가 프레임을 넘어야 한다.** v4 의 `setVisibleLogicalRange` 는 그 자리에서
+  //    적용되지 않고 다음 페인트에 적용되며 거기서 이벤트가 난다. 같은 틱에서 켰다
+  //    끄는 플래그로는 되쏘기를 못 막아 핑퐁이 된다 — **마지막으로 넘긴 범위를
+  //    기억해 두고 같은 범위면 무시**한다.
+  // 3. **구독을 매 틱 다시 걸면 안 된다.** deps 는 `paneKey`(id 문자열)다.
   useEffect(() => {
     const charts = () => [
       chartRef.current,
       ...Array.from(subRefs.current.values(), (e) => e.chart),
     ].filter(Boolean) as IChartApi[];
 
-    const apply = (source: IChartApi, range: LogicalRange | null) => {
-      if (!range || syncing.current) return;
-      syncing.current = true;
-      for (const chart of charts()) {
-        if (chart !== source) chart.timeScale().setVisibleLogicalRange(range);
-      }
-      syncing.current = false;
+    const applied = new WeakMap<IChartApi, string>();
+    const same = (chart: IChartApi, range: LogicalRange) => {
+      const key = `${range.from.toFixed(4)}:${range.to.toFixed(4)}`;
+      if (applied.get(chart) === key) return true;
+      applied.set(chart, key);
+      return false;
     };
 
-    const handlers = charts().map((chart) => {
-      const handler = (range: LogicalRange | null) => apply(chart, range);
+    const spread = (source: IChartApi | null, range: LogicalRange | null) => {
+      if (!range) return;
+      for (const chart of charts()) {
+        if (chart === source || same(chart, range)) continue;
+        chart.timeScale().setVisibleLogicalRange(range);
+      }
+    };
+
+    const rangeHandlers = charts().map((chart) => {
+      const handler = (range: LogicalRange | null) => spread(chart, range);
       chart.timeScale().subscribeVisibleLogicalRangeChange(handler);
       return { chart, handler };
     });
 
+    // 크로스헤어를 세우려면 그 차트의 시리즈가 하나 필요하다. 세로선만 쓸 것이라
+    // 어느 것이든 상관없다.
+    const anySeries = (chart: IChartApi) => {
+      if (chart === chartRef.current) return priceRef.current;
+      for (const entry of subRefs.current.values()) {
+        if (entry.chart === chart) return entry.series.values().next().value ?? null;
+      }
+      return null;
+    };
+
+    // 크로스헤어도 같이 움직인다. 가격 위에 올린 시각의 세로선이 RSI·MACD 에도
+    // 서야 "같은 26일"을 같은 선상에서 읽을 수 있다.
+    const crossHandlers = charts().map((chart) => {
+      const handler = (param: MouseEventParams) => {
+        for (const other of charts()) {
+          if (other === chart) continue;
+          const series = anySeries(other);
+          if (!series) continue;
+          if (param.time === undefined) other.clearCrosshairPosition();
+          // 값은 안 쓴다 — 세로선만 세우면 되고, 가격축은 패널마다 다르다.
+          else other.setCrosshairPosition(Number.NaN, param.time, series);
+        }
+      };
+      chart.subscribeCrosshairMove(handler);
+      return { chart, handler };
+    });
+
     // 새로 생긴 서브 패널을 메인의 현재 구간에 맞춘다.
-    const current = chartRef.current?.timeScale().getVisibleLogicalRange();
-    if (current && chartRef.current) apply(chartRef.current, current);
+    spread(null, chartRef.current?.timeScale().getVisibleLogicalRange() ?? null);
 
     return () => {
-      for (const { chart, handler } of handlers) {
+      for (const { chart, handler } of rangeHandlers) {
         chart.timeScale().unsubscribeVisibleLogicalRangeChange(handler);
       }
+      for (const { chart, handler } of crossHandlers) {
+        chart.unsubscribeCrosshairMove(handler);
+      }
     };
-  }, [subPanes]);
+  }, [paneKey]);
 
-  // 서브 패널의 폭도 창을 따라간다.
+  // 서브 패널의 크기. **`window.resize` 만으로는 모자라다** — 탭을 바꾸거나 패널이
+  // 늘어 레이아웃만 변할 때는 창 크기가 안 바뀌어서 서브만 옛 폭을 유지하고,
+  // 그러면 같은 구간을 보여 줘도 봉 간격이 달라 그림이 어긋난다.
   useEffect(() => {
-    const resize = () => {
+    const fit = () => {
       for (const entry of subRefs.current.values()) {
         entry.chart.applyOptions({
           width: entry.node.clientWidth,
@@ -426,10 +479,15 @@ export function ChartStack({
         });
       }
     };
-    window.addEventListener("resize", resize);
-    resize();
-    return () => window.removeEventListener("resize", resize);
-  }, [subPanes]);
+    const observer = new ResizeObserver(fit);
+    for (const entry of subRefs.current.values()) observer.observe(entry.node);
+    window.addEventListener("resize", fit);
+    fit();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", fit);
+    };
+  }, [paneKey]);
 
   const showLegend =
     Boolean(projection?.available) || Boolean(eventPath?.length) || Boolean(learned?.available);
