@@ -130,7 +130,7 @@ npm run dev
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 456개
+.venv/Scripts/python -m pytest server/tests -q      # 461개
 cd web; npx tsc -b                                # 타입체크
 cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
@@ -141,6 +141,7 @@ cd web; npm run shot                              # 실제 화면 PNG (서버 2�
 .venv/Scripts/python scripts/study.py --hours 0.1    # 예측→채점→분석→기권규칙 한 바퀴
 .venv/Scripts/python scripts/recommend.py --dry-run  # 아침 추천 한 바퀴 (저장 없이)
 .venv/Scripts/python scripts/overfitcheck.py         # 규칙 탐색이 잡음을 줍는지 (섞어서 200번)
+.venv/Scripts/python scripts/metalabel.py            # "맞을 자리인가" 를 따로 배워 본다 (메타 라벨링)
 ```
 
 **as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):
