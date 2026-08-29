@@ -20,15 +20,35 @@ function percent(value: number | undefined, digits = 1): string {
   return value === undefined || !Number.isFinite(value) ? "—" : `${(value * 100).toFixed(digits)}%`;
 }
 
-export function SignalCard({ signal }: { signal: Signal | null }) {
+export function SignalCard({ signal, timeframe, basis }: {
+  signal: Signal | null;
+  /** 이 판단이 선 봉. 안 적으면 어느 질문에 대한 답인지 알 수 없다. */
+  timeframe?: string;
+  /** 아침 추천이 선 봉. 이것과 다르면 둘은 다른 이야기를 하고 있는 것이다. */
+  basis?: string;
+}) {
   if (!signal) return null;
+  // **봉이 다르면 판단도 다르다.** SOLUSDT 가 같은 날 1시간봉에서 '매도'(신뢰 0.26),
+  // 일봉에서 '매수'(신뢰 0.92) 였다. 추천은 일봉으로 계산한 것이라 1시간봉을 보면
+  // "추천은 사라는데 판단은 팔라네" 로 읽힌다. 둘 다 맞고 질문이 다른 것이다.
+  const mismatched = Boolean(timeframe && basis && timeframe !== basis);
   return (
     <section className="card">
-      <h2>종합 판단</h2>
+      <h2>
+        종합 판단
+        {timeframe && <span className="scope">{timeframe} 기준</span>}
+      </h2>
       <div className="verdict" data-dir={signal.direction}>
         <strong>{signal.label}</strong>
         <span>신뢰도 {percent(signal.confidence, 0)}</span>
       </div>
+      {mismatched && (
+        <p className="mismatch">
+          이건 <b>{timeframe} 봉</b>을 보고 한 판단이다. 아침 추천은 <b>{basis} 봉</b>으로
+          1~3일을 본 것이라 <b>서로 다른 질문의 답</b>이다 — 어긋나 보여도 둘 중 하나가
+          틀린 게 아니다. 추천과 맞춰 보려면 위에서 <b>{basis}</b> 를 고를 것.
+        </p>
+      )}
       <div className="meter">
         <i style={{ width: `${Math.round(signal.confidence * 100)}%` }} />
       </div>

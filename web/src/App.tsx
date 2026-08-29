@@ -34,6 +34,10 @@ import type {
 const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
+// **아침 추천이 선 봉.** `scripts/recommend.py` 가 `recommend-<시장>-1d-<일수>` 로
+// 굽는다 — 여기를 바꾸려면 그쪽도 같이 바꿔야 한다. 추천에서 종목을 열 때 이 봉으로
+// 맞추고, 종합 판단이 다른 봉을 보고 있으면 화면이 그렇다고 말한다.
+export const RECOMMEND_TIMEFRAME = "1d";
 
 type Tab = "signal" | "predict" | "screen" | "learn" | "indicators" | "research";
 
@@ -215,13 +219,18 @@ export default function App() {
    * 다섯 이펙트(실시간 재구독·분석·사건·상태 초기화·학습예측)도 한 번만 돈다.
    */
   const selectSymbol = useCallback(
-    (nextProvider: string, nextSymbol: string) => {
+    (nextProvider: string, nextSymbol: string, wanted?: string) => {
       const info = providers.find((p) => p.key === nextProvider);
       setProvider(nextProvider);
       setSymbol(nextSymbol);
-      // 새 시장이 지금 봉을 안 주면 일봉으로. 목록 첫 항목으로 떨어지면 토스는
-      // 1분봉이 열려 사람이 아무것도 못 읽는다.
-      if (info && !info.timeframes.includes(timeframe)) {
+      // **부른 쪽이 봉을 정할 수 있다.** 추천은 일봉으로 계산한 것이라 1시간봉으로
+      // 열리면 종합 판단이 다른 질문에 답한다 — 추천은 "사라" 인데 판단은 "팔라" 가
+      // 나란히 뜨는 화면이 실제로 있었다. 같은 종목이어도 봉이 다르면 다른 이야기다.
+      if (wanted && info?.timeframes.includes(wanted)) {
+        setTimeframe(wanted);
+      } else if (info && !info.timeframes.includes(timeframe)) {
+        // 새 시장이 지금 봉을 안 주면 일봉으로. 목록 첫 항목으로 떨어지면 토스는
+        // 1분봉이 열려 사람이 아무것도 못 읽는다.
         setTimeframe(info.timeframes.includes("1d") ? "1d" : info.timeframes.at(-1)!);
       }
       setPickerOpen(false);
@@ -358,7 +367,9 @@ export default function App() {
           <ScreenPanel
             provider={provider}
             providers={providers}
-            onPick={(s) => selectSymbol(provider, s)}
+            // 추천이 선 봉으로 연다. 추천은 일봉 모델이 1·2·3일을 본 결과라
+            // 다른 봉으로 열면 판단이 그 봉의 답을 하고, 둘이 어긋나 보인다.
+            onPick={(s) => selectSymbol(provider, s, RECOMMEND_TIMEFRAME)}
             onProvider={(key) => switchProvider(key)}
           />
         )}
@@ -379,7 +390,8 @@ export default function App() {
             {/* 폭이 먼저, 방향 투표가 나중. 이 순서가 잰 결과와 같다 —
                 밴드 82.2%, 방향 55.0%. */}
             <ForecastCard forecast={forecast} />
-            <SignalCard signal={live.signal} />
+            <SignalCard signal={live.signal} timeframe={timeframe}
+                        basis={RECOMMEND_TIMEFRAME} />
             <PatternCard patterns={patterns} />
           </>
         )}

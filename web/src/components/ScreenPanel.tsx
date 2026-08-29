@@ -282,9 +282,11 @@ function RecordCard({ result, days }: { result: Recommend; days: number }) {
         {measured.directionHit !== undefined && (
           <>
             <br />
-            지금까지 채점한 {measured.n?.toLocaleString("ko-KR")}판에서 방향은{" "}
-            <b>{pct(measured.directionHit, 1)}</b>, 80% 밴드는{" "}
-            <b>{pct(measured.bandHit, 1)}</b> 맞았다.{" "}
+            <b>아래 숫자는 이 추천의 성적이 아니다.</b> 추천 밑에 깔린 예측 모델을
+            {" "}{measured.n?.toLocaleString("ko-KR")}판 채점한 결과다 — 방향{" "}
+            <b>{pct(measured.directionHit, 1)}</b>, 80% 밴드{" "}
+            <b>{pct(measured.bandHit, 1)}</b>. 추천 자체의 성적은 위 칸에 쌓인다.
+            <br />
             <b>이 도구가 잘하는 건 폭이지 방향이 아니다</b> — 추천은 그 약한 쪽을 쓰는
             화면이라 숫자를 그대로 읽을 것.
           </>
