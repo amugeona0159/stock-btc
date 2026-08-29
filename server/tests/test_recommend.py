@@ -314,3 +314,29 @@ def test_actions_folder_never_holds_korean_stocks():
         body = json.loads(path.read_text(encoding="utf-8"))
         found = sorted(p for p in (body.get("providers") or {}) if p.startswith("toss"))
         assert not found, f"{path.name}: Actions 폴더에 {found} — learning-local 로 가야 한다"
+
+
+def test_krw_lookup_is_asked_only_of_crypto_markets():
+    """**코인인지 아닌지는 심볼 모양이 아니라 그 시장이 안다.**
+
+    모양으로 판단하면 `AAPL` 이 코인처럼 보인다 — 거래쌍 접미사가 없으니 그대로
+    남고, `KRW-AAPL` 이라는 없는 마켓을 업비트에 물으러 간다. 실제로 그랬고,
+    미국주식 추천 한 번마다 실패하는 호출이 아홉 번씩 나갔다.
+    """
+    from marketlens.providers import get as get_provider
+    from marketlens.screen import coins, universe
+
+    crypto = {p for p in universe.providers()
+              if get_provider(p).info.market == "crypto"}
+    assert crypto == {"binance", "upbit"}, crypto
+
+    # **모양만 보면 주식이 코인처럼 보인다.** 이 값이 그럴듯하게 나온다는 것이
+    # 시장으로 갈라야 하는 이유다 — 업비트에 `KRW-AAPL` 은 없다.
+    assert coins.krw_market("AAPL") == "KRW-AAPL"
+
+    # 주식 시장의 후보에는 코인 규칙을 대지 않는다. 대면 전부 없는 마켓이 된다.
+    stock_symbols = [s for p in universe.providers() if p not in crypto
+                     for s in universe.buyable(p)]
+    assert stock_symbols, "주식 후보가 하나도 없다 — 이 검사가 뜻을 잃었다"
+    assert all(coins.base(s) == s for s in stock_symbols), (
+        "주식 심볼이 거래쌍처럼 잘렸다")

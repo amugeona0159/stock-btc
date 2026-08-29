@@ -21,7 +21,7 @@ from ..core.series import IndicatorRequest, candles_payload, compute_requests
 from ..indicators import catalog, patterns
 from ..providers import (ProviderError, ProviderUnavailable, SymbolNotFound,
                          describe, get as get_provider)
-from ..screen import universe
+from ..screen import names, universe
 from ..signals.engine import evaluate
 from ..store.cache import cache
 from . import learning, recommend as recommend_layer, screening
@@ -365,6 +365,19 @@ def list_user_events() -> dict:
 def research_library() -> dict:
     """근거 등록부 전체. 화면의 '근거' 패널이 이걸 그대로 그린다."""
     return {"entries": [e.to_dict() for e in research.all_entries()]}
+
+
+@router.get("/names")
+def symbol_names() -> dict:
+    """종목 기호 → 한글 이름. 화면이 부팅할 때 한 번 받아 둔다.
+
+    **응답마다 이름을 끼워 넣지 않는다.** `screening`·`analyze`·`learned` 에 각각
+    `name` 을 넣으면 같은 표가 네 군데로 퍼지고, 한 곳을 고치면 나머지가 갈라진다.
+    표는 `screen/names.py` 한 벌이고 화면은 그걸 통째로 받아 찾아 쓴다.
+
+    서른 줄짜리 정적 표라 `/api/indicators` 처럼 매번 새로 만들어도 싸다.
+    """
+    return {"names": names.table()}
 
 
 # 함께 학습할 기본 동료 종목 = 추천 후보 목록(`screen.universe`) 그대로.

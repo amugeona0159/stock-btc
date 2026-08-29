@@ -6,6 +6,7 @@ import type {
   Recommend,
   RecommendItem,
   ScreenResult,
+  SymbolNames,
 } from "../types";
 
 // 사용자가 물은 그대로 — 하루·이틀·사흘. 지평마다 **모델이 따로** 있어서 칩을 바꾸면
@@ -24,6 +25,12 @@ const DAYS = [
  * 종합 판단이 다른 봉을 보고 있으면 그렇다고 알린다). 두 벌로 두면 갈라진다.
  */
 export const RECOMMEND_TIMEFRAME = "1d";
+
+/** `이름 티커` 로 읽히게. 표에 없으면 심볼 그대로 — **이름을 지어내지 않는다.** */
+function label(symbol: string, names: SymbolNames | undefined): string {
+  const found = names?.[symbol];
+  return found ? `${found.name} ${found.ticker}` : symbol;
+}
 
 function signed(value: number | null | undefined, digits = 2): string {
   return value === null || value === undefined || !Number.isFinite(value)
@@ -58,9 +65,11 @@ interface Props {
   providers: ProviderInfo[];
   onPick: (symbol: string) => void;
   onProvider: (key: string) => void;
+  /** 종목 기호 → 한글 이름. `App` 이 부팅 때 받아 둔 표를 그대로 넘긴다. */
+  names: SymbolNames;
 }
 
-export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) {
+export function ScreenPanel({ provider, providers, onPick, onProvider, names }: Props) {
   const [days, setDays] = useState(1);
   const [result, setResult] = useState<Recommend | null>(null);
   const [busy, setBusy] = useState(false);
@@ -186,7 +195,7 @@ export function ScreenPanel({ provider, providers, onPick, onProvider }: Props) 
 
       {/* 예전의 '변동 순위'는 다른 질문에 답한다 — "오늘 뭘 지켜볼까".
           지우지 않고 접어 둔다. 재 놓은 결과가 있고, 사라는 뜻이 아닐 뿐이다. */}
-      <WatchCard provider={provider} />
+      <WatchCard provider={provider} names={names} />
     </>
   );
 }
@@ -328,7 +337,7 @@ function RecordCard({ result, days }: { result: Recommend; days: number }) {
 
 /** 예전의 변동 순위. 다른 질문("오늘 뭘 지켜볼까")에 답하고 그쪽이 훨씬 세다 —
  *  변동 상위−하위 +0.94%p vs 방향 +0.65%p. 지우지 않고 접어 둔다. */
-function WatchCard({ provider }: { provider: string }) {
+function WatchCard({ provider, names }: { provider: string; names: SymbolNames }) {
   const [open, setOpen] = useState(false);
   const [found, setFound] = useState<ScreenResult | null>(null);
 
@@ -360,7 +369,7 @@ function WatchCard({ provider }: { provider: string }) {
               {found.items.map((item, i) => (
                 <div className="row" key={item.symbol}>
                   <span>
-                    {i + 1}. {item.symbol}
+                    {i + 1}. {label(item.symbol, names)}
                   </span>
                   <b>{signed(item.move)}</b>
                 </div>

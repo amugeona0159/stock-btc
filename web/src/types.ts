@@ -492,6 +492,13 @@ export interface GateStatus {
 }
 
 /** 오늘 아침의 매수 추천. `GET /api/recommend`. 07:30 에 얼린 것을 읽을 뿐이다. */
+/**
+ * 종목 기호 → 한글 이름. 열쇠는 `SOLUSDT`·`KRW-SOL`·`005930` 처럼 **심볼 그대로**다.
+ * 표에 없는 심볼은 이름이 없는 것이고, 그때 화면은 티커를 그대로 쓴다 —
+ * **이름을 지어내지 않는다.**
+ */
+export type SymbolNames = Record<string, { name: string; ticker: string }>;
+
 export interface RecommendItem {
   symbol: string;
   last: number | null;

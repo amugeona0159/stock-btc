@@ -71,3 +71,61 @@ def test_names_are_not_blank():
     for table in (names.KR_STOCKS, names.US_STOCKS, names.INDICES, names.COINS):
         for symbol, label in table.items():
             assert label and label.strip() == label, symbol
+
+
+# ------------------------------------------------- 화면에 넘기는 표 (`/api/names`)
+
+def test_table_is_keyed_by_the_symbol_itself():
+    """**열쇠가 `SOL` 이 아니라 `SOLUSDT` 다.**
+
+    코인 기호로만 주면 화면이 거래쌍을 떼는 규칙(`coins.base`)을 TypeScript 로
+    한 벌 더 갖게 되고, 그 순간 두 벌이 갈라진다.
+    """
+    table = names.table()
+    assert table["SOLUSDT"] == {"name": "솔라나", "ticker": "SOL"}
+    assert table["KRW-SOL"] == {"name": "솔라나", "ticker": "SOL"}
+    assert table["005930"] == {"name": "삼성전자", "ticker": "005930"}
+
+
+def test_table_covers_everything_the_screens_can_show():
+    """추천·변동 순위·헤더가 보여줄 수 있는 종목은 전부 표에 있어야 한다.
+
+    빠지면 그 종목만 티커로 뜨는데, 화면을 열어 봐야 아는 종류다.
+    """
+    table = names.table()
+    for provider in universe.providers():
+        for symbol in universe.symbols(provider):
+            assert symbol in table, f"{provider}:{symbol}"
+
+
+def test_table_leaves_out_what_it_does_not_know():
+    """거래소 목록을 통째로 싣지 않는다. 바이낸스만 1,358종이다."""
+    table = names.table()
+    assert "PEPEUSDT" not in table
+    assert len(table) < 100
+
+
+def test_the_same_coin_reads_the_same_in_every_market():
+    """`XRPUSDT` 와 `KRW-XRP` 가 다른 이름으로 뜨면 안 된다.
+
+    **실제로 그랬다** — 손으로 적은 `리플` 과 업비트의 `엑스알피(리플)` 이
+    추천 목록과 종목 고르기 화면에서 갈렸다.
+    """
+    table = names.table()
+    for coin, symbols in {
+        "XRP": ("XRPUSDT", "KRW-XRP"),
+        "SOL": ("SOLUSDT", "KRW-SOL"),
+        "BTC": ("BTCUSDT", "KRW-BTC"),
+    }.items():
+        found = {table[s]["name"] for s in symbols if s in table}
+        assert len(found) == 1, f"{coin}: {found}"
+
+
+def test_coin_names_follow_upbit():
+    """코인 이름의 출처는 **업비트**다(원화로 사는 곳이니까).
+
+    업비트를 실제로 부르지는 않는다 — 테스트가 네트워크를 타면 안 된다. 대신
+    한 번 어긋났던 그 값을 고정해, 짧게 줄이려는 손을 막는다.
+    확인 방법은 `names.py` 표에 적어 뒀다(`/api/symbols?provider=upbit`).
+    """
+    assert names.COINS["XRP"] == "엑스알피(리플)", "업비트 표기다. 줄이면 화면이 갈라진다"

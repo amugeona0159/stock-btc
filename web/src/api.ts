@@ -1,4 +1,11 @@
-import type { Forecast, IndicatorSpec, PatternHit, ProviderInfo, Requested } from "./types";
+import type {
+  Forecast,
+  IndicatorSpec,
+  PatternHit,
+  ProviderInfo,
+  Requested,
+  SymbolNames,
+} from "./types";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -18,6 +25,15 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   providers: () => get<{ providers: ProviderInfo[] }>("/api/providers"),
+
+  /**
+   * 종목 기호 → 한글 이름. 부팅할 때 한 번만 받는다.
+   *
+   * **응답마다 이름을 실어 나르지 않는다.** 표는 서버(`screen/names.py`) 한 벌이고
+   * 화면은 그걸 통째로 받아 찾아 쓴다. 열쇠가 `SOLUSDT` 처럼 **심볼 그대로**라
+   * 거래쌍을 떼는 규칙을 이쪽에 또 만들 필요가 없다.
+   */
+  names: () => get<{ names: SymbolNames }>("/api/names"),
 
   /** 지표 목록·파라미터·수식이 전부 여기서 온다. 화면에 표를 다시 적지 않는다. */
   catalog: () =>

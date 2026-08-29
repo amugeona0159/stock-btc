@@ -29,6 +29,7 @@ import type {
   Requested,
   ScenarioForm,
   Situation,
+  SymbolNames,
 } from "./types";
 
 const HORIZON = 10;
@@ -55,6 +56,8 @@ export default function App() {
   const [categories, setCategories] = useState<Array<{ key: string; label: string }>>([]);
   const [selected, setSelected] = useState<Requested[]>([]);
   const [evidence, setEvidence] = useState<Evidence[]>([]);
+  // 종목 기호 → 한글 이름. 부팅에 한 번 받아 두고 화면 곳곳에서 찾아 쓴다.
+  const [symbolNames, setSymbolNames] = useState<SymbolNames>({});
 
   const [provider, setProvider] = useState("binance");
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -84,13 +87,14 @@ export default function App() {
   const [showEvents, setShowEvents] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.providers(), api.catalog(), research.library()])
-      .then(([p, c, r]) => {
+    Promise.all([api.providers(), api.catalog(), research.library(), api.names()])
+      .then(([p, c, r, n]) => {
         setProviders(p.providers);
         setCatalog(c.indicators);
         setCategories(c.categories);
         setSelected(c.defaults);
         setEvidence(r.entries);
+        setSymbolNames(n.names);
       })
       .catch((err) => setBootError(String(err.message ?? err)));
   }, []);
@@ -239,6 +243,7 @@ export default function App() {
     selectSymbol(key, info?.defaultSymbols[0] ?? "");
   };
 
+  const named = symbolNames[symbol];
   const last = live.candles.at(-1);
   const previous = live.candles.at(-2);
   const rawChange = last && previous ? (last.close / previous.close - 1) * 100 : null;
@@ -272,7 +277,9 @@ export default function App() {
             그 자리에서는 아무 말이 없었다. `<b>` 를 쓰면 안 된다 — 스크린샷
             스크립트가 `.topbar b` 로 시세 도착을 판정한다. */}
         <button onClick={() => setPickerOpen(true)} title="종목 고르기">
-          {symbol || "종목"}{" "}
+          {/* 추천 목록과 같은 이름으로 부른다. 표에 없는 심볼(거래소 목록 대부분)은
+              기호 그대로 — 이름을 지어내지 않는다. */}
+          {named ? `${named.name} ${named.ticker}` : symbol || "종목"}{" "}
           <span style={{ color: "var(--text-dim)" }}>찾기</span>
         </button>
 
@@ -366,6 +373,7 @@ export default function App() {
             // 추천이 선 봉으로 연다. 추천은 일봉 모델이 1·2·3일을 본 결과라
             // 다른 봉으로 열면 판단이 그 봉의 답을 하고, 둘이 어긋나 보인다.
             onPick={(s) => selectSymbol(provider, s, RECOMMEND_TIMEFRAME)}
+            names={symbolNames}
             onProvider={(key) => switchProvider(key)}
           />
         )}

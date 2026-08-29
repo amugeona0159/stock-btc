@@ -274,16 +274,21 @@ async def pick(provider: str) -> dict | None:
         print(f"  {provider} {day}일: {order[0]} {found[order[0]]['expected']:+.2f}% "
               f"· skill {by_day[str(day)]['skill']}{mark}")
 
-    # **원화 시세만 얼린다.** 이름·티커는 `coins.py` 표에서 바로 나오므로 저장하지
-    # 않는다 — 저장해 두면 표를 고쳐도 옛 파일이 옛 이름을 계속 들고 있게 된다.
-    # 시세는 그날 값이라 저장해야 한다(나중에 읽으면 다른 값이 나온다).
-    priced = await krw_prices([s for s in rows if not s.startswith("KRW-")])
-    for symbol, row in rows.items():
-        if symbol.startswith("KRW-"):
-            # 업비트는 원래 원화라 그대로가 실거래가다.
-            row["krw"] = {"symbol": symbol, "last": row["last"], "ts": row["lastTs"]}
-        elif symbol in priced:
-            row["krw"] = priced[symbol]
+    # **원화 시세만 얼린다.** 이름·티커는 `screen/names.py` 표에서 바로 나오므로
+    # 저장하지 않는다 — 저장해 두면 표를 고쳐도 옛 파일이 옛 이름을 계속 들고 있게
+    # 된다. 시세는 그날 값이라 저장해야 한다(나중에 읽으면 다른 값이 나온다).
+    #
+    # **코인 시장에서만 찾는다.** 코인인지 아닌지는 심볼 모양이 아니라 **그 시장이**
+    # 안다. 모양으로 판단했더니 `AAPL` 을 코인으로 보고 업비트에 `KRW-AAPL` 을
+    # 물으러 갔다 — 미국주식 열 종목마다 실패하는 호출이 아홉 번씩 나갔다.
+    if get_provider(provider).info.market == "crypto":
+        priced = await krw_prices([s for s in rows if not s.startswith("KRW-")])
+        for symbol, row in rows.items():
+            if symbol.startswith("KRW-"):
+                # 업비트는 원래 원화라 그대로가 실거래가다.
+                row["krw"] = {"symbol": symbol, "last": row["last"], "ts": row["lastTs"]}
+            elif symbol in priced:
+                row["krw"] = priced[symbol]
 
     if not by_day:
         return None

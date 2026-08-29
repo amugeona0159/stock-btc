@@ -79,7 +79,10 @@ npm run dev
   국내주식 4,303 · 미국주식 6,713)은 눌러서 훑을 수도 있다
 - **아침 매수 추천** — 매일 07:30 에 한 번 뽑아 그날은 고정된다. 모델이 앞으로를 보고
   낸 **기대 수익률** 순으로 상위 3(사라) + 하위 2(피하라). 지평이 지나면 실제와 맞춰
-  **후보 전체 평균과 견준 성적**을 쌓는다 — 이기든 지든 그대로 남는다
+  **후보 전체 평균과 견준 성적**을 쌓는다 — 이기든 지든 그대로 남는다.
+  종목은 **한글 이름과 원화**로 나온다(`솔라나 SOL · ₩144,400`). 코인 가격은 환율을
+  곱한 값이 아니라 **업비트 원화 마켓의 실거래가**다 — 환산가는 김치 프리미엄만큼
+  어긋나 그 값에 살 수가 없다. 그래서 원화 마켓이 없는 코인은 후보에서 뺀다
 - **종목 순위** — 오늘 관심있게 볼 종목을 변동 순으로. 순위를 만들기 전에 그 순위가
   과거에 맞았는지를 먼저 재고, 잰 것만 쓴다
 
@@ -127,7 +130,7 @@ npm run dev
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 376개
+.venv/Scripts/python -m pytest server/tests -q      # 453개
 cd web; npx tsc -b                                # 타입체크
 cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
@@ -137,6 +140,7 @@ cd web; npm run shot                              # 실제 화면 PNG (서버 2�
 .venv/Scripts/python scripts/screen.py --dry-run     # 추천 팩터가 실제로 맞는지 재기
 .venv/Scripts/python scripts/study.py --hours 0.1    # 예측→채점→분석→기권규칙 한 바퀴
 .venv/Scripts/python scripts/recommend.py --dry-run  # 아침 추천 한 바퀴 (저장 없이)
+.venv/Scripts/python scripts/overfitcheck.py         # 규칙 탐색이 잡음을 줍는지 (섞어서 200번)
 ```
 
 **as-of 검증 결과** (일봉 10봉 지평, origin 40개/종목):
