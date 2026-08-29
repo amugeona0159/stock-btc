@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..screen import coins
+from ..screen import names
 from .learning import DIRS
 
 FOLDER = "recommend"
@@ -155,10 +155,10 @@ def today(provider: str, days: int) -> dict:
         found = (row.get("byDay") or {}).get(key, {})
         return {
             "symbol": symbol, "last": row.get("last"),
-            # 이름과 티커는 **읽을 때 표에서 붙인다**(`screen/coins.py`). 얼린 파일에
+            # 이름과 티커는 **읽을 때 표에서 붙인다**(`screen/names.py`). 얼린 파일에
             # 넣지 않는 이유는, 넣어 두면 표를 고쳐도 옛 파일이 옛 이름을 계속
             # 들고 나오기 때문이다. 표에 없으면 `None` — 지어내지 않는다.
-            "name": coins.name(symbol), "ticker": coins.base(symbol),
+            "name": names.of(symbol), "ticker": names.ticker(symbol),
             # 원화 시세는 **그날 값이라 얼려 둔 것만** 쓴다. `krw` 는 업비트
             # 실거래가지 환율 환산가가 아니다. 옛 파일이나 주식이면 없고, 그때
             # 화면은 티커만 낸다 — 없다고 행을 빼면 그날 추천을 통째로 못 보게 된다.

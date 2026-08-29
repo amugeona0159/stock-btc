@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from marketlens.screen import coins, universe
+from marketlens.screen import coins, names, universe
 
 
 @pytest.mark.parametrize("symbol, want", [
@@ -44,19 +44,12 @@ def test_coins_without_a_krw_market_have_none():
         assert not coins.sellable_in_krw(symbol)
 
 
-def test_names_are_not_invented():
-    """표에 없으면 `None`. 지어낸 이름은 다른 코인과 헷갈린다."""
-    assert coins.name("SOLUSDT") == "솔라나"
-    assert coins.name("KRW-BTC") == "비트코인"
-    assert coins.name("NOSUCHUSDT") is None
-
-
 def test_every_named_coin_has_a_market_or_is_marked():
     """이름은 있는데 원화로 못 사는 코인은 `NO_KRW` 에 적혀 있어야 한다.
 
     안 적혀 있으면 `KRW-XXX` 라는 없는 마켓을 조회하러 간다.
     """
-    for ticker in coins.NAMES:
+    for ticker in names.COINS:
         market = coins.krw_market(ticker)
         assert (market is None) == (ticker in coins.NO_KRW), ticker
 
