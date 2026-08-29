@@ -39,6 +39,21 @@ BACKFILL = "backfill.jsonl"
 ENOUGH = 30
 
 
+# **사람이 사는 단위로 묶는다.** 화면은 시장 이름(바이낸스·토스)이 아니라
+# 국내주식·해외주식·코인 셋으로 읽는다 — 어느 거래소를 거쳐 사는지는 그다음 문제고,
+# 하나만 골라 보여주면 차트가 BTC 에 서 있는 동안에는 코인 추천만 보인다.
+#
+# 한 묶음에 프로바이더가 여럿인 건 같은 종목을 여러 곳에서 받아서다(미국주식은
+# 토스·야후, 코인은 바이낸스·업비트). **앞에 적은 것이 이긴다.** 토스가 앞인 건
+# 한글 이름이 붙어서고, 바이낸스가 앞인 건 추천 모델이 거기서 학습되고 원화 시세는
+# 업비트에서 따로 붙기 때문이다(`screen/coins.py`).
+GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("kr", "국내주식", ("toss_kr", "kis")),
+    ("us", "해외주식", ("toss_us", "yahoo", "us_stock")),
+    ("coin", "코인", ("binance", "upbit")),
+)
+
+
 def _dirs() -> list[Path]:
     return [d / FOLDER for d in DIRS]
 
@@ -241,6 +256,25 @@ def today(provider: str, days: int) -> dict:
         "measured": measured(),
         "skipped": body.get("skipped") or [],
     }
+
+
+def groups(days: int) -> dict:
+    """국내주식·해외주식·코인 셋을 한 번에.
+
+    **빠진 묶음을 조용히 지우지 않는다.** 국내주식은 토스가 IP 허용목록을 타서
+    Actions 에서 못 돌고, 그래서 PC 가 며칠 꺼져 있으면 통째로 없다. 없는 것을
+    안 보여주면 "국내주식은 살 게 없다"로 잘못 읽힌다 — 자리는 남기고 사유를 적는다.
+    """
+    found = _merged()
+    out = []
+    for key, name, order in GROUPS:
+        provider = next((p for p in order if p in found), None)
+        if provider is None:
+            out.append({"key": key, "label": name, "available": False,
+                        "reason": f"{name} 추천이 아직 없다 — 그 시장을 한 번 뽑아야 한다"})
+            continue
+        out.append({"key": key, "label": name, **today(provider, days)})
+    return {"days": days, "groups": out}
 
 
 def status() -> dict:

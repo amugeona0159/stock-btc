@@ -387,12 +387,14 @@ export default function App() {
         {tab === "screen" && (
           <ScreenPanel
             provider={provider}
-            providers={providers}
             // 추천이 선 봉으로 연다. 추천은 일봉 모델이 1·2·3일을 본 결과라
             // 다른 봉으로 열면 판단이 그 봉의 답을 하고, 둘이 어긋나 보인다.
-            onPick={(s) => selectSymbol(provider, s, RECOMMEND_TIMEFRAME)}
+            //
+            // **시장도 같이 넘긴다.** 목록이 국내주식·해외주식·코인 셋을 한꺼번에
+            // 내므로, 지금 차트가 선 시장으로 열면 코인 목록에서 삼성전자를 눌렀을 때
+            // 바이낸스에 없는 심볼을 묻게 된다.
+            onPick={(market, s) => selectSymbol(market, s, RECOMMEND_TIMEFRAME)}
             names={symbolNames}
-            onProvider={(key) => switchProvider(key)}
           />
         )}
 

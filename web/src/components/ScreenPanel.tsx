@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { positions, recommend, screen } from "../api";
 import type {
-  ProviderInfo,
-  Recommend,
+  RecommendGroup,
   RecommendItem,
   ScreenResult,
   SymbolNames,
@@ -62,29 +61,35 @@ const CONFIDENCE: Record<string, string> = {
 
 interface Props {
   provider: string;
-  providers: ProviderInfo[];
-  onPick: (symbol: string) => void;
-  onProvider: (key: string) => void;
+  onPick: (provider: string, symbol: string) => void;
   /** 종목 기호 → 한글 이름. `App` 이 부팅 때 받아 둔 표를 그대로 넘긴다. */
   names: SymbolNames;
 }
 
-export function ScreenPanel({ provider, providers, onPick, onProvider, names }: Props) {
+/**
+ * **시장을 고르게 하지 않는다.** 예전에는 차트가 선 시장 하나만 보여줬는데, 차트는
+ * 기본이 BTCUSDT 라 열면 늘 코인 추천만 나왔다 — 국내주식과 해외주식은 시장을 바꿔야
+ * 볼 수 있었고, 그러려면 그런 게 있다는 걸 먼저 알아야 했다.
+ *
+ * 지금은 국내주식·해외주식·코인 셋을 한 번에 낸다. 묶음마다 **사라 셋 · 사지 말 것
+ * 셋**이라 아홉씩 열여덟 줄이고, 각 묶음이 자기 날짜를 들고 온다 — PC 가 꺼져 있어
+ * 국내주식이 며칠 전 것이면 그 날짜가 그대로 보인다.
+ */
+export function ScreenPanel({ provider, onPick, names }: Props) {
   const [days, setDays] = useState(1);
-  const [result, setResult] = useState<Recommend | null>(null);
+  const [groups, setGroups] = useState<RecommendGroup[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setBusy(true);
     setError(null);
-    setResult(null);
     recommend
-      .today(provider, days)
-      .then(setResult)
+      .groups(days)
+      .then((r) => setGroups(r.groups))
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setBusy(false));
-  }, [provider, days]);
+  }, [days]);
 
   return (
     <>
@@ -95,9 +100,7 @@ export function ScreenPanel({ provider, providers, onPick, onProvider, names }: 
           칩을 바꾸면 그 지평 모델의 답이 나온다 — <b>다시 뽑는 게 아니다.</b>
         </p>
         <p className="note" style={{ marginTop: 0 }}>
-          {result?.date
-            ? `${result.date} 아침에 뽑았다 · 오늘은 다시 눌러도 안 바뀐다`
-            : "아침에 한 번 뽑아 그날은 고정된다"}
+          국내주식·해외주식·코인을 따로 낸다 · 아침에 한 번 뽑아 그날은 고정된다
         </p>
         <div className="chips">
           {DAYS.map((item) => (
@@ -112,91 +115,111 @@ export function ScreenPanel({ provider, providers, onPick, onProvider, names }: 
             </button>
           ))}
         </div>
-        {busy && <p className="note">불러오는 중…</p>}
+        {busy && !groups && <p className="note">불러오는 중…</p>}
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
-        {result && !result.available && (
-          <>
-            <p className="note warn">{result.reason}</p>
-            {(result.providers?.length ?? 0) > 0 && (
-              <>
-                <div className="group-label">추천이 있는 시장</div>
-                <div className="chips">
-                  {result.providers!.map((key) => (
-                    <button key={key} className="chip" onClick={() => onProvider(key)}>
-                      {providers.find((p) => p.key === key)?.name ?? key}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        )}
       </section>
 
-      {result?.available && (
+      {groups?.map((group) => (
+        <GroupCard key={group.key} group={group} days={days} onPick={onPick} />
+      ))}
+
+      {/* 긴 설명은 **묶음마다 되풀이하지 않는다.** 세 번 적으면 목록보다 문장이
+          길어져 정작 순위가 안 읽힌다. 셋 밑에 한 번만 둔다. */}
+      {groups?.some((g) => g.available) && (
         <section className="card">
-          <h2>사라 · {days}일</h2>
-
-          {/* 모델을 하나도 안 쓴 날이 있다. 그때 순위는 사실상 변동성 순서라
-              "사라"가 아니다 — 목록보다 먼저 말해야 한다. */}
-          {result.degenerate && (
-            <p className="note warn" style={{ marginTop: 0 }}>
-              <b>오늘 {days}일 모델은 기준선만 쓴다.</b> 이 순서는 사실상 변동성
-              순서지 "사라"가 아니다.
-              {result.skill !== null && result.skill !== undefined && (
-                <> 학습 성적 {signed(result.skill, 4)} 로 기준선을 못 넘었다.</>
-              )}
-            </p>
-          )}
-          {result.allNegative && (
-            <p className="note warn" style={{ marginTop: 0 }}>
-              오늘은 후보 전부의 기대가 마이너스다. 그래도 순서는 낸다 —
-              이건 <b>덜 나쁜 셋</b>이지 사라는 뜻이 아니다.
-            </p>
-          )}
-          {(result.staleBars ?? 0) > 0 && (
-            <p className="note" style={{ marginTop: 0 }}>
-              장이 쉬어 {result.basedOn} 종가 기준이다.
-            </p>
-          )}
-          {result.modelStale && (
-            <p className="note warn" style={{ marginTop: 0 }}>
-              오늘 학습이 실패해 어제 모델을 그대로 썼다.
-            </p>
-          )}
-
-          <div className="rows">
-            {result.buy.map((item, i) => (
-              <Row key={item.symbol} item={item} rank={i + 1} days={days}
-                   provider={provider} onPick={() => onPick(item.symbol)} />
-            ))}
-          </div>
-
-          <div className="group-label">피하라</div>
-          <div className="rows">
-            {result.avoid.map((item) => (
-              <Row key={item.symbol} item={item} down
-                   onPick={() => onPick(item.symbol)} />
-            ))}
-          </div>
-          <p className="note" style={{ marginTop: 6 }}>
-            기대가 제일 낮은 둘이다. 공매도 하라는 말이 아니고, 값이 양수여도
-            <b> 후보 중 꼴찌</b>라는 뜻이다.
+          <p className="note" style={{ marginTop: 0 }}>
+            <b>사지 말 것</b>은 기대가 제일 낮은 셋이다. 공매도 하라는 말이 아니고,
+            값이 양수여도 <b>그 묶음 안에서 꼴찌</b>라는 뜻이다.
           </p>
           <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
             <b>확신</b>은 모델이 얼마나 크게 움직인다고 했는지다. 27,664판을 갈라 보니
             크게 본 구간에서는 방향을 <b>64.7%</b> 맞혔고, 거의 안 움직인다고 한 구간에서는{" "}
             <b>47.5%</b> — 동전던지기보다 못했다. 순위를 이걸로 다시 세우지는 않는다.
+            <br />
+            <b>묶음끼리 견주지 말 것.</b> 순위는 그 묶음의 후보 안에서만 매겨진다 —
+            코인 +2% 와 국내주식 +0.5% 는 변동성이 달라 같은 자로 잰 값이 아니다.
           </p>
         </section>
       )}
 
-      {result?.available && <RecordCard result={result} days={days} />}
+      {groups && <RecordCard groups={groups} days={days} />}
 
       {/* 예전의 '변동 순위'는 다른 질문에 답한다 — "오늘 뭘 지켜볼까".
           지우지 않고 접어 둔다. 재 놓은 결과가 있고, 사라는 뜻이 아닐 뿐이다. */}
       <WatchCard provider={provider} names={names} />
     </>
+  );
+}
+
+/** 한 묶음 — 국내주식 · 해외주식 · 코인 중 하나. **빠진 묶음도 자리를 지킨다.**
+ *  없는 것을 안 보여주면 "국내주식은 살 게 없다"로 잘못 읽힌다. */
+function GroupCard({ group, days, onPick }: {
+  group: RecommendGroup; days: number;
+  onPick: (provider: string, symbol: string) => void;
+}) {
+  if (!group.available) {
+    return (
+      <section className="card">
+        <h2>{group.label}</h2>
+        <p className="note warn" style={{ marginTop: 0, marginBottom: 0 }}>
+          {group.reason}
+        </p>
+      </section>
+    );
+  }
+  const market = group.provider ?? "";
+  return (
+    <section className="card">
+      <div className="row" style={{ marginBottom: 6 }}>
+        <h2 style={{ margin: 0 }}>{group.label} · 사라</h2>
+        {/* **묶음마다 자기 날짜를 들고 온다.** PC 가 꺼져 있으면 국내주식만 며칠
+            전 것인데, 오늘 것인 척하면 그게 제일 위험한 거짓말이다. */}
+        <span style={{ color: "var(--text-dim)", fontSize: 11 }}>{group.date}</span>
+      </div>
+
+      {/* 모델을 하나도 안 쓴 날이 있다. 그때 순위는 사실상 변동성 순서라
+          "사라"가 아니다 — 목록보다 먼저 말해야 한다. */}
+      {group.degenerate && (
+        <p className="note warn" style={{ marginTop: 0 }}>
+          <b>오늘 {days}일 모델은 기준선만 쓴다.</b> 이 순서는 사실상 변동성
+          순서지 "사라"가 아니다.
+          {group.skill !== null && group.skill !== undefined && (
+            <> 학습 성적 {signed(group.skill, 4)} 로 기준선을 못 넘었다.</>
+          )}
+        </p>
+      )}
+      {group.allNegative && (
+        <p className="note warn" style={{ marginTop: 0 }}>
+          이 묶음은 후보 전부의 기대가 마이너스다. 그래도 순서는 낸다 —
+          이건 <b>덜 나쁜 셋</b>이지 사라는 뜻이 아니다.
+        </p>
+      )}
+      {(group.staleBars ?? 0) > 0 && (
+        <p className="note" style={{ marginTop: 0 }}>
+          장이 쉬어 {group.basedOn} 종가 기준이다.
+        </p>
+      )}
+      {group.modelStale && (
+        <p className="note warn" style={{ marginTop: 0 }}>
+          그날 학습이 실패해 하루 전 모델을 그대로 썼다.
+        </p>
+      )}
+
+      <div className="rows">
+        {group.buy.map((item, i) => (
+          <Row key={item.symbol} item={item} rank={i + 1} days={days}
+               provider={market} onPick={() => onPick(market, item.symbol)} />
+        ))}
+      </div>
+
+      <div className="group-label">사지 말 것</div>
+      <div className="rows">
+        {group.avoid.map((item) => (
+          <Row key={item.symbol} item={item} down
+               onPick={() => onPick(market, item.symbol)} />
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -341,140 +364,113 @@ function BuyForm({ item, days, provider, onDone }: {
   );
 }
 
-/** 되돌려 본 성적. **위의 실전 칸과 합치지 않는다** — 같은 자로 잰 값이 아니다.
+/**
+ * 이 추천이 과거에 맞았나 — **묶음마다 따로 센다.**
  *
- *  실전은 그날 한 번뿐이라 되돌릴 수 없고, 백필은 origin 을 고를 수 있고 몇 번이든
- *  다시 돌릴 수 있다. 한 숫자로 합치면 "몇 번 다시 돌렸는지" 가 성적에 스며든다.
- *  그래서 칸을 나누고, 읽을 값(holdout)을 앞에 둔다. */
-function BackfillBlock({ result }: { result: Recommend }) {
-  const back = result.backfill;
-  if (!back || !back.n) return null;
-  const held = back.holdout?.n ? back.holdout : null;
-  const read = held ?? back;
+ * 국내주식·해외주식·코인은 변동성이 자릿수로 달라 합치면 평균이 아무 뜻이 없다.
+ * 한 표에 나란히 놓되 한 숫자로 접지 않는다.
+ *
+ * 칸이 둘인 이유: 실전은 그날 한 번뿐이라 되돌릴 수 없고, 백필은 origin 을 고를 수
+ * 있고 몇 번이든 다시 돌릴 수 있다. 한 숫자로 합치면 "몇 번 다시 돌렸는지" 가
+ * 성적에 스며든다. 그래서 나누고, 백필은 읽을 값(holdout)을 앞에 둔다.
+ */
+function RecordCard({ groups, days }: { groups: RecommendGroup[]; days: number }) {
+  const live = groups.filter((g) => (g.record?.n ?? 0) > 0);
+  const back = groups.filter((g) => (g.backfill?.n ?? 0) > 0);
+  const measured = groups.find((g) => g.measured?.directionHit !== undefined)?.measured;
 
-  return (
-    <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
-      <div className="row" style={{ marginBottom: 6 }}>
-        <span style={{ fontWeight: 600 }}>되돌려 본 성적</span>
-        <span style={{ color: "var(--text-dim)" }}>
-          {back.from} ~ {back.to} · {back.n}판
-        </span>
-      </div>
-      <div className="rows">
-        <div className="row">
-          <span>
-            차이 (추천 − 후보 평균)
-            {held && <span style={{ color: "var(--text-dim)" }}> · 안 본 구간 {held.n}판</span>}
-          </span>
-          <b style={{ color: (read.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
-            {signed(read.edgePct)}%p
-            <span style={{ color: "var(--text-dim)" }}> · 이긴 비율 {pct(read.winRate, 0)}</span>
-          </b>
-        </div>
-        <div className="row">
-          <span>80% 밴드 적중</span>
-          <b>{pct(read.bandHit, 1)}</b>
-        </div>
-        {held && (
-          <div className="row">
-            <span style={{ color: "var(--text-dim)" }}>규칙을 고른 구간 (참고)</span>
-            <b style={{ color: "var(--text-dim)" }}>
-              {signed(back.edgePct)}%p · {back.n}판
-            </b>
-          </div>
-        )}
-      </div>
-      <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
-        <b>이건 실전 성적이 아니다.</b> 과거 아침에 서서 같은 추천을 뽑고 지평이 지난
-        뒤 실제와 맞춘 것이다 — 그날의 시세·사건·관심도만 보고 뽑았지만, 실전과 달리
-        어느 날들을 볼지 고를 수 있고 몇 번이든 다시 돌릴 수 있다.
-        {held ? (
-          <>
-            {" "}그래서 위 숫자는 <b>규칙 튜닝에 쓰지 않은 마지막 구간</b>에서 잰 것만
-            읽는다. 튜닝에 쓴 구간의 성적은 자기 답을 보고 만든 값이라 아래에 참고로만 둔다.
-          </>
-        ) : (
-          <> 아직 구간을 나눌 만큼 쌓이지 않았다.</>
-        )}
-        {!!back.staleRows && (
-          <>
-            {" "}설정이 바뀐 <b>{back.staleRows}판</b>은 안 셌다 — 옛 모델과 새 모델
-            성적을 한 숫자에 섞을 수 없어서다.
-          </>
-        )}
-        {back.model && (
-          <>
-            <br />
-            <span style={{ color: "var(--text-dim)" }}>{back.model}</span> 로 잰 값이다.
-            모델 설정이 바뀌면 다시 잰다 — 옛 모델과 새 모델 성적이 한 숫자에 섞이면 안 된다.
-          </>
-        )}
-      </p>
-    </div>
-  );
-}
-
-function RecordCard({ result, days }: { result: Recommend; days: number }) {
-  const record = result.record;
-  const measured = result.measured ?? {};
   return (
     <section className="card">
       <h2>이 추천이 과거에 맞았나</h2>
-      {record && record.n > 0 ? (
+
+      <div className="group-label">실전 — 아침에 뽑아 그대로 채점한 것</div>
+      {live.length ? (
         <div className="rows">
-          <div className="row">
-            <span>추천 3종 평균</span>
-            <b>{signed(record.buyPct)}%</b>
-          </div>
-          <div className="row">
-            <span>후보 전체 평균</span>
-            <b>{signed(record.universePct)}%</b>
-          </div>
-          <div className="row">
-            <span>차이 (이게 실력이다)</span>
-            <b
-              style={{
-                fontSize: 15,
-                color: (record.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)",
-              }}
-            >
-              {signed(record.edgePct)}%p
-              <span style={{ color: "var(--text-dim)" }}>
-                {" "}
-                · 이긴 비율 {pct(record.winRate, 0)}
-              </span>
-            </b>
-          </div>
-          <div className="row">
-            <span>80% 밴드 적중</span>
-            <b>{pct(record.bandHit, 1)}</b>
-          </div>
-          <div className="row">
-            <span>채점한 날</span>
-            <b>
-              {record.n}일치
-              {!record.enough && (
-                <span style={{ color: "var(--warn)" }}> · 30일은 있어야 성적이다</span>
-              )}
-            </b>
-          </div>
+          {groups.map((g) => {
+            const r = g.record;
+            return (
+              <div className="row" key={g.key}>
+                <span>{g.label}</span>
+                {r && r.n > 0 ? (
+                  <b style={{ color: (r.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+                    {signed(r.edgePct)}%p
+                    <span style={{ color: "var(--text-dim)" }}>
+                      {" "}· 밴드 {pct(r.bandHit, 1)} · {r.n}판
+                      {!r.enough && " (30일은 있어야 성적이다)"}
+                    </span>
+                  </b>
+                ) : (
+                  <b style={{ color: "var(--text-dim)" }}>아직 없음</b>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <p className="note">
+        <p className="note" style={{ marginTop: 0 }}>
           아직 채점할 판이 없다. 추천을 낸 뒤 {days}일이 지나야 첫 줄이 쌓인다 —
           그때부터 이 표가 이 기능의 진짜 답이다.
         </p>
       )}
 
-      <BackfillBlock result={result} />
+      {back.length > 0 && (
+        <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+          <div className="group-label" style={{ marginTop: 0 }}>
+            되돌려 본 성적 — 실전이 아니다
+          </div>
+          <div className="rows">
+            {back.map((g) => {
+              const b = g.backfill!;
+              const held = b.holdout?.n ? b.holdout : null;
+              const read = held ?? b;
+              return (
+                <div className="row" key={g.key}>
+                  <span>
+                    {g.label}
+                    <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
+                      {b.from} ~ {b.to}
+                      {held ? ` · 안 본 구간 ${held.n}판` : ` · ${b.n}판`}
+                    </span>
+                  </span>
+                  <b style={{ color: (read.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+                    {signed(read.edgePct)}%p
+                    <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
+                      밴드 {pct(read.bandHit, 1)} · 이긴 비율 {pct(read.winRate, 0)}
+                    </span>
+                  </b>
+                </div>
+              );
+            })}
+          </div>
+          <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
+            <b>이건 실전 성적이 아니다.</b> 과거 아침에 서서 같은 추천을 뽑고 지평이
+            지난 뒤 실제와 맞춘 것이다 — 그날의 시세·사건·관심도만 보고 뽑았지만,
+            실전과 달리 어느 날들을 볼지 고를 수 있고 몇 번이든 다시 돌릴 수 있다.
+            {back.some((g) => g.backfill?.holdout?.n) && (
+              <>
+                {" "}그래서 위 숫자는 <b>규칙 튜닝에 쓰지 않은 마지막 구간</b>에서 잰
+                것만 읽는다. 튜닝에 쓴 구간의 성적은 자기 답을 보고 만든 값이다.
+              </>
+            )}
+            {back.some((g) => g.backfill?.staleRows) && (
+              <>
+                {" "}설정이 바뀐 판은 안 셌다 — 옛 모델과 새 모델 성적을 한 숫자에
+                섞을 수 없어서다.
+              </>
+            )}
+          </p>
+        </div>
+      )}
 
       <p className="formula" style={{ marginTop: 10 }}>
-        <b>기준선은 후보 전체 평균이다.</b> 0 과 견주면 고르는 실력이 아니라 시장을
-        재게 된다 — 시장이 다 오른 날 추천도 올랐다는 건 아무 말도 아니다.
+        <b>기준선은 그 묶음 후보 전체의 평균이다.</b> 0 과 견주면 고르는 실력이 아니라
+        시장을 재게 된다 — 시장이 다 오른 날 추천도 올랐다는 건 아무 말도 아니다.
+        <b> 묶음끼리 견주는 것도 안 된다</b> — 코인과 국내주식은 변동성이 자릿수로
+        다르다.
         <br />
         <b>기대</b>는 예측 분포의 <b>중앙값</b>이지 평균이 아니다. 수수료·슬리피지는
         빼지 않았다.
-        {measured.directionHit !== undefined && (
+        {measured?.directionHit !== undefined && (
           <>
             <br />
             <b>아래 숫자는 이 추천의 성적이 아니다.</b> 추천 밑에 깔린 예측 모델을

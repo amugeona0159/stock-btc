@@ -559,6 +559,18 @@ export interface RecommendBackfill {
   model?: string | null;
 }
 
+/**
+ * 한 묶음 = 국내주식 · 해외주식 · 코인 하나. 시장 이름(바이낸스·토스)이 아니라
+ * **사람이 사는 단위**로 읽는다 — 어느 거래소를 거치는지는 그다음 문제다.
+ *
+ * 빠진 묶음도 자리를 지키고 `reason` 을 들고 온다. 없는 것을 안 보여주면
+ * "국내주식은 살 게 없다"로 잘못 읽힌다.
+ */
+export interface RecommendGroup extends Recommend {
+  key: "kr" | "us" | "coin";
+  label: string;
+}
+
 export interface Recommend {
   available: boolean;
   reason?: string;

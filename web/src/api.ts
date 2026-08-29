@@ -236,6 +236,12 @@ export const recommend = {
   today: (provider: string, days: number) =>
     get<import("./types").Recommend>(
       `/api/recommend?provider=${encodeURIComponent(provider)}&days=${days}`),
+
+  /** 국내주식·해외주식·코인 셋을 한 번에. **화면이 시장을 고르지 않게 하려는 것이다** —
+   *  차트가 BTC 에 서 있다고 코인 추천만 보이면 안 된다. */
+  groups: (days: number) =>
+    get<{ days: number; groups: import("./types").RecommendGroup[] }>(
+      `/api/recommend/groups?days=${days}`),
 };
 
 export const screen = {

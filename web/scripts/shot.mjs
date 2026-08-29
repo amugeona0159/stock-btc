@@ -28,10 +28,10 @@ const SHOTS = [
   // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
-    timeframe: "1d", waitFor: "text=사라 ·" },
+    timeframe: "1d", waitFor: "text=코인 · 사라" },
   // 추천 줄의 「샀다」를 눌러 진입가·주수 칸이 열리는지. 여기서 장부로 넘어간다.
   { name: "screen-buy", width: 1600, height: 950, indicators: [], tab: "추천",
-    timeframe: "1d", waitFor: "text=사라 ·", click: "샀다" },
+    timeframe: "1d", waitFor: "text=코인 · 사라", click: "샀다" },
   // 성적 칸은 오른쪽 띠 맨 아래라 안 내리면 안 찍힌다. **실전과 되돌려 본 것이
   // 한 숫자로 읽히지 않는지**가 이 그림의 전부다 — 합쳐 보이면 그 순간 거짓말이 된다.
   { name: "screen-record", width: 1600, height: 950, indicators: [], tab: "추천",

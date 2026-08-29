@@ -554,6 +554,13 @@ def recommend(provider: str, days: int = Query(1, ge=1, le=3)) -> dict:
     return recommend_layer.today(provider, days)
 
 
+@router.get("/recommend/groups")
+def recommend_groups(days: int = Query(1, ge=1, le=3)) -> dict:
+    """국내주식·해외주식·코인 셋을 한 번에. 화면이 시장을 안 고르게 하려는 것이다 —
+    차트가 BTC 에 서 있다고 코인 추천만 보이면 안 된다."""
+    return recommend_layer.groups(days)
+
+
 @router.get("/recommend/status")
 def recommend_status() -> dict:
     """어느 시장의 추천이 언제 것으로 있는지."""

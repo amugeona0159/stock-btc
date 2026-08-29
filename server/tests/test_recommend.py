@@ -487,3 +487,80 @@ def test_a_market_without_a_backfill_says_nothing(tmp_path, monkeypatch):
 
     monkeypatch.setattr(layer, "_dirs", lambda: [tmp_path / "none"])
     assert layer.backfill("p", 1) == {"n": 0}
+
+
+# --- 세 묶음 -----------------------------------------------------------
+
+def test_the_three_groups_come_at_once(tmp_path, monkeypatch):
+    """**화면이 시장을 고르게 하지 않는다.** 차트는 기본이 BTCUSDT 라, 선 시장 하나만
+    보여주면 열 때마다 코인 추천만 나온다 — 국내주식·해외주식이 있다는 걸 먼저
+    알아야 볼 수 있었다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"toss_kr": _body("005930"),
+                                  "yahoo": _body("AAPL"),
+                                  "binance": _body("SOLUSDT")})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+    monkeypatch.setattr(layer, "DIRS", (tmp_path / "repo",))
+
+    found = layer.groups(1)
+    assert [g["key"] for g in found["groups"]] == ["kr", "us", "coin"]
+    assert [g["label"] for g in found["groups"]] == ["국내주식", "해외주식", "코인"]
+    assert all(g["available"] for g in found["groups"])
+    assert [g["provider"] for g in found["groups"]] == ["toss_kr", "yahoo", "binance"]
+
+
+def test_a_missing_group_keeps_its_place(tmp_path, monkeypatch):
+    """국내주식은 토스가 IP 허용목록을 타서 Actions 에서 못 돈다. PC 가 며칠 꺼져
+    있으면 통째로 없는데, **없는 것을 안 보여주면 "국내주식은 살 게 없다"로 읽힌다.**"""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"binance": _body("SOLUSDT")})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+    monkeypatch.setattr(layer, "DIRS", (tmp_path / "repo",))
+
+    by_key = {g["key"]: g for g in layer.groups(1)["groups"]}
+    assert len(by_key) == 3                       # 자리는 셋 그대로
+    assert by_key["kr"]["available"] is False
+    assert "국내주식" in by_key["kr"]["reason"]
+    assert by_key["coin"]["available"] is True
+
+
+def test_a_group_prefers_the_first_provider_listed(tmp_path, monkeypatch):
+    """미국주식은 토스와 야후 둘 다 준다. 토스가 앞인 건 한글 이름이 붙어서다 —
+    둘이 다 있을 때 어느 쪽을 쓰는지가 정해져 있어야 화면이 날마다 안 흔들린다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"yahoo": _body("AAPL"), "toss_us": _body("MSFT")})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+    monkeypatch.setattr(layer, "DIRS", (tmp_path / "repo",))
+
+    us = next(g for g in layer.groups(1)["groups"] if g["key"] == "us")
+    assert us["provider"] == "toss_us"
+    order = dict((key, names) for key, _, names in layer.GROUPS)
+    assert order["us"].index("toss_us") < order["us"].index("yahoo")
+
+
+def test_every_group_provider_is_a_real_universe():
+    """묶음 표에 오타가 있으면 그 묶음이 조용히 영영 비어 보인다."""
+    from marketlens.api.recommend import GROUPS
+    from marketlens.screen import universe
+
+    known = set(universe.providers())
+    for key, name, order in GROUPS:
+        assert order, f"{key}: 프로바이더가 비었다"
+        for provider in order:
+            assert provider in known, f"{name}: {provider} 는 유니버스에 없다"
+
+
+def test_buy_and_avoid_are_the_same_size():
+    """화면이 세 묶음을 나란히 놓으므로 양쪽이 같은 크기여야 한 줄로 읽힌다."""
+    assert script.BUY == script.AVOID == 3
+    # 후보가 그 둘을 합친 것보다 많아야 순위가 뜻을 갖는다.
+    from marketlens.screen import universe
+
+    for provider in universe.providers():
+        assert len(universe.buyable(provider)) > script.BUY + script.AVOID, provider
