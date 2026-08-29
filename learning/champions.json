@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-28T14:41:01+00:00",
+  "updated": "2026-08-29T22:26:33+00:00",
   "promoteMargin": 0.002,
   "champions": {
     "binance:BTCUSDT:15m": {
@@ -178,17 +178,53 @@
         "folds": 4,
         "peer_count": 11
       },
-      "skill": 0.0021,
-      "learned": true,
-      "rows": 14465,
+      "skill": 0.001,
+      "learned": false,
+      "rows": 34694,
       "symbols": [
         "AAPL",
         "MSFT",
         "NVDA",
         "AMZN",
-        "^GSPC"
+        "META",
+        "GOOGL",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "XOM",
+        "^GSPC",
+        "^IXIC"
       ],
-      "updated": "2026-08-28T14:40:32+00:00",
+      "updated": "2026-08-29T22:25:43+00:00",
+      "trials": 4,
+      "promotions": 0
+    },
+    "yahoo:AAPL:1h": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0005,
+      "learned": false,
+      "rows": 40231,
+      "symbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "AMZN",
+        "META",
+        "GOOGL",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "XOM",
+        "^GSPC",
+        "^IXIC"
+      ],
+      "updated": "2026-08-29T22:24:52+00:00",
       "trials": 2,
       "promotions": 0
     },
@@ -200,17 +236,82 @@
         "folds": 4,
         "peer_count": 11
       },
-      "skill": 0.0021,
-      "learned": true,
-      "rows": 14465,
+      "skill": 0.001,
+      "learned": false,
+      "rows": 34694,
       "symbols": [
         "MSFT",
         "AAPL",
         "NVDA",
         "AMZN",
-        "^GSPC"
+        "META",
+        "GOOGL",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "XOM",
+        "^GSPC",
+        "^IXIC"
       ],
-      "updated": "2026-08-28T14:41:01+00:00",
+      "updated": "2026-08-29T22:26:33+00:00",
+      "trials": 4,
+      "promotions": 0
+    },
+    "yahoo:NVDA:1d": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0008,
+      "learned": false,
+      "rows": 34694,
+      "symbols": [
+        "NVDA",
+        "AAPL",
+        "MSFT",
+        "AMZN",
+        "META",
+        "GOOGL",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "XOM",
+        "^GSPC",
+        "^IXIC"
+      ],
+      "updated": "2026-08-29T22:22:58+00:00",
+      "trials": 2,
+      "promotions": 0
+    },
+    "yahoo:^GSPC:1d": {
+      "config": {
+        "horizon": 10,
+        "window": 48,
+        "neighbours": 20,
+        "folds": 4,
+        "peer_count": 11
+      },
+      "skill": 0.0012,
+      "learned": false,
+      "rows": 34694,
+      "symbols": [
+        "^GSPC",
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "AMZN",
+        "META",
+        "GOOGL",
+        "TSLA",
+        "AVGO",
+        "JPM",
+        "XOM",
+        "^IXIC"
+      ],
+      "updated": "2026-08-29T22:23:45+00:00",
       "trials": 2,
       "promotions": 0
     }
