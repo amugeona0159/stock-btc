@@ -31,6 +31,10 @@ from .learning import DIRS
 
 FOLDER = "recommend"
 SCORES = "scores.jsonl"
+# 되돌려 돌린 것. **실전과 다른 파일이다** — 섞으면 "과거에 맞았나" 가 못 믿을
+# 숫자가 된다. 백필은 origin 을 고를 수 있고 몇 번이든 다시 돌릴 수 있는 반면
+# 실전은 그날 한 번뿐이라, 성질이 다른 숫자다.
+BACKFILL = "backfill.jsonl"
 # 하루 한 건씩 쌓이므로 30건이면 한 달이다. 그 아래는 성적이라고 부르지 않는다.
 ENOUGH = 30
 
@@ -64,11 +68,11 @@ def _merged() -> dict:
     return out
 
 
-def _scores() -> list[dict]:
+def _scores(name: str = SCORES) -> list[dict]:
     rows: list[dict] = []
     seen: set[tuple] = set()
     for folder in reversed(_dirs()):
-        path = folder / SCORES
+        path = folder / name
         if not path.is_file():
             continue
         try:
@@ -107,6 +111,53 @@ def record(provider: str, days: int) -> dict:
         "winRate": round(float(np.mean([r["edgePct"] > 0 for r in part])), 3),
         "bandHit": round(float(np.mean([r.get("bandHit") or 0 for r in part])), 3),
         "lastScored": max(r.get("scoredAt") or "" for r in part),
+    }
+
+
+def backfill(provider: str, days: int) -> dict:
+    """되돌려 본 성적. **실전(`record`)과 절대 합치지 않는다.**
+
+    `scripts/backfill.py` 가 과거 아침에 서서 같은 추천을 뽑고 지평이 지난 뒤 실제와
+    맞춘 것이다. 실전 표가 하루 한 줄씩 쌓이는 동안 이쪽은 미리 채워지지만, 대신
+    origin 을 내가 고를 수 있고 몇 번이든 다시 돌릴 수 있다 — **그래서 다른 숫자다.**
+
+    `holdout` 은 규칙 튜닝에 안 쓴 마지막 구간이다. 튜닝에 쓴 구간에서 잰 성적은
+    자기 답을 보고 만든 성적이라 못 믿으므로, **읽을 값은 holdout 쪽**이다.
+    """
+    found = [r for r in _scores(BACKFILL)
+             if r.get("provider") == provider and r.get("days") == days]
+    if not found:
+        return {"n": 0}
+
+    # **설정이 다른 줄을 섞지 않는다.** 손잡이가 바뀌면 옛 모델 성적과 새 모델 성적이
+    # 한 숫자가 되는데, 그게 정확히 못 믿을 숫자다. 가장 최근에 잰 설정만 남기고
+    # 나머지는 세어서 알린다 — 조용히 버리면 판 수가 왜 줄었는지 알 수가 없다.
+    newest = max(found, key=lambda r: r.get("scoredAt") or "")
+    part = [r for r in found if r.get("config") == newest.get("config")]
+    stale = len(found) - len(part)
+
+    def summarise(rows: list[dict]) -> dict:
+        if not rows:
+            return {"n": 0}
+        return {
+            "n": len(rows),
+            "buyPct": round(float(np.mean([r["buyPct"] for r in rows])), 3),
+            "universePct": round(float(np.mean([r["universePct"] for r in rows])), 3),
+            "edgePct": round(float(np.mean([r["edgePct"] for r in rows])), 3),
+            "winRate": round(float(np.mean([r["edgePct"] > 0 for r in rows])), 3),
+            "bandHit": round(float(np.mean([r.get("bandHit") or 0 for r in rows])), 3),
+        }
+
+    dates = sorted(r.get("date") or "" for r in part)
+    return {
+        **summarise(part),
+        "holdout": summarise([r for r in part if r.get("holdout")]),
+        "from": dates[0], "to": dates[-1],
+        # 설정이 바뀌어 안 센 줄. `scripts/backfill.py --restale` 로 다시 잰다.
+        "staleRows": stale,
+        # 어느 설정으로 잰 것인지. 설정이 바뀌면 옛 줄과 새 줄이 한 숫자에 섞이면
+        # 안 되므로, 화면도 무엇을 보고 있는지 알 수 있어야 한다.
+        "model": part[-1].get("model"),
     }
 
 
@@ -185,6 +236,8 @@ def today(provider: str, days: int) -> dict:
         "modelStale": bool(day.get("modelStale")),
         "candidates": len(rows),
         "record": record(provider, days),
+        # **실전과 나란히 두되 합치지 않는다.** 화면이 어느 쪽 숫자인지 밝힌다.
+        "backfill": backfill(provider, days),
         "measured": measured(),
         "skipped": body.get("skipped") or [],
     }

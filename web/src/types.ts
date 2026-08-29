@@ -534,6 +534,31 @@ export interface RecommendRecord {
   lastScored?: string;
 }
 
+/**
+ * 되돌려 본 성적. **실전(`RecommendRecord`)과 다른 숫자다** — 섞으면 "과거에
+ * 맞았나" 가 못 믿는 값이 된다. 과거 아침에 서서 같은 추천을 뽑고 지평이 지난 뒤
+ * 실제와 맞춘 것이라 미리 채워지지만, 대신 origin 을 고를 수 있고 몇 번이든 다시
+ * 돌릴 수 있다.
+ *
+ * **읽을 값은 `holdout` 이다.** 규칙 튜닝에 안 쓴 마지막 구간이라, 튜닝 구간에서
+ * 잰 값과 달리 자기 답을 보고 만든 성적이 아니다.
+ */
+export interface RecommendBackfill {
+  n: number;
+  buyPct?: number;
+  universePct?: number;
+  edgePct?: number;
+  winRate?: number;
+  bandHit?: number;
+  holdout?: Omit<RecommendBackfill, "holdout" | "from" | "to" | "model" | "staleRows">;
+  from?: string;
+  to?: string;
+  /** 설정이 바뀌어 안 센 판. 섞으면 옛 모델과 새 모델 성적이 한 숫자가 된다. */
+  staleRows?: number;
+  /** 어느 모델이 낸 추천인지. 설정이 바뀌면 옛 줄과 새 줄을 섞으면 안 된다. */
+  model?: string | null;
+}
+
 export interface Recommend {
   available: boolean;
   reason?: string;
@@ -555,6 +580,7 @@ export interface Recommend {
   modelStale?: boolean;
   candidates?: number;
   record?: RecommendRecord;
+  backfill?: RecommendBackfill;
   measured?: { directionHit?: number; bandHit?: number; n?: number; directionN?: number };
   skipped?: Array<{ symbol: string; reason: string }>;
 }

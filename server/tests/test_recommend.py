@@ -59,18 +59,68 @@ def test_confidence_falls_back_when_there_is_too_little():
 # --- 채점 ---------------------------------------------------------------
 
 def _frozen(tmp_path, symbols, buy, avoid, last_ts=1_000_000_000_000):
+    """**`pick()` 이 실제로 얼리는 모양 그대로.** 추천 목록은 `byDay[일수]` 안의
+    심볼 문자열 리스트다 — 지평마다 다른 종목을 고르니 최상위에 있을 수가 없다.
+
+    여기서 지어낸 모양(`"buy": [{"symbol": …}]`)을 검사하던 시절이 있었고, 그래서
+    `score_one` 이 없는 키를 읽어 `KeyError` 로 죽는 걸 테스트가 못 잡았다.
+    채점은 ①단계라 뽑기까지 같이 못 돌았다. **픽스처는 생산 코드가 만드는 것만 흉내낸다.**
+    """
     body = {
         "provider": "fake", "lastTs": last_ts, "basedOn": "2026-08-20",
         "candidates": [{"symbol": s, "byDay": {"1": {"expected": 0.0,
                                                      "band": [-1.0, 1.0]}}}
                        for s in symbols],
-        "buy": [{"symbol": s} for s in buy],
-        "avoid": [{"symbol": s} for s in avoid],
+        "byDay": {"1": {"buy": list(buy), "avoid": list(avoid),
+                        "model": "recommend-fake-1d-1"}},
     }
     frozen = {"date": "2026-08-20", "providers": {"fake": body}}
     (tmp_path / "2026-08-20.json").write_text(json.dumps(frozen, ensure_ascii=False),
                                               encoding="utf-8")
     return frozen, body
+
+
+def test_the_frozen_file_on_disk_can_actually_be_scored(tmp_path, monkeypatch):
+    """**얼린 파일을 그대로 넣어 본다.** 픽스처가 아니라 `pick()` 이 만든 진짜 모양이다 —
+    여기가 어긋나 있었고, 어긋난 줄 모르는 채로 아침마다 뽑기만 돌았다."""
+    import asyncio
+
+    import pandas as pd
+
+    anchor = 1_000_000_000_000
+    symbols = [f"S{i}" for i in range(6)]
+    body = {
+        # `pick()` 의 반환 그대로: byDay 의 buy/avoid 는 **심볼 문자열**이다.
+        "provider": "fake", "lastTs": anchor, "basedOn": "2026-08-20",
+        "staleBars": 0,
+        "candidates": [{"symbol": s, "last": 100.0, "lastTs": anchor,
+                        "byDay": {"2": {"day": 2, "expected": 0.5,
+                                        "band": [-5.0, 5.0]}}} for s in symbols],
+        "byDay": {"2": {"buy": symbols[:3], "avoid": symbols[-2:],
+                        "degenerate": False, "allNegative": False, "learned": True,
+                        "skill": 0.004, "modelStale": False,
+                        "model": "recommend-fake-1d-2"}},
+        "skipped": [],
+    }
+    frozen = {"date": "2026-08-20", "providers": {"fake": body}}
+
+    class Flat:
+        async def history(self, symbol, timeframe, limit):
+            step = 86_400_000
+            return pd.DataFrame({
+                "ts": [anchor + i * step for i in range(4)],
+                "open": [100.0] * 4, "high": [100.0] * 4, "low": [100.0] * 4,
+                "close": [100.0, 101.0, 102.0, 103.0],
+                "volume": [1.0] * 4, "closed": [True] * 4,
+            })
+
+    monkeypatch.setattr(script, "get_provider", lambda key: Flat())
+    row = asyncio.run(script.score_one(frozen, "fake", body, 2))
+    assert row is not None, "얼린 파일을 채점하지 못한다 — 여기가 죽으면 뽑기도 같이 죽는다"
+    assert row["buyPct"] == pytest.approx(2.0)                 # 100 → 102
+    assert row["model"] == "recommend-fake-1d-2"               # 어느 모델이 낸 추천인지
+    # 안 뽑은 지평은 채점할 게 없다 — 실패가 아니라 없음이다.
+    assert asyncio.run(script.score_one(frozen, "fake", body, 1)) is None
 
 
 def test_the_baseline_is_all_candidates_not_the_rest(tmp_path, monkeypatch):
@@ -340,3 +390,100 @@ def test_krw_lookup_is_asked_only_of_crypto_markets():
     assert stock_symbols, "주식 후보가 하나도 없다 — 이 검사가 뜻을 잃었다"
     assert all(coins.base(s) == s for s in stock_symbols), (
         "주식 심볼이 거래쌍처럼 잘렸다")
+
+
+# --- 되돌려 본 성적 -----------------------------------------------------
+
+def _rows(folder: Path, name: str, rows: list[dict]) -> None:
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / name).write_text(
+        "".join(json.dumps(r, ensure_ascii=False) + chr(10) for r in rows),
+        encoding="utf-8")
+
+
+def _line(date: str, days: int, edge: float, holdout: bool) -> dict:
+    return {"date": date, "provider": "p", "days": days, "buyPct": edge,
+            "universePct": 0.0, "edgePct": edge, "bandHit": 0.8,
+            "holdout": holdout, "mode": "backfill", "model": "backfill-p-1d-1"}
+
+
+def test_the_backfill_never_leaks_into_the_live_record(tmp_path, monkeypatch):
+    """**섞으면 "과거에 맞았나" 가 못 믿을 숫자가 된다.** 실전은 그날 한 번뿐이고
+    백필은 몇 번이든 다시 돌릴 수 있어, 한 숫자로 합치면 몇 번 돌렸는지가 성적에
+    스며든다. 여기서는 백필만 잔뜩 넣고 실전 칸이 0 인지 본다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _rows(folder, layer.BACKFILL, [_line(f"2026-06-{i:02d}", 1, 1.0, False)
+                                   for i in range(1, 20)])
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    assert layer.record("p", 1) == {"n": 0, "enough": False}
+    back = layer.backfill("p", 1)
+    assert back["n"] == 19 and back["edgePct"] == 1.0
+
+
+def test_the_backfill_reads_the_stretch_it_did_not_tune_on(tmp_path, monkeypatch):
+    """규칙을 고른 구간에서 잰 성적은 자기 답을 보고 만든 값이다. `holdout` 은
+    거기 안 쓴 마지막 구간이라, **읽을 값은 그쪽**이다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _rows(folder, layer.BACKFILL,
+          [_line(f"2026-06-{i:02d}", 1, 5.0, False) for i in range(1, 9)]
+          + [_line(f"2026-07-{i:02d}", 1, -1.0, True) for i in range(1, 3)])
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    back = layer.backfill("p", 1)
+    assert back["n"] == 10 and back["edgePct"] == pytest.approx(3.8)
+    # 튜닝 구간의 +5.0 이 섞이면 안 된다.
+    assert back["holdout"]["n"] == 2 and back["holdout"]["edgePct"] == -1.0
+    assert back["from"] == "2026-06-01" and back["to"] == "2026-07-02"
+
+
+def test_the_backfill_is_carried_next_to_the_record_not_inside_it(tmp_path, monkeypatch):
+    """화면이 어느 쪽 숫자인지 밝힐 수 있어야 한다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"p": _body()})
+    _rows(folder, layer.BACKFILL, [_line("2026-06-01", 1, 2.0, True)])
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+    monkeypatch.setattr(layer, "DIRS", (tmp_path / "repo",))
+
+    found = layer.today("p", 1)
+    assert found["record"]["n"] == 0
+    assert found["backfill"]["n"] == 1
+    assert found["backfill"]["model"] == "backfill-p-1d-1"
+
+
+def test_rows_measured_with_another_setting_are_not_mixed_in(tmp_path, monkeypatch):
+    """**손잡이가 바뀌면 옛 모델 성적과 새 모델 성적이 한 숫자가 된다** — 그게
+    정확히 못 믿을 숫자다. 최근에 잰 설정만 세고, 안 센 줄은 세어서 알린다."""
+    from marketlens.api import recommend as layer
+
+    old_cfg, new_cfg = {"window": 32}, {"window": 48}
+    rows = []
+    for i in range(1, 6):
+        rows.append({**_line(f"2026-05-{i:02d}", 1, 9.0, True),
+                     "config": old_cfg, "scoredAt": "2026-06-01T00:00:00+00:00"})
+    for i in range(1, 4):
+        rows.append({**_line(f"2026-07-{i:02d}", 1, 1.0, True),
+                     "config": new_cfg, "scoredAt": "2026-08-01T00:00:00+00:00"})
+
+    folder = tmp_path / "repo" / "recommend"
+    _rows(folder, layer.BACKFILL, rows)
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    back = layer.backfill("p", 1)
+    assert back["n"] == 3, "옛 설정 줄이 섞였다"
+    assert back["edgePct"] == 1.0                  # 9.0 이 섞이면 4.0 이 된다
+    assert back["staleRows"] == 5                  # 조용히 버리지 않는다
+
+
+def test_a_market_without_a_backfill_says_nothing(tmp_path, monkeypatch):
+    """빈 목록보다 그럴듯한 숫자가 나쁘다."""
+    from marketlens.api import recommend as layer
+
+    monkeypatch.setattr(layer, "_dirs", lambda: [tmp_path / "none"])
+    assert layer.backfill("p", 1) == {"n": 0}

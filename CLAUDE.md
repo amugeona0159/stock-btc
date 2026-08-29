@@ -335,6 +335,55 @@
 - 고쳤으면 `.venv/Scripts/python -m pytest server/tests/test_recommend.py -q` 와
   `.venv/Scripts/python scripts/recommend.py --dry-run --provider binance`.
 
+## 추천을 되돌려 채점한다 — 백필
+
+`scripts/backfill.py`. 화면의 "이 추천이 과거에 맞았나" 는 실전 채점이 하루 한 줄씩
+쌓여야 답이 나온다 — 한 달을 기다려야 한 달치다. 그래서 같은 추천을 **과거 아침에
+세워** 뽑고, 지평이 지난 뒤 실제와 맞춰 그 표를 미리 채운다.
+
+- **뽑기 함수를 따로 만들지 않는다.** `recommend.pick()` 은 넘겨받은 시세로 그
+  자리에서 굽기 때문에, 시세를 origin 까지 잘라 넘기면 그대로 as-of 가 된다.
+  채점도 `score_one` 그대로 쓰고 `closes` 로 시세 출처만 바꾼다. **표가 두 벌이
+  되는 순간 "되돌려 본 성적"과 "실전 성적"이 다른 자로 잰 값이 된다.**
+- 자르는 곳은 `cut()` 한 곳이고 갈래가 넷이다 — 시세·사건·관심도, 그리고 잘린
+  시세에서 다시 만들어지는 학습 표. 관심도는 **ts 가 아니라 남은 확정봉 수**로
+  자른다(그 표에는 ts 열이 없어서, ts 로 자르려 들면 조용히 안 잘린다).
+- **8 origin 마다 다시 굽는다.** (시장 × 지평 3 × origin)이라 60일치가 180번이고
+  몇 시간이다. 매번은 너무 비싸고 한 번만 하면 미래를 본다 — `scripts/asof.py` 가
+  같은 벽에서 쓴 답이다.
+- **모델 이름은 `backfill-*` 다.** `recommend-*` 를 과거 origin 에서 잘라 구운 것으로
+  덮으면 며칠 전까지만 본 모델로 아침 추천을 하게 된다(`study-*` 재사용 금지와 같은 이유).
+- **원화 시세를 붙이지 않는다**(`krw=False`). 그건 '지금' 값이라 과거 origin 에
+  붙이면 거짓말이 된다.
+- **파일이 다르다** — `scores.jsonl`(실전) · `backfill.jsonl`(되돌려 본 것). 섞으면
+  못 믿을 숫자가 된다: 실전은 그날 한 번뿐이라 되돌릴 수 없고, 백필은 origin 을 고를
+  수 있고 몇 번이든 다시 돌릴 수 있다. 화면도 칸을 나눠 어느 쪽인지 밝힌다.
+- **줄마다 모델 이름과 설정을 박는다**(`config`). 손잡이는 `recommend.WINDOW`·`FOLDS`
+  한 곳에서만 정하고, 바뀌면 `--restale` 이 옛 설정 줄을 버리고 그 자리만 다시 돌린다.
+  옛 모델 성적과 새 모델 성적이 한 숫자에 섞이면 그게 정확히 못 믿을 숫자다.
+- **뒤 20% 는 `holdout` 이다.** 추천 규칙(후보 수·기권 문턱·지평)은 앞 구간에서만
+  만지고, 성적은 holdout 에서 읽는다. 튜닝에 쓴 구간의 성적은 자기 답을 보고 만든
+  값이다 — `study.py` 의 최종 구간과 같은 이치다.
+- **승격에 쓰지 않는다.** 모델 승격은 워크포워드(`daily.py`)로만 한다. as-of 를
+  승격 기준에 넣는 순간 그것도 학습 구간이 되어 외부 표본이 아니게 된다.
+  `test_backfill.py` 가 `daily.py` 에 `backfill` 이라는 낱말이 없는지로 잡는다.
+- origin 마다 저장한다. 한 시장이 30분~1시간짜리라 끝에 한 번 저장하면 도중에
+  끊길 때 통째로 사라진다.
+- 고쳤으면 `.venv/Scripts/python -m pytest server/tests/test_backfill.py -q` 와
+  `.venv/Scripts/python scripts/backfill.py --provider binance --origins 3 --every 3 --dry-run`.
+
+## 픽스처는 생산 코드가 만드는 것만 흉내낸다
+
+`score_one` 이 `body["buy"]` 를 읽고 있었는데 얼린 파일에는 그런 키가 없었다
+(추천 목록은 지평마다 다르니 `byDay[일수]` 안에만 있다). 실전 채점이 `KeyError` 로
+죽는 코드였고, **채점이 ①단계라 뽑기까지 같이 못 돌 뻔했다.**
+
+그런데도 몇 달을 살아남았다 — `_frozen` 픽스처가 `pick()` 이 만드는
+모양이 아니라 **자기가 지어낸 모양**(`"buy": [{"symbol": …}]`)을 만들어 넣고 있었다.
+지어낸 모양을 검사하는 테스트는 통과할수록 위험하다. 얼린 파일·나간 응답처럼
+**다른 코드가 만드는 것을 받는 함수는, 그것을 만드는 코드의 출력으로 시험한다.**
+
+
 ## 종목 추천 — 재고 나서 줄 세운다
 
 `screen/` + `scripts/screen.py`. "오늘 관심있게 볼 종목"을 횡단면으로 줄 세운다.
@@ -716,8 +765,9 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 376개
+.venv/Scripts/python -m pytest server/tests -q      # 519개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
+.venv/Scripts/python scripts/backfill.py --summary            # 되돌려 본 추천 성적
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b
 cd web; npm run shot     # uvicorn(8000) + vite(5173) 가 떠 있어야 한다

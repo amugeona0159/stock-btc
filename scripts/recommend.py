@@ -89,6 +89,9 @@ SCORES = OUT / "scores.jsonl"
 DAYS = (1, 2, 3)
 BARS = 3000
 BUY, AVOID = 3, 2
+# 학습 손잡이. **여기 한 곳에서만 정한다** — `scripts/backfill.py` 가 되돌려 돌린
+# 기록마다 이 값을 박아 두므로, 두 벌이 되면 "무슨 설정으로 잰 성적인지" 가 어긋난다.
+WINDOW, FOLDS = 48, 3
 # 이 시장의 하루가 언제인지. 07:30 KST 는 22:30 UTC(전날)라, UTC 로 날짜를 지으면
 # "오늘의 추천"에 어제 날짜가 뜬다.
 CALENDAR = "Asia/Seoul"
@@ -211,18 +214,40 @@ def confidence(values: list[float | None]) -> list[str]:
     return out
 
 
-async def pick(provider: str) -> dict | None:
+async def pick(provider: str, *, loaded: list | None = None,
+               skipped: list[dict] | None = None, prefix: str = "recommend",
+               retrain: bool = True, krw: bool = True,
+               quiet: bool = False) -> dict | None:
     """한 시장의 오늘 추천.
 
     **날짜마다 모델을 따로 굽는다.** 지평 3 하나로 1·2·3일을 다 뽑으면, 그 모델이
     3일에서 기준선을 못 넘는 순간(실제로 그랬다 — skill 0.0013) `predict` 가 기준선만
     쓰고 1일·2일에 있던 우위(0.0054·0.0032)까지 같이 버린다. 지평마다 자기 성적으로
     판정받게 두면 되는 자리에서는 모델이, 안 되는 자리에서는 기준선이 쓰인다.
+
+    ## 되돌려 돌릴 때 (`scripts/backfill.py`)
+
+    이 함수는 **넘겨받은 시세로 그 자리에서 굽는다.** 그래서 시세를 origin 까지 잘라
+    넘기면 그대로 as-of 가 된다 — 백필용 함수를 따로 만들지 않는 이유다. 표가 두 벌이
+    되는 순간 "되돌려 본 성적" 과 "실전 성적" 이 다른 자로 잰 값이 된다.
+
+    - `loaded` — 이미 적재한 `SymbolData` 목록. 넘기면 조회하지 않는다.
+    - `prefix` — 모델 이름의 앞부분. 백필은 `backfill-*` 로 굽는다.
+      **`recommend-*` 를 건드리면 안 된다.** 그건 아침에 화면이 쓰는 모델이라,
+      과거 origin 에서 잘라 구운 것으로 덮으면 며칠 전까지만 본 모델로 추천하게 된다
+      (`study-*` 를 재사용하면 안 되는 것과 같은 이유).
+    - `retrain=False` — 굽지 않고 있는 모델로 예측만. 매 origin 마다 구우면 너무
+      비싸고, 한 번만 구우면 미래를 본다(`scripts/asof.py` 가 같은 벽에서 8 origin
+      마다 다시 굽는다).
+    - `krw=False` — 원화 시세는 **지금** 값이라 과거 origin 에 붙이면 거짓말이 된다.
     """
     started = time.time()
-    loaded, skipped = await load_market(provider)
+    if loaded is None:
+        loaded, skipped = await load_market(provider)
+    skipped = skipped or []
     if len(loaded) < universe.MIN_BREADTH:
-        print(f"  {provider}: 시세를 받은 종목이 {len(loaded)}개뿐 — 오늘은 안 낸다")
+        if not quiet:
+            print(f"  {provider}: 시세를 받은 종목이 {len(loaded)}개뿐 — 오늘은 안 낸다")
         return None
 
     buyables = set(universe.buyable(provider))
@@ -231,23 +256,32 @@ async def pick(provider: str) -> dict | None:
     by_day: dict[str, dict] = {}
 
     for day in DAYS:
-        name = f"recommend-{provider}-1d-{day}".lower()
+        name = f"{prefix}-{provider}-1d-{day}".lower()
         report, stale = {}, False
-        try:
-            report = ml.train(loaded, name, horizon=day, window=48, folds=3,
-                              timeframe="1d")
-        except Exception as exc:                                   # noqa: BLE001
-            # 어제 구운 모델이 있으면 그걸 쓴다. 번들은 자족적이라 예측이 된다.
-            # **조용히 쓰지 않는다** — 낡았다는 걸 파일과 화면에 남긴다.
+        if not retrain:
+            # 앞 origin 에서 구운 것을 그대로 쓴다. 없으면 그냥 건너뛴다 — 없는 모델을
+            # 급히 구우면 "8 origin 마다" 라는 규칙이 조용히 깨진다.
             if ml.load(name) is None:
-                print(f"  {provider} {day}일: 학습 실패 — {str(exc)[:60]}")
                 continue
-            stale, report = True, (ml.report(name) or {})
+            report = ml.report(name) or {}
+        else:
+            try:
+                report = ml.train(loaded, name, horizon=day, window=WINDOW,
+                                  folds=FOLDS, timeframe="1d")
+            except Exception as exc:                               # noqa: BLE001
+                # 어제 구운 모델이 있으면 그걸 쓴다. 번들은 자족적이라 예측이 된다.
+                # **조용히 쓰지 않는다** — 낡았다는 걸 파일과 화면에 남긴다.
+                if ml.load(name) is None:
+                    if not quiet:
+                        print(f"  {provider} {day}일: 학습 실패 — {str(exc)[:60]}")
+                    continue
+                stale, report = True, (ml.report(name) or {})
 
         found = {d.symbol: look(d, name, day) for d in loaded}
         found = {k: v for k, v in found.items() if v is not None and k in buyables}
         if len(found) < BUY + AVOID:
-            print(f"  {provider} {day}일: 예측이 {len(found)}개뿐")
+            if not quiet:
+                print(f"  {provider} {day}일: 예측이 {len(found)}개뿐")
             continue
 
         order = sorted(found, key=lambda k: -found[k]["expected"])
@@ -271,8 +305,9 @@ async def pick(provider: str) -> dict | None:
             "modelStale": stale, "model": name,
         }
         mark = " · 모델 안 씀(사실상 변동성 순서)" if degenerate else ""
-        print(f"  {provider} {day}일: {order[0]} {found[order[0]]['expected']:+.2f}% "
-              f"· skill {by_day[str(day)]['skill']}{mark}")
+        if not quiet:
+            print(f"  {provider} {day}일: {order[0]} {found[order[0]]['expected']:+.2f}% "
+                  f"· skill {by_day[str(day)]['skill']}{mark}")
 
     # **원화 시세만 얼린다.** 이름·티커는 `screen/names.py` 표에서 바로 나오므로
     # 저장하지 않는다 — 저장해 두면 표를 고쳐도 옛 파일이 옛 이름을 계속 들고 있게
@@ -281,7 +316,7 @@ async def pick(provider: str) -> dict | None:
     # **코인 시장에서만 찾는다.** 코인인지 아닌지는 심볼 모양이 아니라 **그 시장이**
     # 안다. 모양으로 판단했더니 `AAPL` 을 코인으로 보고 업비트에 `KRW-AAPL` 을
     # 물으러 갔다 — 미국주식 열 종목마다 실패하는 호출이 아홉 번씩 나갔다.
-    if get_provider(provider).info.market == "crypto":
+    if krw and get_provider(provider).info.market == "crypto":
         priced = await krw_prices([s for s in rows if not s.startswith("KRW-")])
         for symbol, row in rows.items():
             if symbol.startswith("KRW-"):
@@ -299,7 +334,8 @@ async def pick(provider: str) -> dict | None:
     stale_bars = (pd.Timestamp(today(), tz=CALENDAR).tz_convert("UTC").normalize()
                   - last_day.normalize()).days - 1
 
-    print(f"  {provider}: 후보 {len(rows)}종목 · {time.time() - started:.0f}s")
+    if not quiet:
+        print(f"  {provider}: 후보 {len(rows)}종목 · {time.time() - started:.0f}s")
     return {
         "provider": provider, "lastTs": last_ts, "basedOn": f"{last_day:%Y-%m-%d}",
         "staleBars": max(0, int(stale_bars)),
@@ -324,12 +360,27 @@ def already() -> set[str]:
     return done
 
 
-async def score_one(frozen: dict, provider: str, body: dict, days: int) -> dict | None:
+async def score_one(frozen: dict, provider: str, body: dict, days: int,
+                    closes: dict | None = None) -> dict | None:
     """그 추천이 실제로 어땠나. 아직 결과가 안 나왔으면 None(실패가 아니다).
 
     **`lastTs` 에 앵커한다, 파일 날짜가 아니라.** 그게 예측이 딛고 선 마지막 확정봉이고
     예측의 유일한 원점이다. 날짜로 맞추면 공휴일 하나에 조용히 밀린다.
+
+    **추천 목록은 `byDay[일수]` 안에만 있다.** 지평마다 다른 종목을 고르므로 최상위에
+    있을 수가 없다. 예전에 여기서 `body["buy"]` 를 읽었는데 얼린 파일에 그런 키가
+    없어 채점이 `KeyError` 로 죽었고, **채점이 ①단계라 뽑기까지 같이 못 돌았다.**
+    테스트 픽스처가 실제 `pick()` 이 만드는 모양이 아니라 자기가 지어낸 모양을
+    검사하고 있어 몇 달을 살아남았다 — 픽스처는 생산 코드가 만드는 것만 검사한다.
+
+    `closes`(심볼 → 확정봉 표)를 넘기면 조회하지 않고 거기서 읽는다. 되돌려 채점할 때
+    (origin × 종목)마다 다시 물으면 수천 번이 된다. **채점 공식은 한 벌 그대로 두고
+    시세가 어디서 오는지만 바꾼다** — 두 벌이 되면 실전 성적과 백필 성적이 다른 자로
+    잰 값이 되어 나란히 놓을 수가 없다.
     """
+    day = (body.get("byDay") or {}).get(str(days))
+    if not day:
+        return None
     anchor = int(body.get("lastTs") or 0)
     wanted = [r["symbol"] for r in body.get("candidates", [])]
     if not anchor or not wanted:
@@ -337,24 +388,29 @@ async def score_one(frozen: dict, provider: str, body: dict, days: int) -> dict 
 
     real: dict[str, float] = {}
     for symbol in wanted:
-        try:
-            df = await get_provider(provider).history(symbol, "1d", 60)
-        except Exception:                                          # noqa: BLE001
-            continue
-        closed = closed_only(df).reset_index(drop=True)
+        if closes is not None:
+            closed = closes.get(symbol)
+            if closed is None or closed.empty:
+                continue
+        else:
+            try:
+                df = await get_provider(provider).history(symbol, "1d", 60)
+            except Exception:                                      # noqa: BLE001
+                continue
+            closed = closed_only(df).reset_index(drop=True)
         stamps = closed["ts"].to_numpy()
         where = int(np.searchsorted(stamps, anchor, side="right")) - 1
         if where < 0 or where + days >= len(closed):
             return None                       # 아직 그날로부터 days 봉이 안 지났다
         start = float(closed["close"].iloc[where])
         real[symbol] = (float(closed["close"].iloc[where + days]) / start - 1) * 100
-        if provider.startswith(("toss", "upbit")):
+        if closes is None and provider.startswith(("toss", "upbit")):
             await asyncio.sleep(1.2)
 
     if len(real) < universe.MIN_BREADTH:
         return None
-    buys = [real[r["symbol"]] for r in body["buy"] if r["symbol"] in real]
-    avoids = [real[r["symbol"]] for r in body["avoid"] if r["symbol"] in real]
+    buys = [real[s] for s in day.get("buy", []) if s in real]
+    avoids = [real[s] for s in day.get("avoid", []) if s in real]
     everyone = list(real.values())
     if not buys:
         return None
@@ -370,6 +426,10 @@ async def score_one(frozen: dict, provider: str, body: dict, days: int) -> dict 
     return {
         "date": frozen["date"], "provider": provider, "days": days,
         "basedOn": body.get("basedOn"), "scoredAt": now(),
+        # **어느 모델이 낸 추천인지 줄마다 박아 둔다.** 승격으로 모델이 바뀌면
+        # 옛 모델 성적과 새 모델 성적이 한 숫자에 섞이는데, 그게 정확히 못 믿을
+        # 숫자다. 이름이 있으면 바뀐 줄만 골라 다시 잴 수 있다.
+        "model": day.get("model"),
         "buyPct": round(buy_mean, 4),
         "avoidPct": round(float(np.mean(avoids)), 4) if avoids else None,
         # **기준선은 후보 전체 평균이다.** 0 과 견주면 고르는 실력이 아니라 시장을 잰다.

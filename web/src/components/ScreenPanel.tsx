@@ -341,6 +341,79 @@ function BuyForm({ item, days, provider, onDone }: {
   );
 }
 
+/** 되돌려 본 성적. **위의 실전 칸과 합치지 않는다** — 같은 자로 잰 값이 아니다.
+ *
+ *  실전은 그날 한 번뿐이라 되돌릴 수 없고, 백필은 origin 을 고를 수 있고 몇 번이든
+ *  다시 돌릴 수 있다. 한 숫자로 합치면 "몇 번 다시 돌렸는지" 가 성적에 스며든다.
+ *  그래서 칸을 나누고, 읽을 값(holdout)을 앞에 둔다. */
+function BackfillBlock({ result }: { result: Recommend }) {
+  const back = result.backfill;
+  if (!back || !back.n) return null;
+  const held = back.holdout?.n ? back.holdout : null;
+  const read = held ?? back;
+
+  return (
+    <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+      <div className="row" style={{ marginBottom: 6 }}>
+        <span style={{ fontWeight: 600 }}>되돌려 본 성적</span>
+        <span style={{ color: "var(--text-dim)" }}>
+          {back.from} ~ {back.to} · {back.n}판
+        </span>
+      </div>
+      <div className="rows">
+        <div className="row">
+          <span>
+            차이 (추천 − 후보 평균)
+            {held && <span style={{ color: "var(--text-dim)" }}> · 안 본 구간 {held.n}판</span>}
+          </span>
+          <b style={{ color: (read.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+            {signed(read.edgePct)}%p
+            <span style={{ color: "var(--text-dim)" }}> · 이긴 비율 {pct(read.winRate, 0)}</span>
+          </b>
+        </div>
+        <div className="row">
+          <span>80% 밴드 적중</span>
+          <b>{pct(read.bandHit, 1)}</b>
+        </div>
+        {held && (
+          <div className="row">
+            <span style={{ color: "var(--text-dim)" }}>규칙을 고른 구간 (참고)</span>
+            <b style={{ color: "var(--text-dim)" }}>
+              {signed(back.edgePct)}%p · {back.n}판
+            </b>
+          </div>
+        )}
+      </div>
+      <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
+        <b>이건 실전 성적이 아니다.</b> 과거 아침에 서서 같은 추천을 뽑고 지평이 지난
+        뒤 실제와 맞춘 것이다 — 그날의 시세·사건·관심도만 보고 뽑았지만, 실전과 달리
+        어느 날들을 볼지 고를 수 있고 몇 번이든 다시 돌릴 수 있다.
+        {held ? (
+          <>
+            {" "}그래서 위 숫자는 <b>규칙 튜닝에 쓰지 않은 마지막 구간</b>에서 잰 것만
+            읽는다. 튜닝에 쓴 구간의 성적은 자기 답을 보고 만든 값이라 아래에 참고로만 둔다.
+          </>
+        ) : (
+          <> 아직 구간을 나눌 만큼 쌓이지 않았다.</>
+        )}
+        {!!back.staleRows && (
+          <>
+            {" "}설정이 바뀐 <b>{back.staleRows}판</b>은 안 셌다 — 옛 모델과 새 모델
+            성적을 한 숫자에 섞을 수 없어서다.
+          </>
+        )}
+        {back.model && (
+          <>
+            <br />
+            <span style={{ color: "var(--text-dim)" }}>{back.model}</span> 로 잰 값이다.
+            모델 설정이 바뀌면 다시 잰다 — 옛 모델과 새 모델 성적이 한 숫자에 섞이면 안 된다.
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
 function RecordCard({ result, days }: { result: Recommend; days: number }) {
   const record = result.record;
   const measured = result.measured ?? {};
@@ -392,6 +465,8 @@ function RecordCard({ result, days }: { result: Recommend; days: number }) {
           그때부터 이 표가 이 기능의 진짜 답이다.
         </p>
       )}
+
+      <BackfillBlock result={result} />
 
       <p className="formula" style={{ marginTop: 10 }}>
         <b>기준선은 후보 전체 평균이다.</b> 0 과 견주면 고르는 실력이 아니라 시장을

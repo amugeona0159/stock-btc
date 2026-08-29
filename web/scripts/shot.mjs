@@ -32,6 +32,10 @@ const SHOTS = [
   // 추천 줄의 「샀다」를 눌러 진입가·주수 칸이 열리는지. 여기서 장부로 넘어간다.
   { name: "screen-buy", width: 1600, height: 950, indicators: [], tab: "추천",
     timeframe: "1d", waitFor: "text=사라 ·", click: "샀다" },
+  // 성적 칸은 오른쪽 띠 맨 아래라 안 내리면 안 찍힌다. **실전과 되돌려 본 것이
+  // 한 숫자로 읽히지 않는지**가 이 그림의 전부다 — 합쳐 보이면 그 순간 거짓말이 된다.
+  { name: "screen-record", width: 1600, height: 950, indicators: [], tab: "추천",
+    timeframe: "1d", waitFor: "text=이 추천이 과거에 맞았나", scrollTo: ".side" },
   // 종목 고르기. 4,300종목을 그리면 브라우저가 멎으므로 잘라 놓았는데, 실제로
   // 잘렸는지와 한글 종목명이 읽히는지는 그림으로만 확인된다.
   { name: "symbols", width: 1600, height: 950, indicators: [], picker: "삼성" },
@@ -138,6 +142,13 @@ for (const shot of SHOTS.filter((s) => !ONLY || s.name === ONLY)) {
     await page.waitForTimeout(9000);
     await page.fill(".picker-search input", shot.picker);
     await page.waitForTimeout(3500);
+  }
+
+  if (shot.scrollTo) {
+    // 오른쪽 띠는 세로로 길다. 아래쪽 카드는 내려야 나온다.
+    await page.locator(shot.scrollTo).first()
+      .evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await page.waitForTimeout(600);
   }
 
   await page.waitForTimeout(1800);
