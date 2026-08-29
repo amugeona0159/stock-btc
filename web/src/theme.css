@@ -124,6 +124,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 
 .spacer { flex: 1; }
 
+/* 봉 고르는 띠. 넓은 화면에서는 그냥 한 줄이고, 폰에서만 가로 스크롤이 된다. */
+.tf-strip { display: flex; gap: 4px; min-width: 0; }
+
 .status { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral); }
 .dot[data-state="live"] { background: var(--up); }
@@ -367,15 +370,55 @@ button:disabled { opacity: 0.4; cursor: default; }
     min-height: 100dvh;
     /* 노치·홈 인디케이터를 피한다. 홈 화면에 추가하면 전체화면이 되면서
        아래 버튼이 인디케이터에 먹힌다. */
-    padding: max(var(--gutter), env(safe-area-inset-top))
-             max(var(--gutter), env(safe-area-inset-right))
-             max(var(--gutter), env(safe-area-inset-bottom))
-             max(var(--gutter), env(safe-area-inset-left));
+    padding: max(8px, env(safe-area-inset-top))
+             max(8px, env(safe-area-inset-right))
+             max(8px, env(safe-area-inset-bottom))
+             max(8px, env(safe-area-inset-left));
+    gap: 8px;
   }
 
-  .charts { min-height: 46dvh; }
-  .pane.main { min-height: 34dvh; }
-  .pane.sub { height: 84px; }
+  /* --- 헤더 -------------------------------------------------------------
+     아이폰 12(390×664)에서 헤더가 세 줄로 접혀 178px 을 먹었다. 화면의 27% 다.
+     한 줄로 눕히고, 넘치는 건 가로로 민다. */
+  .topbar { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .topbar::-webkit-scrollbar { display: none; }
+  /* **기본 순서를 뒤로 민다.** `order` 를 안 준 요소는 0 이라, 아래에서 1~4 를
+     지정하면 오히려 그것들이 앞으로 튀어나온다(사건·실시간이 그랬다). */
+  .topbar > * { flex: 0 0 auto; order: 9; }
+  /* 브랜드 이름은 폰에서 자리만 먹는다. 아이콘이 이미 앱 이름을 말한다. */
+  .brand { display: none; }
+  .spacer { display: none; }
+  .topbar select { max-width: 26vw; }
+  /* '찾기' 는 힌트다. 그 폭을 현재가에 준다. */
+  .topbar .hint { display: none; }
+
+  .tf-strip {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tf-strip::-webkit-scrollbar { display: none; }
+
+  /* **현재가를 봉 목록 앞으로.** 헤더가 가로로 밀리는데 값이 오른쪽으로 넘어가면
+     시세를 보려고 헤더를 스크롤해야 한다. 거래 화면에서 그건 안 된다. */
+  /* 선택자를 `.topbar > *` 보다 무겁게 둔다. 안 그러면 위 규칙(order: 9)이 이겨서
+     순서가 하나도 안 바뀐다 — 실제로 그랬다. */
+  .topbar > select { order: 1; }
+  .topbar > button:first-of-type { order: 2; }   /* 종목 찾기 */
+  .topbar > .price { order: 3; margin-left: 2px; }
+  .topbar > .tf-strip { order: 4; }
+
+  /* 캔버스 위 범례가 두 줄로 접혀 가격 영역을 덮었다. 폰에서는 접는다 —
+     선 색의 뜻은 '예측' 탭 설명에 있고, 좁은 화면에서는 차트 자체가 먼저다. */
+  .chart-legend { display: none; }
+
+  /* --- 차트 -------------------------------------------------------------
+     484px(73%)을 먹고 있었다. 탭과 첫 카드가 화면에 같이 보여야 한다. */
+  .charts { min-height: 0; gap: 4px; }
+  .pane.main { min-height: 38dvh; }
+  .pane.sub { height: 62px; }
+  /* 캔버스 위에 얹힌 범례가 두 줄로 접혀 가격 영역을 덮었다. 폰에서는 접는다. */
+  .pane-label { font-size: 10px; top: 3px; left: 6px; }
 
   /* 오른쪽 띠가 아래로 내려온다. 자체 스크롤을 없애야 페이지 스크롤과 안 싸운다. */
   .side { overflow-y: visible; min-height: 0; }
@@ -391,14 +434,22 @@ button:disabled { opacity: 0.4; cursor: default; }
     -webkit-overflow-scrolling: touch;
   }
   .tabs::-webkit-scrollbar { display: none; }
-  .tabs button { flex: 0 0 auto; padding: 8px 12px; }
+  .tabs button { flex: 0 0 auto; padding: 7px 11px; }
 
-  /* 손가락으로 누를 수 있는 크기. 44px 은 애플이 권하는 최소 터치 영역이다. */
-  button, select, input { min-height: 40px; }
-  .chip { min-height: 32px; }
-  .topbar { gap: 6px; }
-  .topbar select { max-width: 42vw; }
+  /* 손가락으로 누를 수 있는 크기 — 다만 헤더는 낮게 눌러 자리를 아낀다. */
+  button, select, input { min-height: 36px; }
+  .topbar button, .topbar select { min-height: 32px; padding: 4px 8px; }
+  .chip { min-height: 30px; }
+  .card { padding: 10px; }
 
   /* 폰에서는 16px 미만 입력창에 포커스가 가면 사파리가 화면을 확대한다. */
   input, select { font-size: 16px; }
+}
+
+/* 아주 좁은 폰(SE 320px). 아이폰 12(390px)는 위 규칙으로 이미 들어가지만,
+   더 좁은 화면에서 현재가가 잘리지 않게 한 단계 더 줄인다. */
+@media (max-width: 360px) {
+  .topbar select { max-width: 22vw; }
+  .topbar > .price b { font-size: 14px; }
+  .topbar button, .topbar select { padding: 4px 6px; }
 }

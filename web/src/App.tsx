@@ -283,17 +283,24 @@ export default function App() {
           {/* 추천 목록과 같은 이름으로 부른다. 표에 없는 심볼(거래소 목록 대부분)은
               기호 그대로 — 이름을 지어내지 않는다. */}
           {named ? `${named.name} ${named.ticker}` : symbol || "종목"}{" "}
-          <span style={{ color: "var(--text-dim)" }}>찾기</span>
+          {/* 폰에서는 이 힌트를 접는다 — 눌리는 건 보면 알고, 그 자리에 현재가를 넣는다. */}
+          <span className="hint" style={{ color: "var(--text-dim)" }}>찾기</span>
         </button>
 
-        {timeframes.map((tf) => (
-          <button key={tf} data-active={tf === timeframe} onClick={() => setTimeframe(tf)}>
-            {tf}
-          </button>
-        ))}
+        {/* 봉 아홉 개를 그냥 늘어놓으면 폰에서 두 줄로 접히면서 헤더가 화면의
+            4분의 1을 먹는다(아이폰 12 에서 178px). 한 줄짜리 가로 스크롤로 묶는다. */}
+        <div className="tf-strip">
+          {timeframes.map((tf) => (
+            <button key={tf} data-active={tf === timeframe} onClick={() => setTimeframe(tf)}>
+              {tf}
+            </button>
+          ))}
+        </div>
 
+        {/* 폰에서는 이 값이 **봉 목록보다 앞으로** 온다(`.price` 의 order). 헤더가
+            가로로 밀리는데 현재가가 오른쪽으로 넘어가 안 보이면 안 된다. */}
         {last && (
-          <span style={{ marginLeft: 4 }}>
+          <span className="price" style={{ marginLeft: 4 }}>
             <b style={{ fontSize: 16 }}>
               {last.close.toLocaleString("ko-KR", { maximumFractionDigits: 6 })}
             </b>
