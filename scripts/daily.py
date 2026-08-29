@@ -28,6 +28,7 @@ import json
 import os
 import random
 import shutil
+import statistics
 import sys
 import time
 from dataclasses import asdict, dataclass, field
@@ -55,7 +56,14 @@ LOG = LEARNING / "log.jsonl"
 SUMMARY = ROOT / "docs" / "LEARNING.md" if LEARNING.name == "learning" else LEARNING / "LEARNING.md"
 
 # 도전자가 이만큼은 이겨야 승격한다. 0 으로 두면 잡음이 매일 챔피언을 갈아치운다.
+# 승격에 필요한 최소 마진. **여기서 끝나지 않는다** — 같은 자리에 여러 번 도전할수록
+# 잡음만으로 이기는 일이 흔해지므로 `promote_bar()` 가 시험 횟수만큼 이 값을 올린다.
 PROMOTE_MARGIN = 0.002
+# 도전자−챔피언 차이의 표준편차. 로그가 쌓이면 거기서 재고, 얇으면 이 값을 쓴다.
+# 지금 값은 기록 14건에서 잰 것이다(`scripts/overfitcheck.py` 와 같은 정신).
+FALLBACK_NULL_STD = 0.0015
+# 이만큼은 쌓여야 로그에서 잰 값을 믿는다. 몇 건으로 잰 표준편차는 그 자체가 잡음이다.
+MIN_FOR_NULL = 30
 # 마지막 실행이 오래됐을수록 순위를 올린다. 되는 자리에 시간이 몰리되, 시장이 변하면
 # 지금 지는 자리도 언젠가 다시 보게 하려는 것. 완전히 버리지는 않는다.
 STALE_BONUS_PER_DAY = 0.004
@@ -160,6 +168,45 @@ def save_state(state: dict[str, Record]) -> None:
         "promoteMargin": PROMOTE_MARGIN,
         "champions": {k: asdict(v) for k, v in sorted(state.items())},
     }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def null_std() -> float:
+    """도전자가 챔피언을 **우연히** 이기는 폭. 로그에서 잰다.
+
+    손잡이 하나를 흔든 결과는 대개 중립이라, 지난 차이들의 흩어진 정도가 곧
+    "아무것도 안 배웠을 때의 폭" 이다. 가정하지 않고 재는 쪽을 택한다.
+    """
+    if not LOG.is_file():
+        return FALLBACK_NULL_STD
+    gaps = []
+    for line in LOG.read_text(encoding="utf-8").splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if row.get("dryRun"):
+            continue
+        a, b = row.get("challengerSkill"), row.get("championSkill")
+        if a is not None and b is not None:
+            gaps.append(a - b)
+    if len(gaps) < MIN_FOR_NULL:
+        return FALLBACK_NULL_STD
+    spread = float(statistics.pstdev(gaps))
+    # 0 이 나오면(전부 같은 값) 문턱이 사라진다. 바닥을 깐다.
+    return max(spread, FALLBACK_NULL_STD * 0.5)
+
+
+def promote_bar(challenges: int, spread: float) -> float:
+    """이번 도전이 넘어야 할 선.
+
+    같은 자리에 N번 도전하면 **잡음만으로도** 그중 최고는 꽤 이긴다. 그 기대값을
+    문턱으로 삼는다(Bailey & Lopez de Prado 의 선택편향 보정과 같은 생각).
+    재 보면 5회까지는 고정 마진으로 충분하고, 10회를 넘으면 모자란다 —
+    매일 도전하면 한 달이면 그 자리다.
+    """
+    from marketlens.forecast import overfit
+
+    return max(PROMOTE_MARGIN, overfit.expected_max(challenges, spread))
 
 
 def append_log(entry: dict) -> None:
@@ -267,6 +314,9 @@ async def run(budget: int, dry_run: bool, seed: int) -> list[dict]:
     today = time.time()
 
     ordered = sorted(targets(), key=lambda t: -priority(t, state.get(t.key), today))
+    # 잡음의 폭은 한 번만 잰다. 이번 실행 중에 로그가 늘어나도 판정 기준이 대상마다
+    # 달라지면 안 된다 — 같은 날의 승격 조건은 하나여야 한다.
+    spread = null_std()
     entries: list[dict] = []
 
     for target in ordered[:budget]:
@@ -286,9 +336,13 @@ async def run(budget: int, dry_run: bool, seed: int) -> list[dict]:
         challenger_report = await train_once(target, challenger, trial_name)
         challenger_skill = skill_of(challenger_report) if challenger_report else None
 
+        # 이 자리에 지금까지 몇 번 도전했나. 한 번 돌 때 도전은 한 번이고,
+        # `trials` 는 챔피언 재학습까지 세므로 절반이 도전 횟수다.
+        challenges = record.trials // 2 + 1
+        bar = promote_bar(challenges, spread)
         promoted = (
             challenger_skill is not None
-            and challenger_skill > champion_skill + PROMOTE_MARGIN
+            and challenger_skill > champion_skill + bar
         )
         if promoted and not dry_run:
             adopt(trial_name, target.model)
@@ -306,7 +360,11 @@ async def run(budget: int, dry_run: bool, seed: int) -> list[dict]:
             "challengerSkill": None if challenger_skill is None else round(challenger_skill, 5),
             "change": change,
             "promoted": bool(promoted),
-            "margin": PROMOTE_MARGIN,
+            # 고정값이 아니라 그날 계산된 선이다. 나중에 "왜 승격됐나" 를 볼 때
+            # 이 숫자가 없으면 재현이 안 된다.
+            "margin": round(bar, 5),
+            "challenges": challenges,
+            "nullStd": round(spread, 5),
             # 이 대상에 지금까지 몇 번 시험했나. 이긴 결과를 읽을 때 같이 봐야 한다.
             "trials": record.trials + (2 if challenger_report else 1),
             "config": asdict(winner),

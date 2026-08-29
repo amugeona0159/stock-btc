@@ -484,10 +484,16 @@ def value_of(frame: pd.DataFrame, rule: Rule | None) -> dict:
 # 10 으로 뒀더니 8시간 730라운드에서 **73번**을 열어 봤다. 그쯤이면 최종 구간이라고
 # 부를 수 없다. 50 이면 같은 길이에서 15번이다.
 HOLDOUT_EVERY = 50
-# 최종 구간에서 이만큼은 이겨야 규칙을 내보낸다. 8시간을 돌린 결과 살아남은 규칙이
-# **+0.5%p** 였는데, 라운드마다 서른 개 넘는 가설을 세운 끝에 나온 +0.5%p 는
-# 개선이 아니라 잡음이다. 그런 걸 실제 예측에 물리면 학습이 해가 된다.
-MIN_HOLDOUT_GAIN = 0.02
+# 최종 구간에서 이만큼은 이겨야 규칙을 내보낸다.
+#
+# **이 값은 재서 정했다.** `scripts/overfitcheck.py` 가 결과를 덩어리째 섞어 놓고
+# 같은 탐색을 200번 돌린다. 조건과 결과의 관계가 끊긴 세계라 거기서 나오는 이득은
+# 전부 운인데, 그 분포의 **95%가 +3.8%p** 였다(최대 +16.5%p). 즉 3,600판짜리 최종
+# 구간에서도 잡음이 4%p 를 만든다.
+#
+# 처음엔 감으로 2%p 를 뒀고, 그 문턱으로도 실제 규칙(+0.55%p)은 걸러졌다. 하지만
+# 2%p 는 잡음이 넘는 선이었다 — 언젠가 통과시켰을 것이다. 그래서 4%p 로 올린다.
+MIN_HOLDOUT_GAIN = 0.04
 # 최종 구간에 이만큼은 있어야 규칙을 내보낸다. 야간 작업이 1,300판짜리 풀에서
 # **62판**으로 규칙을 만들어 8시간치 결과를 덮은 적이 있다 — 62판의 +9%p 는
 # 아무 말도 아니다.
@@ -601,7 +607,8 @@ def write_gate(state: dict, analysis: dict) -> None:
         gap = "—" if base is None or ruled is None else f"{(ruled - base) * 100:+.1f}%p"
         why = (f"최종 구간이 {kept}판뿐 — {MIN_HOLDOUT_N}판은 있어야 쓴다"
                if kept < MIN_HOLDOUT_N else
-               f"최종 구간에서 {gap} — {MIN_HOLDOUT_GAIN * 100:.0f}%p 는 넘어야 쓴다")
+               f"최종 구간에서 {gap} — 섞은 데이터도 {MIN_HOLDOUT_GAIN * 100:.0f}%p 를 "
+               f"만든다(측정). 그보다 커야 쓴다")
         GATE.write_text(json.dumps(
             {"updated": now(), "rule": None, "reason": why,
              "holdoutLooks": state.get("holdoutLooks", 0)},
