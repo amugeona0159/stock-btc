@@ -325,6 +325,10 @@
 - 화면의 실측 숫자(방향 55.0% · 밴드 82.2%)를 **TSX 에 박지 말 것.**
   `api/recommend.py: measured()` 가 `study/state.json` 에서 읽어 넘긴다 — 그래야
   학습 실행과 절대 어긋나지 않는다.
+- **`.cmd` 는 CRLF 로 저장한다.** LF 면 cmd.exe 가 줄을 못 끊어 한글 REM 주석이 명령으로
+  해석된다. 작업 스케줄러는 그걸 `Last Result: 1` 한 줄로만 알려 주고 **로그 파일조차 안
+  만든다** — 아침에 추천이 안 나오는데 이유를 볼 데가 없다. `test_scripts.py` 가 막는다.
+  (Windows 의 Python `write_text` 는 자동으로 CRLF 로 쓴다. bash heredoc 은 LF 라 걸린다.)
 - 07:30 은 **06:00 학습과 따로 등록한다**(`market-lens-recommend`). 거기 붙이면 실제
   실행이 08시 언저리에서 매일 흔들린다. 겹치지 않게 `daily.cmd` 의 study 예산을
   1시간으로 줄여 뒀다.
