@@ -5,6 +5,8 @@
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -230,3 +232,40 @@ def test_prob_up_reads_the_quantile_curve():
     assert ml._prob_up({0.1: -0.03, 0.5: -0.02, 0.9: -0.01}) == 0.0
     # 중앙값이 0이면 절반.
     assert ml._prob_up({0.1: -0.02, 0.5: 0.0, 0.9: 0.02}) == pytest.approx(0.5, abs=0.01)
+
+
+# --- 배포판이 기록을 읽을 수 있나 ---------------------------------------
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_the_image_ships_the_learning_records():
+    """**`api/learning.py`·`api/recommend.py` 는 저장소 뿌리의 `learning/` 을 읽는다.**
+
+    `MARKET_LENS_LEARNING` 은 스크립트용이고 서버는 학습을 안 돌린다. 그래서 이미지에
+    `learning/` 이 안 들어가면 배포판에서 아침 추천·챔피언·성적이 통째로 비는데,
+    화면은 "아직 없다"고만 말해서 원인이 안 보인다.
+    """
+    from marketlens.api.learning import DIRS
+
+    assert DIRS[-1].name == "learning", "읽는 자리가 바뀌었으면 Dockerfile 도 같이 본다"
+    docker = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "COPY learning/" in docker, "이미지에 학습 기록이 안 들어간다"
+
+
+def test_the_build_context_drops_the_heavy_things():
+    """`flyctl deploy --remote-only` 는 컨텍스트를 통째로 올린다. 빼 두지 않으면
+    `.venv`·모델·개인 기록까지 매 배포마다 올라간다."""
+    ignore = (ROOT / ".dockerignore").read_text(encoding="utf-8").split()
+    for heavy in (".venv/", "node_modules/", "store_data/", "alerts/",
+                  "learning-local/", "learning/study/verdicts.jsonl"):
+        assert heavy in ignore, f".dockerignore 에 {heavy} 가 없다"
+    # 화면이 읽는 것은 남아야 한다 — 통째로 빼면 위 테스트가 무의미해진다.
+    assert "learning/" not in ignore
+
+
+def test_a_new_record_reaches_the_deployment():
+    """밤새 배운 것과 아침 추천이 이미지에 들어가는데, 배포 트리거가 그 경로를 안 보면
+    영영 안 닿는다. 코드가 안 바뀌는 날이 대부분이라 더 그렇다."""
+    deploy = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+    assert '"learning/**"' in deploy, "학습 기록이 바뀌어도 배포가 안 돈다"

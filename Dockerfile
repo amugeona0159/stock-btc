@@ -17,6 +17,13 @@ RUN pip install --no-cache-dir -e ".[ml,push]"
 
 COPY --from=web /web/dist ./web/dist
 COPY scripts/ ./scripts/
+# **학습 기록을 같이 넣는다.** `api/learning.py`·`api/recommend.py` 는 저장소 뿌리
+# 기준으로 `learning/` 을 읽는다(`MARKET_LENS_LEARNING` 은 스크립트용이고 서버는
+# 학습을 안 돌린다). 이게 없으면 배포판에서 아침 추천·챔피언·성적이 통째로 비는데,
+# 화면은 "아직 없다"고만 말해서 원인이 안 보인다.
+# 판 원자료(`study/verdicts.jsonl`)는 `.dockerignore` 가 뺀다 — 수만 줄이고
+# 화면은 요약만 읽는다.
+COPY learning/ ./learning/
 
 # 감시 루프를 켠다. 이게 없으면 알림이 안 나간다.
 ENV MARKET_LENS_WATCH=1

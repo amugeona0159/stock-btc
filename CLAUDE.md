@@ -701,6 +701,16 @@
   (한동안 이 자리에 "그래서 `recommend.cmd` 에서 뺐다"고 적혀 있었는데 그 파일은
   만들어질 때부터 토스를 넘기고 있었다. **하려던 것을 한 것처럼 적으면 안 된다** —
   문서가 코드보다 오래 살아서, 읽는 사람이 확인 없이 믿는다.)
+- **배포판은 이미지에 든 `learning/` 을 읽는다.** `api/learning.py`·`api/recommend.py`
+  는 저장소 뿌리 기준으로 읽지 `MARKET_LENS_LEARNING` 을 안 본다(그건 스크립트용이고
+  서버는 학습을 안 돌린다). 그래서 Dockerfile 이 `learning/` 을 넣고 `deploy.yml` 이
+  `learning/**` 을 지켜본다 — 둘 중 하나만 빠져도 배포판에서 추천·챔피언·성적이
+  통째로 비는데, 화면은 "아직 없다"고만 말해서 원인이 안 보인다.
+- **`.dockerignore` 를 지우지 말 것.** `flyctl deploy --remote-only` 는 컨텍스트를
+  통째로 올린다 — 빼 두지 않으면 `.venv`·모델·개인 기록(`alerts/`)까지 매번 올라간다.
+- **배포는 `FLY_API_TOKEN` 시크릿이 있어야 실제로 돈다.** 없으면 아무것도 안 하고
+  초록불로 끝나므로, 실행 요약에 "배포 안 함"을 적어 눈에 띄게 해 뒀다.
+  토큰은 사람이 넣어야 한다.
 - 토스가 붙으려면 **Fly 고정 IPv4 를 토스 콘솔 허용목록에 등록**해야 한다
   (`fly ips allocate-v4`). 이건 계정 설정이라 사람이 해야 한다.
 - `auto_stop_machines = false`. 인스턴스가 자면 **감시 루프가 멈춰 알림이 안 나간다.**
@@ -803,7 +813,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 531개
+.venv/Scripts/python -m pytest server/tests -q      # 534개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/backfill.py --summary            # 되돌려 본 추천 성적
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
