@@ -27,6 +27,9 @@ ml = ["scikit-learn>=1.5", "lightgbm>=4.5", "pyarrow>=17.0"]
 # arch 는 NCSA 라이선스(퍼미시브)다. GPL/AGPL 인 volatility-trading·openbb-technical
 # 은 공개 저장소에 옮으므로 쓰지 않는다.
 research = ["arch>=7.0"]
+# 웹푸시. **없어도 앱은 그대로 뜬다** — 알림만 기록에 남고 폰으로 안 나간다.
+# 알림 하나 때문에 서버가 못 뜨면 나머지 기능까지 같이 죽는다.
+push = ["pywebpush>=2.0"]
 # 자연어 질문 해석. 없으면 규칙 파서만 쓴다.
 llm = ["anthropic>=0.40"]
 

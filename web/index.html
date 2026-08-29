@@ -2,7 +2,17 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- `viewport-fit=cover` 가 있어야 아이폰 노치 아래까지 배경이 찬다.
+         `user-scalable=no` 는 쓰지 않는다 — 차트를 손가락으로 확대해야 한다. -->
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1117" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- iOS 는 manifest 의 아이콘을 무시하고 이걸 본다. -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="market-lens" />
     <title>market-lens</title>
   </head>
   <body>

@@ -14,6 +14,7 @@ import {
   SignalCard,
   SituationCard,
 } from "./components/Panels";
+import { AlertsPanel } from "./components/AlertsPanel";
 import { RECOMMEND_TIMEFRAME, ScreenPanel } from "./components/ScreenPanel";
 import { SymbolPicker } from "./components/SymbolPicker";
 import { useLive } from "./useLive";
@@ -36,13 +37,15 @@ const HORIZON = 10;
 // 실시간 구독이 받아오는 봉 수. 사건 조회도 같은 길이를 쓴다.
 const CHART_BARS = 600;
 
-type Tab = "signal" | "predict" | "screen" | "learn" | "indicators" | "research";
+type Tab = "signal" | "predict" | "screen" | "alerts" | "learn" | "indicators" | "research";
 
 // **되는 것부터 보이게 둔다.** 이 도구가 실제로 잘하는 건 "얼마나 움직일까"(밴드
 // 적중 82.2%, 추천의 변동 점수)지 "어느 쪽으로 갈까"(방향 55%)가 아니다.
 // 8시간 · 27,664판으로 잰 결과다 — docs/STUDY.md.
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: "screen", label: "추천" },
+  // 알림은 폰에서 제일 자주 여는 화면이라 앞에 둔다.
+  { key: "alerts", label: "알림" },
   { key: "predict", label: "예측" },
   { key: "learn", label: "학습" },
   { key: "signal", label: "판단" },
@@ -376,6 +379,11 @@ export default function App() {
             names={symbolNames}
             onProvider={(key) => switchProvider(key)}
           />
+        )}
+
+        {tab === "alerts" && (
+          <AlertsPanel provider={provider} symbol={symbol}
+                       onPick={(s) => selectSymbol(provider, s, RECOMMEND_TIMEFRAME)} />
         )}
 
         {tab === "learn" && (

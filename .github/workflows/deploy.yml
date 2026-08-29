@@ -1,0 +1,49 @@
+name: deploy
+
+# 코드를 밀면 배포판이 갱신된다. 사용자가 말한 "GitHub 에 올리고 폰에서 받는" 이
+# 실제로 도는 자리다 — 폰에는 홈 화면에 추가로 들어가고, 내용은 여기서 갱신된다.
+#
+# **비밀값은 저장소에 없다.** `fly secrets` 로만 올린다(토스 키·접속 토큰·VAPID).
+# 여기 필요한 건 배포 권한 하나뿐이다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "web/**"
+      - "pyproject.toml"
+      - "Dockerfile"
+      - "fly.toml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # 토큰이 없으면 조용히 건너뛴다. 배포를 안 쓰는 사람이 클론해도 CI 가 빨개지지 않는다.
+    if: ${{ github.repository_owner != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 배포 토큰이 있나
+        id: check
+        run: |
+          if [ -z "${{ secrets.FLY_API_TOKEN }}" ]; then
+            echo "FLY_API_TOKEN 이 없다 — 배포를 건너뛴다"
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.check.outputs.ready == 'yes'
+
+      - run: flyctl deploy --remote-only
+        if: steps.check.outputs.ready == 'yes'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

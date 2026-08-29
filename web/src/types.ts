@@ -558,3 +558,51 @@ export interface Recommend {
   measured?: { directionHit?: number; bandHit?: number; n?: number; directionN?: number };
   skipped?: Array<{ symbol: string; reason: string }>;
 }
+
+
+// --- 알림 -----------------------------------------------------------------
+
+/** 걸어 둔 규칙. `kind` 가 **어느 쪽에서 닿는지**를 정한다. */
+export interface AlertRule {
+  id: string;
+  provider: string;
+  symbol: string;
+  /** buy_below·stop_below 는 내려와서 닿을 때, sell_above·target_above 는 올라가서. */
+  kind: "buy_below" | "sell_above" | "stop_below" | "target_above";
+  price: number;
+  note: string;
+  source: "manual" | "recommend";
+  active: boolean;
+  /** 한 번 나가면 여기 시각이 박힌다. 다시 켜려면 사람이 되살려야 한다(폭주 방지). */
+  fired_at: string | null;
+  created_at: string;
+  band: [number, number] | null;
+  days: number | null;
+  /** 서버가 붙여 주는 한글 이름. 표에 없으면 티커 그대로. */
+  label: string;
+}
+
+/** 실제로 나간 알림 한 건. **지우지 않고** 보관 표시만 한다. */
+export interface AlertFired {
+  id: string;
+  ruleId?: string;
+  provider?: string;
+  symbol?: string;
+  kind?: string;
+  price?: number;
+  setPrice?: number;
+  title: string;
+  body: string;
+  at: string;
+  read: boolean;
+  archived: boolean;
+  batch?: boolean;
+}
+
+export interface AlertsView {
+  rules: AlertRule[];
+  fired: AlertFired[];
+  /** 지금이 조용한 시간인가. 손절 말고는 모아 뒀다 아침에 나간다. */
+  quiet: boolean;
+  push: { available: boolean; publicKey: string };
+}

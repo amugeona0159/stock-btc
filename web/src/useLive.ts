@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Candle, IndicatorResult, Requested, Signal } from "./types";
+import { withToken } from "./api";
 
 export type Status = "idle" | "connecting" | "live" | "error" | "static";
 
@@ -54,7 +55,8 @@ export function useLive({ provider, symbol, timeframe, indicators, enabled }: Op
     if (!enabled) return;
     const { protocol, host } = window.location;
     const scheme = protocol === "https:" ? "wss:" : "ws:";
-    const socket = new WebSocket(`${scheme}//${host}/ws`);
+    // **웹소켓은 헤더를 못 붙인다.** 토큰을 쿼리로 실어야 배포판에서 붙는다.
+    const socket = new WebSocket(withToken(`${scheme}//${host}/ws`));
     socketRef.current = socket;
     setState((s) => ({ ...s, status: "connecting", error: null }));
 

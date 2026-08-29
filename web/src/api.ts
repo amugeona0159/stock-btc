@@ -7,21 +7,93 @@ import type {
   SymbolNames,
 } from "./types";
 
+/**
+ * 접속 토큰. 배포판은 공개 주소라 이게 없으면 서버가 401 을 준다.
+ *
+ * 집에서 개발할 때는 서버가 토큰을 안 걸어 두므로(`MARKET_LENS_TOKEN` 미설정)
+ * 여기가 비어 있어도 그대로 돈다.
+ */
+const TOKEN_KEY = "market-lens-token";
+
+export function token(): string {
+  try {
+    return localStorage.getItem(TOKEN_KEY) ?? "";
+  } catch {
+    return "";                       // 사파리 프라이빗에서 localStorage 가 막힌다
+  }
+}
+
+export function setToken(value: string): void {
+  try {
+    if (value) localStorage.setItem(TOKEN_KEY, value);
+    else localStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* 못 저장해도 이번 세션은 돈다 */
+  }
+}
+
+export function authHeaders(): Record<string, string> {
+  const value = token();
+  return value ? { Authorization: `Bearer ${value}` } : {};
+}
+
+/** 웹소켓은 **헤더를 못 붙인다.** 토큰을 쿼리로 실어야 한다. */
+export function withToken(url: string): string {
+  const value = token();
+  if (!value) return url;
+  return url + (url.includes("?") ? "&" : "?") + `token=${encodeURIComponent(value)}`;
+}
+
+async function fail(res: Response): Promise<never> {
+  const detail = (await res.json().catch(() => null))?.detail;
+  if (res.status === 401) {
+    throw new Error(detail ?? "토큰이 필요하다 — 설정에서 넣을 것");
+  }
+  throw new Error(detail ?? res.statusText);
+}
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? res.statusText);
+  const res = await fetch(path, { headers: authHeaders() });
+  if (!res.ok) return fail(res);
   return res.json();
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.detail ?? res.statusText);
+  if (!res.ok) return fail(res);
   return res.json();
 }
+
+async function send<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) return fail(res);
+  return res.json();
+}
+
+export const alerts = {
+  list: () => get<import("./types").AlertsView>("/api/alerts"),
+  create: (body: {
+    provider: string; symbol: string; kind: string; price: number; note?: string;
+  }) => post<import("./types").AlertRule>("/api/alerts", body),
+  patch: (id: string, body: Record<string, unknown>) =>
+    send<import("./types").AlertRule>(`/api/alerts/${id}`, "PATCH", body),
+  remove: (id: string) => send<{ ok: boolean }>(`/api/alerts/${id}`, "DELETE"),
+  read: (id: string) => post<{ ok: boolean }>(`/api/alerts/fired/${id}/read`, {}),
+  archive: (id: string) => post<{ ok: boolean }>(`/api/alerts/fired/${id}/archive`, {}),
+  fromRecommendation: (provider: string, days: number) =>
+    post<{ made: import("./types").AlertRule[]; date?: string }>(
+      `/api/alerts/from-recommendation?provider=${provider}&days=${days}`, {}),
+  test: () => post<{ sent: number; subscriptions: number; push: boolean }>(
+    "/api/alerts/test", {}),
+};
 
 export const api = {
   providers: () => get<{ providers: ProviderInfo[] }>("/api/providers"),

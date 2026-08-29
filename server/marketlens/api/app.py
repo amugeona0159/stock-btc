@@ -6,7 +6,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -21,6 +23,10 @@ load_dotenv()  # 라우터가 환경변수를 읽기 전에 .env 를 올린다
 from ..core.series import IndicatorRequest, candles_payload, compute_requests  # noqa: E402
 from ..indicators import catalog  # noqa: E402
 from ..signals.engine import evaluate  # noqa: E402
+from ..alerts import push as push_layer  # noqa: E402
+from ..alerts.watch import Watcher  # noqa: E402
+from .alerts import router as alerts_router  # noqa: E402
+from .auth import guard  # noqa: E402
 from .routes import load_candles, router  # noqa: E402
 from .ws import hub  # noqa: E402
 
@@ -31,14 +37,43 @@ WEB_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
 # 봉이 닫히는 순간에는 무조건 계산하고, 그 사이에는 이 간격으로만.
 LIVE_RECOMPUTE_SECONDS = 1.5
 
-app = FastAPI(title="market-lens", version="0.1.0")
+# 폰에서 쓰려면 배포 주소에서도 붙어야 한다. `MARKET_LENS_ORIGINS` 로 더한다
+# (쉼표 구분). 없으면 개발용 두 개만 — **`*` 를 기본값으로 두지 않는다.**
+ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+ORIGINS += [o.strip() for o in (os.environ.get("MARKET_LENS_ORIGINS") or "").split(",")
+            if o.strip()]
+
+watcher = Watcher(push_layer.send)
+
+
+@contextlib.asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """알림 감시를 앱과 같이 켜고 끈다.
+
+    **켜는 조건을 둔다.** 알림 규칙이 없으면 시세를 부를 이유가 없고, 개발 중에
+    켜 두면 저장소의 알림 파일이 계속 자란다.
+    """
+    if (os.environ.get("MARKET_LENS_WATCH") or "").strip() == "1":
+        watcher.start()
+        log.info("알림 감시 시작")
+    try:
+        yield
+    finally:
+        await watcher.stop()
+
+
+app = FastAPI(title="market-lens", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# **토큰 검사는 CORS 뒤에 온다.** 순서가 바뀌면 브라우저가 401 을 CORS 오류로
+# 읽어서, 화면에는 "네트워크 오류" 만 뜨고 진짜 이유가 안 보인다.
+app.middleware("http")(guard)
 app.include_router(router)
+app.include_router(alerts_router)
 
 
 @app.get("/api/health")
@@ -153,4 +188,16 @@ if WEB_DIST.is_dir():
 
     @app.get("/{path:path}")
     def spa(path: str) -> FileResponse:
+        """실제 파일이 있으면 그걸 주고, 없으면 SPA 로 넘긴다.
+
+        **`/assets` 만 마운트해서는 부족하다.** `manifest.webmanifest`·`sw.js`·
+        아이콘은 `dist` **뿌리**에 놓이는데, 그것들까지 `index.html` 로 돌려주면
+        서비스 워커가 HTML 을 받아 등록에 실패한다 — 그러면 푸시가 통째로 안 온다.
+        실제로 그랬다.
+        """
+        candidate = (WEB_DIST / path).resolve()
+        # `..` 로 dist 밖을 못 나가게 한다.
+        inside = candidate.is_relative_to(WEB_DIST.resolve())
+        if path and inside and candidate.is_file():
+            return FileResponse(candidate)
         return FileResponse(WEB_DIST / "index.html")
