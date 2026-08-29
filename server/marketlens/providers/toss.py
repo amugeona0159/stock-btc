@@ -30,7 +30,7 @@ import pandas as pd
 
 from . import base
 from ..core.candle import Candle, resample, to_frame
-from ..core.timeframe import to_ms
+from ..core.timeframe import bar_closed, to_ms
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
                    ProviderUnavailable, SymbolCatalog, SymbolNotFound, register)
 
@@ -259,7 +259,8 @@ class TossProvider(Provider):
                 break
             # 응답은 최신부터 온다. 앞에 붙여 시간순으로 쌓는다.
             daily = interval == "1d"
-            rows = [self._row(c, step, now, self._tz if daily else None) for c in page] + rows
+            rows = [self._row(c, timeframe, now, self._tz if daily else None,
+                              self.info.market) for c in page] + rows
             before = result.get("nextBefore")
             if not before or len(rows) >= native_limit:
                 break
@@ -273,7 +274,8 @@ class TossProvider(Provider):
         return frame.tail(limit).reset_index(drop=True)
 
     @staticmethod
-    def _row(candle: dict, step: int, now: int, tz: str | None = None) -> dict:
+    def _row(candle: dict, timeframe: str, now: int, tz: str | None = None,
+             market: str = "") -> dict:
         # 가격이 문자열로 온다(소수 손실을 막으려는 것). float 로 바꾸는 건 여기 한 번뿐이다.
         ts = _to_ms(candle["timestamp"])
         if tz is not None:
@@ -287,7 +289,7 @@ class TossProvider(Provider):
             "low": float(candle["lowPrice"]),
             "close": float(candle["closePrice"]),
             "volume": float(candle.get("volume") or 0.0),
-            "closed": ts + step <= now,
+            "closed": bar_closed(ts, timeframe, now, market),
         }
 
     async def stream(self, symbol: str, timeframe: str) -> AsyncIterator[Candle]:

@@ -75,14 +75,14 @@ async def test_csv_provider_rejects_path_escape(tmp_path, monkeypatch):
 # --- 프로바이더별 순수 변환 --------------------------------------------------
 
 def test_binance_row_marks_the_forming_bar():
-    step = 60_000
     now = 1_700_000_120_000
     kline = [1_700_000_060_000, "10", "12", "9", "11", "100"]
-    row = BinanceProvider._row(kline, step, now)
+    row = BinanceProvider._row(kline, "1m", now, "crypto")
     assert row["ts"] == 1_700_000_060_000
     assert row["closed"] is True
 
-    forming = BinanceProvider._row([1_700_000_120_000, "10", "12", "9", "11", "100"], step, now)
+    forming = BinanceProvider._row(
+        [1_700_000_120_000, "10", "12", "9", "11", "100"], "1m", now, "crypto")
     assert forming["closed"] is False
 
 
@@ -97,7 +97,7 @@ def test_upbit_row_normalizes_field_names():
         "opening_price": 100.0, "high_price": 110.0,
         "low_price": 95.0, "trade_price": 105.0,
         "candle_acc_trade_volume": 12.5,
-    }, 3_600_000, 1_787_965_300_000)
+    }, "1h", 1_787_965_300_000, "crypto")
     assert row["open"] == 100.0 and row["close"] == 105.0
     assert row["volume"] == 12.5
     assert row["closed"] is True
@@ -199,7 +199,7 @@ def test_toss_row_parses_strings_and_offsets():
         "timestamp": "2026-03-25T09:30:00.000+09:00",
         "openPrice": "72000", "highPrice": "72500",
         "lowPrice": "71800", "closePrice": "72300", "volume": "1200",
-    }, step=60_000, now=1_800_000_000_000)
+    }, timeframe="1m", now=1_800_000_000_000, market="kr")
     # +09:00 09:30 = UTC 00:30
     assert pd.Timestamp(row["ts"], unit="ms", tz="UTC").hour == 0
     assert row["open"] == 72000.0 and row["close"] == 72300.0
@@ -214,5 +214,5 @@ def test_toss_marks_the_forming_bar():
     forming = TossProvider._row({
         "timestamp": stamp, "openPrice": "1", "highPrice": "1",
         "lowPrice": "1", "closePrice": "1", "volume": "0",
-    }, step=86_400_000, now=ts + 1000)
+    }, timeframe="1d", now=ts + 1000, market="kr")
     assert forming["closed"] is False

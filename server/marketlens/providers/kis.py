@@ -15,7 +15,7 @@ import httpx
 import pandas as pd
 
 from ..core.candle import Candle, resample, to_frame
-from ..core.timeframe import to_ms
+from ..core.timeframe import bar_closed, to_ms
 from . import base
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
                    ProviderUnavailable, register)
@@ -163,6 +163,12 @@ class KisProvider(Provider):
             if not item.get("stck_bsop_date"):
                 continue
             day = datetime.strptime(item["stck_bsop_date"], "%Y%m%d").replace(tzinfo=KST)
+            # 장중에도 그날 봉이 온다. 무조건 확정으로 넘기면 마지막 봉이 계속
+            # 바뀌면서 그 위에서 잰 성적이 전부 거짓이 된다(리페인팅).
+            # 마감 판정은 **현지 날짜**로 한다 — 아래 `ts` 는 KST 자정이라
+            # UTC 로는 전날 15:00 이고, 그걸 그대로 넘기면 하루 일찍 닫힌다.
+            local_day = int(datetime.strptime(item["stck_bsop_date"], "%Y%m%d")
+                            .replace(tzinfo=timezone.utc).timestamp() * 1000)
             rows.append({
                 "ts": int(day.timestamp() * 1000),
                 "open": float(item["stck_oprc"]),
@@ -170,7 +176,7 @@ class KisProvider(Provider):
                 "low": float(item["stck_lwpr"]),
                 "close": float(item["stck_clpr"]),
                 "volume": float(item.get("acml_vol") or 0.0),
-                "closed": True,
+                "closed": bar_closed(local_day, "1d", int(time.time() * 1000), "kr"),
             })
         return to_frame(rows[-limit:])
 
@@ -209,7 +215,8 @@ class KisProvider(Provider):
                     "low": float(item["stck_lwpr"]),
                     "close": float(item["stck_prpr"]),
                     "volume": float(item.get("cntg_vol") or 0.0),
-                    "closed": True,
+                    # 지금 만들어지는 분봉도 온다. 확정으로 넘기면 안 된다.
+                    "closed": bar_closed(ts, "1m", int(time.time() * 1000), "kr"),
                 })
                 oldest = item["stck_cntg_hour"] if oldest is None else min(oldest, item["stck_cntg_hour"])
             if oldest is None or oldest <= "090000":

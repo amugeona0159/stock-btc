@@ -15,7 +15,7 @@ import pandas as pd
 
 from . import base
 from ..core.candle import Candle, to_frame
-from ..core.timeframe import to_ms
+from ..core.timeframe import bar_closed, to_ms
 from .base import (CandleAggregator, Provider, ProviderError, ProviderInfo,
                    SymbolCatalog, SymbolNotFound, register)
 
@@ -99,7 +99,8 @@ class UpbitProvider(Provider):
                 if not batch:
                     break
                 tries = 0
-                rows = [self._row(c, step, now) for c in reversed(batch)] + rows
+                rows = [self._row(c, timeframe, now, self.info.market)
+                        for c in reversed(batch)] + rows
                 before = batch[-1]["candle_date_time_utc"]
                 if len(batch) < params["count"]:
                     break
@@ -109,7 +110,7 @@ class UpbitProvider(Provider):
         return to_frame(rows[-limit:])
 
     @staticmethod
-    def _row(candle: dict, step: int, now: int) -> dict:
+    def _row(candle: dict, timeframe: str, now: int, market: str = "") -> dict:
         open_ts = _parse_utc(candle["candle_date_time_utc"])
         return {
             "ts": open_ts,
@@ -118,7 +119,7 @@ class UpbitProvider(Provider):
             "low": float(candle["low_price"]),
             "close": float(candle["trade_price"]),
             "volume": float(candle["candle_acc_trade_volume"]),
-            "closed": open_ts + step <= now,
+            "closed": bar_closed(open_ts, timeframe, now, market),
         }
 
     async def stream(self, symbol: str, timeframe: str) -> AsyncIterator[Candle]:

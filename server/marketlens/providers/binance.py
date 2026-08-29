@@ -14,7 +14,7 @@ import pandas as pd
 
 from . import base
 from ..core.candle import Candle, to_frame
-from ..core.timeframe import to_ms
+from ..core.timeframe import bar_closed, to_ms
 from .base import (Provider, ProviderError, ProviderInfo, SymbolCatalog,
                    SymbolNotFound,
                    register)
@@ -81,7 +81,7 @@ class BinanceProvider(Provider):
                     raise ProviderError(f"Binance 에 연결하지 못했다: {exc}") from exc
                 if not batch:
                     break
-                rows = [self._row(k, step, now) for k in batch] + rows
+                rows = [self._row(k, timeframe, now, self.info.market) for k in batch] + rows
                 end = int(batch[0][0]) - 1
                 if len(batch) < want:
                     break
@@ -89,7 +89,7 @@ class BinanceProvider(Provider):
         return to_frame(rows[-limit:])
 
     @staticmethod
-    def _row(kline: list, step: int, now: int) -> dict:
+    def _row(kline: list, timeframe: str, now: int, market: str = "") -> dict:
         open_ts = int(kline[0])
         return {
             "ts": open_ts,
@@ -99,7 +99,7 @@ class BinanceProvider(Provider):
             "close": float(kline[4]),
             "volume": float(kline[5]),
             # 마지막 봉은 아직 자라는 중일 수 있다. 종료 시각이 지났는지로만 판단한다.
-            "closed": open_ts + step <= now,
+            "closed": bar_closed(open_ts, timeframe, now, market),
         }
 
     async def stream(self, symbol: str, timeframe: str) -> AsyncIterator[Candle]:

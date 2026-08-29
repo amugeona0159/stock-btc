@@ -26,6 +26,28 @@
 - 계약 위반은 `validate()` 가 문장으로 돌려준다. 프로바이더를 하나 더 만들면
   `tests/test_providers.py` 의 `assert_contract` 를 그대로 통과해야 한다.
 
+## 봉이 언제 끝나나 — 장 마감을 안다
+
+`ts + 봉길이 <= 지금` 은 암호화폐에는 맞지만 **주식에는 틀리다.** 코스피 일봉은
+15:30 KST 에 끝나는데 그 식으로는 다음날 09:00 KST 에야 닫힌다. 그 사이 예측·추천은
+하루 전 데이터로 돌아간다 — 실제로 29일 아침에 27일까지만 보고 예측하고 있었다.
+
+- 판정은 `core/timeframe.py: bar_closed` **한 곳**. 프로바이더마다 다시 적지 말 것.
+  `tests/test_session.py` 가 `+ step <= now` 를 프로바이더에서 찾으면 실패시킨다.
+- 두 규칙을 **OR** 로 묶는다: 시각 계산 **또는** 그날 정규장 마감(`SESSION_END`).
+  OR 인 게 중요하다 — 마감 표가 틀려도 시각 계산이 결국 닫으므로 **한 번 닫힌 봉이
+  다시 열리는 일은 없다.** 그게 뒤집히면 그 위에서 잰 성적이 전부 거짓이 된다.
+- 마감 뒤 `SETTLE_MS`(30분)를 더 기다린다. 종가·거래량이 확정돼 오기까지 몇 분 걸리고,
+  그 사이 값을 확정봉으로 쓰면 마지막 봉만 조용히 틀린다.
+- **일찍 닫는 게 늦게 닫는 것보다 나쁘다.** 모르는 시장은 시각 계산으로 두고, 장중
+  봉(1m~4h)은 마감을 안 본다.
+- 서머타임을 손으로 적지 말 것. `SESSION_END` 는 tz 이름(`America/New_York`)을 들고
+  있고 변환이 그걸 처리한다. 오프셋을 박으면 반년마다 틀린다.
+- 일봉 시각은 **현지 달력 날짜를 UTC 자정으로** 찍는 게 이 저장소의 약속이다
+  (`toss._local_day_ms`, 야후도 결과적으로 같다). `bar_closed` 가 그 약속 위에서
+  현지 날짜를 읽는다. KIS 만 아직 KST 자정(=UTC 전날 15:00)이라 격자를 벗어나 있고,
+  그래서 마감 판정에는 `stck_bsop_date` 를 따로 쓴다 — 고칠 자리다.
+
 ## 리페인팅 — 제일 중요한 규칙
 
 - **시그널 판정·백테스트·ML 라벨은 `closed_only()` 를 통과한 봉만 본다.** 미확정 봉을
@@ -384,7 +406,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 333개
+.venv/Scripts/python -m pytest server/tests -q      # 350개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b

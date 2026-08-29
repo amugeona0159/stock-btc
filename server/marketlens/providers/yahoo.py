@@ -17,7 +17,7 @@ import httpx
 import pandas as pd
 
 from ..core.candle import to_frame
-from ..core.timeframe import floor_ts, to_ms
+from ..core.timeframe import bar_closed, floor_ts, to_ms
 from . import base
 from .base import (Provider, ProviderError, ProviderInfo, ProviderUnavailable,
                    SymbolNotFound,
@@ -110,7 +110,7 @@ class YahooProvider(Provider):
                 "open": float(values[0]), "high": float(values[1]),
                 "low": float(values[2]), "close": float(values[3]),
                 "volume": float(quote.get("volume", [0])[i] or 0.0),
-                "closed": ts + step <= now_ms,
+                "closed": bar_closed(ts, timeframe, now_ms, self.info.market),
             })
         if not rows:
             raise ProviderError(f"'{symbol}' 응답에 쓸 수 있는 봉이 없다")
