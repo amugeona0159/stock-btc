@@ -136,3 +136,37 @@ def test_pbo_rejects_odd_or_tiny_split_counts():
     for bad in (3, 7, 2):
         with pytest.raises(ValueError):
             overfit.pbo(rng.standard_normal((240, 10)), splits=bad)
+
+
+# ------------------------------------------------------- 겹치는 라벨의 실질 표본
+
+def test_effective_n_divides_by_the_horizon():
+    """지평 10이면 행 30,000개가 독립 관측 3,000개다."""
+    assert overfit.effective_n(30_000, 10) == 3_000
+    assert overfit.effective_n(30_000, 1) == 30_000
+
+
+def test_effective_n_survives_edges():
+    assert overfit.effective_n(0, 10) == 0
+    assert overfit.effective_n(5, 10) == 1        # 0 을 내면 나누기에서 터진다
+    assert overfit.effective_n(100, 0) == 100
+
+
+def test_uniqueness_is_flat_when_every_bar_has_a_label():
+    """**표본 가중치를 안 넣은 근거.** 지평이 고정이고 봉마다 라벨이 하나면
+    고유도가 안쪽에서 완전히 일정하다 — 가중치를 줘도 학습이 안 달라진다.
+
+    이 성질이 깨지는 날(빠진 봉이 많은 종목을 들이는 날) 다시 재야 하므로 고정한다.
+    """
+    import numpy as np
+
+    horizon, total = 10, 500
+    count = np.zeros(total + horizon)
+    for start in range(total):
+        count[start:start + horizon] += 1
+    uniq = np.array([np.mean(1.0 / count[s:s + horizon]) for s in range(total)])
+    inner = uniq[horizon:-horizon]
+    # `std() == 0` 으로 쓰면 안 된다 — 값이 전부 같아도 분산 계산에서 1e-17 이 남는다.
+    # 하고 싶은 말은 "전부 같은 값" 이므로 그대로 쓴다.
+    assert (inner == inner[0]).all(), "안쪽 고유도가 일정하지 않다"
+    assert inner[0] == pytest.approx(1.0 / horizon)

@@ -397,12 +397,17 @@ async def run(budget: int, dry_run: bool, seed: int) -> list[dict]:
 
 
 def _row(key: str, record: Record) -> str:
+    from marketlens.forecast import overfit
+
     config = record.config
     setting = (f"지평{config['horizon']}·창{config['window']}·이웃{config['neighbours']}"
                f"·폴드{config['folds']}·동료{config['peer_count']}")
     skill = "—" if record.skill is None else f"{record.skill:+.4f}"
+    # **행 수를 그대로 적으면 표본이 열 배로 부풀어 보인다.** 지평 10이면 오늘 라벨과
+    # 내일 라벨이 9봉을 공유한다. 뭔가를 주장할 때 쓸 수 있는 건 실질 쪽이다.
+    real = overfit.effective_n(record.rows, int(config["horizon"]))
     return (f"| `{key}` | {skill} | {'O' if record.learned else 'X'} | {setting} | "
-            f"{record.rows:,} | {record.trials} | {record.promotions} |")
+            f"{record.rows:,} ({real:,}) | {record.trials} | {record.promotions} |")
 
 
 def write_summary(state: dict[str, Record], entries: list[dict]) -> None:
@@ -424,7 +429,7 @@ def write_summary(state: dict[str, Record], entries: list[dict]) -> None:
         "",
         "## 지금의 챔피언",
         "",
-        "| 대상 | skill | 기준선 넘음 | 설정 | 표본 | 시험 | 승격 |",
+        "| 대상 | skill | 기준선 넘음 | 설정 | 표본 (실질) | 시험 | 승격 |",
         "|---|---|---|---|---|---|---|",
     ]
     lines += [_row(key, record) for key, record in sorted(
@@ -445,6 +450,9 @@ def write_summary(state: dict[str, Record], entries: list[dict]) -> None:
         "## 이 숫자를 읽을 때",
         "",
         "- `skill` 은 **변동성 기준선 대비 개선율**이다. 0 이면 기준선과 같고, 음수면 더 나쁘다.",
+        "- `표본` 의 괄호 안이 **실질 표본 수**다. 지평이 10봉이면 오늘 라벨과 내일 라벨이",
+        "  9봉을 공유하므로, 행이 30,000개여도 독립인 관측은 3,000개 남짓이다.",
+        "  표본 수로 뭔가를 주장할 때는 괄호 안을 쓸 것.",
         "- 양수라고 방향을 맞힌다는 뜻이 아니다. 이득의 대부분은 밴드의 폭과 모양에서 나온다.",
         "- `시험` 횟수가 클수록 '이긴' 결과를 의심해야 한다. 같은 데이터로 수백 번 시험하면",
         "  그중 하나는 반드시 이긴다 — 그래서 이 숫자를 숨기지 않고 같이 적고,",

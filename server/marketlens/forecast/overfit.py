@@ -170,3 +170,26 @@ def pbo(matrix: np.ndarray, splits: int = 10) -> dict:
         "candidates": n,
         "medianLogit": float(np.median(array)),
     }
+
+
+def effective_n(rows: int, horizon: int) -> int:
+    """겹치는 라벨을 감안한 **실질 표본 수.**
+
+    지평이 10봉이면 오늘의 라벨과 내일의 라벨이 9봉을 공유한다. 행이 30,000개라도
+    독립인 관측은 3,000개 남짓이고, 표본 수로 뭔가를 주장할 때는 이쪽을 써야 한다.
+
+    López de Prado 의 '평균 고유도' 합이 곧 이 값이다. **이 저장소에서는 그 계산을
+    할 필요가 없다** — 지평이 고정이고 봉마다 라벨이 하나씩이라 고유도가 안쪽에서
+    정확히 1/지평 로 일정하기 때문이다. 재 봤다: 암호화폐 일봉 6종목에서 봉이
+    하나도 안 빠져 가중치 최대/최소가 **정확히 1.000** 이었다.
+
+    그래서 **표본 가중치는 넣지 않았다.** 전부 같은 값이라 학습이 달라질 수가 없다.
+    빠진 봉이 많은 계열(거래 정지, 신규 상장 직후)에서는 달라지므로, 유니버스에
+    그런 종목을 들이면 그때 다시 볼 것.
+
+    출처: López de Prado, M. *Advances in Financial Machine Learning*, Wiley 2018,
+    4장 Sample Weights (동시성 · 평균 고유도 · 순차 부트스트랩).
+    """
+    if rows <= 0 or horizon <= 1:
+        return max(rows, 0)
+    return max(1, int(rows / horizon))

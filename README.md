@@ -130,7 +130,7 @@ npm run dev
 ## 검증
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 453개
+.venv/Scripts/python -m pytest server/tests -q      # 456개
 cd web; npx tsc -b                                # 타입체크
 cd web; npm run shot                              # 실제 화면 PNG (서버 2개가 떠 있어야 함)
 
