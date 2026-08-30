@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-29T22:26:33+00:00",
+  "updated": "2026-08-30T22:26:35+00:00",
   "promoteMargin": 0.002,
   "champions": {
     "binance:BTCUSDT:15m": {
@@ -195,8 +195,8 @@
         "^GSPC",
         "^IXIC"
       ],
-      "updated": "2026-08-29T22:25:43+00:00",
-      "trials": 4,
+      "updated": "2026-08-30T22:26:35+00:00",
+      "trials": 6,
       "promotions": 0
     },
     "yahoo:AAPL:1h": {
@@ -311,8 +311,8 @@
         "XOM",
         "^IXIC"
       ],
-      "updated": "2026-08-29T22:23:45+00:00",
-      "trials": 2,
+      "updated": "2026-08-30T22:25:42+00:00",
+      "trials": 4,
       "promotions": 0
     }
   }
