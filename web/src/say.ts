@@ -278,3 +278,75 @@ export function afterWords(points: number[]): string | null {
   if (last > 0) return rising ? "그 뒤로 계속 올랐습니다" : "그 뒤로 올랐다가 힘이 빠졌습니다";
   return rising ? "내렸다가 돌아오는 중입니다" : "그 뒤로 계속 내렸습니다";
 }
+
+// --- 예측 (유사구간) -----------------------------------------------------
+
+/**
+ * 유사구간 예측을 한 문단으로.
+ *
+ * 이 예측은 "지금과 비슷했던 과거를 찾아 그때 이후를 본다" 하나다. 그래서 **사례가
+ * 몇 건이고 얼마나 비슷했나**가 답의 무게를 정한다 — 사례 셋짜리 60%와 스물짜리
+ * 60%는 다른 말이다(`analog/projection.py: diagnostics.reliable`).
+ *
+ * **답을 되풀이하지 않는다.** 위의 「답」 카드가 이미 "그래서 어떻게 갔나" 를 말하므로
+ * 여기는 **"그 답을 얼마나 믿을 만한가"** 만 맡는다 — 몇 건이고 얼마나 닮았나.
+ */
+export function analogWords(count: number, distance: number,
+                            reliable?: boolean): string[] {
+  const many = count >= 20 ? "제법 많습니다" : count >= 10 ? "그럭저럭 됩니다" : "적습니다";
+  // 거리는 z-정규화한 창끼리의 DTW 거리다. 작을수록 모양이 닮았다.
+  const close = distance < 0.2 ? "지금과 거의 판박이였습니다"
+    : distance < 0.4 ? "지금과 제법 닮았습니다"
+    : distance < 0.7 ? "지금과 어느 정도만 닮았습니다"
+    : "지금과 그리 닮지 않았습니다";
+  const out = [`비슷했던 자리를 ${count}건 찾았습니다 — 이 정도면 ${many}. 그중 가장 가까운 자리는 ${close}.`];
+
+  // **믿을 자리인지 먼저 말한다.** 이 도구가 제일 조심해야 하는 자리다 —
+  // 사례 셋짜리 60%와 스물짜리 60%는 다른 말이다.
+  out.push(reliable
+    ? "사례가 충분히 모였고 서로 비슷해서, 위 답의 **폭**은 읽을 만합니다."
+    : "**다만 사례가 적거나 서로 흩어져 있습니다.** 폭이 실제를 못 담고 있을 수 있으니 방향보다 폭을 보는 데만 쓰는 게 맞습니다.");
+  return out;
+}
+
+/** 밴드가 실제로 얼마나 맞았나(사례 하나를 빼고 만든 밴드가 그 사례를 덮었나). */
+export function coverageWords(coverage: number | null, target: number,
+                              widen: number): string | null {
+  if (coverage === null || !Number.isFinite(coverage)) return null;
+  const hit = outOfTen(coverage);
+  const goal = Math.round(target * 100);
+  const wide = widen > 1.01 ? ` 모자란 만큼 폭을 ${widen.toFixed(2)}배로 넓혔습니다.` : "";
+  return `사례 하나를 빼고 만든 폭이 그 사례를 ${hit} 덮었습니다 (목표 ${goal}%).${wide}`;
+}
+
+/**
+ * 이벤트 스터디를 말로. **`t 값 2.01 유의` 를 그대로 내보내지 않는다.**
+ *
+ * 그 표시가 뜻하는 것은 "우연으로 보기 어렵다" 이고, 아닐 때는 "우연일 수도 있다" 다.
+ * t값을 모르면 못 읽고, 알면 굳이 문장으로 안 읽는다 — 뜻을 풀고 숫자는 남긴다.
+ *
+ * `overlapping` 이면 그 판정 자체를 믿으면 안 된다. 사건 창이 겹치면 사건들이 독립이
+ * 아니라서 t 값이 실제보다 커진다.
+ */
+export function eventStudyWords(count: number, after: number, carPct: number | null,
+                                significant: boolean, hitRate: number | null,
+                                overlapping: boolean): string[] {
+  const car = carPct ?? 0;
+  const where = Math.abs(car) < 0.3 ? "평소와 별로 다르지 않았습니다"
+    : car > 0 ? `평소보다 ${car.toFixed(1)}% 더 갔습니다`
+    : `평소보다 ${Math.abs(car).toFixed(1)}% 덜 갔습니다`;
+  const out = [`같은 종류의 사건이 과거에 ${count}건 있었고, 그 뒤 ${after}봉 동안 ${where}.`];
+
+  if (overlapping) {
+    // **겹치면 판정을 믿을 수 없다.** 유의/유의하지 않음보다 이 말이 먼저다.
+    out.push("**다만 사건 창이 서로 겹칩니다.** 그러면 사건들이 서로 독립이 아니어서 " +
+             "이 차이가 실제보다 커 보입니다 — 우연인지 아닌지는 판단하지 않는 게 맞습니다.");
+  } else {
+    out.push(significant
+      ? "우연으로 보기는 어려운 차이입니다."
+      : "다만 우연히 그렇게 보일 수도 있는 정도라, 이것만으로는 말하기 어렵습니다.");
+  }
+  const hit = outOfTen(hitRate);
+  if (hit) out.push(`방향은 ${hit} 같은 쪽이었습니다.`);
+  return out;
+}

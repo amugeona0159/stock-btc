@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
 import type { AskResult, EventStudy, Evidence, Projection, ScenarioForm } from "../types";
+import { analogWords, coverageWords, eventStudyWords } from "../say";
+import { Numbers } from "./Numbers";
 
 const PRESETS: Array<{ label: string; hours: number }> = [
   { label: "1일", hours: 24 },
@@ -293,52 +295,58 @@ function ProjectionCard({ projection }: { projection: Projection }) {
   return (
     <section className="card">
       <h2>예측</h2>
-      <div className="rows">
-        <div className="row">
-          <span>사례 수</span>
-          <b>{projection.sampleCount}건</b>
-        </div>
-        <div className="row">
-          <span>중앙 경로</span>
-          <b>{pct(projection.expectedMovePct, 2)}</b>
-        </div>
-        <div className="row">
-          <span>상승 비중</span>
-          <b>{pct((projection.probUp ?? 0) * 100, 0)}</b>
-        </div>
-        <div className="row">
-          <span>가장 비슷한 정도</span>
-          <b>
-            {closeness(d.distanceMin)}
-            <span style={{ color: "var(--text-dim)" }}> ({d.distanceMin.toFixed(2)})</span>
-          </b>
-        </div>
-        <div className="row">
-          <span>밴드 적중률</span>
-          <b>
-            {d.coverage === null ? "—" : `${(d.coverage * 100).toFixed(0)}%`}
-            <span style={{ color: "var(--text-dim)" }}>
-              {" "}
-              / 목표 {(d.nominalCoverage * 100).toFixed(0)}%
-            </span>
-          </b>
-        </div>
-        {d.widenFactor > 1.01 && (
-          <div className="row">
-            <span>밴드 보정</span>
-            <b>×{d.widenFactor.toFixed(2)}</b>
-          </div>
-        )}
-      </div>
-      {!d.reliable && (
-        <p className="note warn">
-          사례가 적거나 흩어져 있다. 밴드가 실제 분포를 못 담고 있을 수 있으니
-          방향보다 폭을 보는 데 쓸 것.
+      {/* **몇 건인지가 답의 무게다.** 사례 셋짜리 60%와 스물짜리 60%는 다른 말인데,
+          `사례 수 12건` 이라고만 적혀 있으면 그 무게가 안 읽힌다. */}
+      {analogWords(projection.sampleCount, d.distanceMin,
+                   d.reliable).map((line, i) => (
+        <p className="plain" key={i} style={{ marginTop: i === 0 ? 0 : 4 }}>
+          {line.split("**").map((part, j) => (j % 2 === 1 ? <b key={j}>{part}</b> : part))}
         </p>
+      ))}
+      {coverageWords(d.coverage, d.nominalCoverage, d.widenFactor) && (
+        <p className="plain">{coverageWords(d.coverage, d.nominalCoverage, d.widenFactor)}</p>
       )}
+      <Numbers>
+        <div className="rows">
+          <div className="row">
+            <span>사례 수</span>
+            <b>{projection.sampleCount}건</b>
+          </div>
+          <div className="row">
+            <span>중앙 경로</span>
+            <b>{pct(projection.expectedMovePct, 2)}</b>
+          </div>
+          <div className="row">
+            <span>상승 비중</span>
+            <b>{pct((projection.probUp ?? 0) * 100, 0)}</b>
+          </div>
+          <div className="row">
+            <span>가장 비슷한 정도</span>
+            <b>
+              {closeness(d.distanceMin)}
+              <span style={{ color: "var(--text-dim)" }}> ({d.distanceMin.toFixed(2)})</span>
+            </b>
+          </div>
+          <div className="row">
+            <span>밴드 적중률</span>
+            <b>
+              {d.coverage === null ? "—" : `${(d.coverage * 100).toFixed(0)}%`}
+              <span style={{ color: "var(--text-dim)" }}>
+                {" "}/ 목표 {(d.nominalCoverage * 100).toFixed(0)}%
+              </span>
+            </b>
+          </div>
+          {d.widenFactor > 1.01 && (
+            <div className="row">
+              <span>밴드 보정</span>
+              <b>×{d.widenFactor.toFixed(2)}</b>
+            </div>
+          )}
+        </div>
+      </Numbers>
       <p className="formula" style={{ marginBottom: 0 }}>
-        회색 얇은 선이 과거 사례의 실제 경로, 파란 점선이 그 중앙값, 옅은 파란 선이
-        10·25·75·90% 구간이다. 노란 점선은 같은 종류의 사건 이후 평균 경로.
+        차트의 회색 얇은 선이 과거 사례의 실제 경로, 파란 점선이 그 중앙값, 옅은 파란
+        선이 10·25·75·90% 구간이다. 노란 점선은 같은 종류의 사건 이후 평균 경로.
       </p>
     </section>
   );
@@ -374,38 +382,44 @@ function EventStudyCard({ study }: { study: EventStudy }) {
   if (!study.available) return null;
   return (
     <section className="card">
-      <h2>사건 이후 (이벤트 스터디)</h2>
-      <div className="rows">
-        <div className="row">
-          <span>사건 수</span>
-          <b>{study.count}건</b>
-        </div>
-        <div className="row">
-          <span>{study.after}봉 뒤 누적 초과수익</span>
-          <b style={{ color: (study.finalCarPct ?? 0) >= 0 ? "var(--up)" : "var(--down)" }}>
-            {pct(study.finalCarPct, 2)}
-          </b>
-        </div>
-        <div className="row">
-          <span>t 값</span>
-          <b>
-            {study.finalTStat?.toFixed(2)}{" "}
-            <span style={{ color: study.significant ? "var(--up)" : "var(--text-dim)" }}>
-              {study.significant ? "유의" : "유의하지 않음"}
-            </span>
-          </b>
-        </div>
-        <div className="row">
-          <span>방향 일치율</span>
-          <b>{pct((study.hitRate ?? 0) * 100, 0)}</b>
-        </div>
-      </div>
-      {study.overlapping && (
-        <p className="note warn">
-          사건 창이 서로 겹친다. 겹치면 사건들이 독립이 아니라서 t 값이 실제보다 커진다 —
-          유의하다는 표시를 그대로 믿지 말 것.
+      <h2>사건 이후</h2>
+      {/* **`t 값 2.01 유의` 를 그대로 내보내지 않는다.** 그 표시가 뜻하는 것은
+          "우연으로 보기 어렵다" 인데, t값을 모르면 못 읽고 알면 굳이 문장으로 안 읽는다.
+          뜻을 풀고 숫자는 아래 접어 둔다. */}
+      {eventStudyWords(study.count ?? 0, study.after ?? 0, study.finalCarPct ?? null,
+                       Boolean(study.significant), study.hitRate ?? null,
+                       Boolean(study.overlapping)).map((line, i) => (
+        <p className="plain" key={i} style={{ marginTop: i === 0 ? 0 : 4 }}>
+          {line.split("**").map((part, j) => (j % 2 === 1 ? <b key={j}>{part}</b> : part))}
         </p>
-      )}
+      ))}
+      <Numbers>
+        <div className="rows">
+          <div className="row">
+            <span>사건 수</span>
+            <b>{study.count}건</b>
+          </div>
+          <div className="row">
+            <span>{study.after}봉 뒤 누적 초과수익 (CAR)</span>
+            <b style={{ color: (study.finalCarPct ?? 0) >= 0 ? "var(--up)" : "var(--down)" }}>
+              {pct(study.finalCarPct, 2)}
+            </b>
+          </div>
+          <div className="row">
+            <span>t 값</span>
+            <b>
+              {study.finalTStat?.toFixed(2)}{" "}
+              <span style={{ color: study.significant ? "var(--up)" : "var(--text-dim)" }}>
+                {study.significant ? "유의" : "유의하지 않음"}
+              </span>
+            </b>
+          </div>
+          <div className="row">
+            <span>방향 일치율</span>
+            <b>{pct((study.hitRate ?? 0) * 100, 0)}</b>
+          </div>
+        </div>
+      </Numbers>
     </section>
   );
 }

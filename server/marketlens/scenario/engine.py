@@ -133,33 +133,44 @@ def _event_path(car_profile: dict, last_close: float, last_ts: int, timeframe: s
 
 
 def summarize(scenario: Scenario, forecast: dict, car: dict, matched: int) -> str:
-    """숫자를 사람 문장으로. 단정하지 않는다 — 근거의 크기를 같이 말한다."""
+    """숫자를 사람 문장으로. 단정하지 않는다 — 근거의 크기를 같이 말한다.
+
+    **이 답을 읽는 사람이 t값·유의성을 공부했을 이유가 없다.** 예전에는
+    `그 차이는 통계적으로 유의하다(t=+2.01)` 로 나갔는데, 그걸 모르면 읽을 수 없고
+    알면 굳이 문장으로 안 읽는다. 뜻을 풀어 쓰고 숫자는 `t값` 그대로 괄호에 남긴다 —
+    지우면 확인할 길이 없어진다.
+    """
     if not forecast.get("available"):
-        return f"{scenario.horizon_text} 뒤를 볼 만한 과거 사례를 찾지 못했다."
+        return f"{scenario.horizon_text} 뒤를 볼 만한 과거 사례를 찾지 못했습니다."
 
     move = forecast["expectedMovePct"]
     prob = forecast["probUp"] * 100
     count = forecast["sampleCount"]
     reliable = forecast["diagnostics"]["reliable"]
 
+    where = ("거의 제자리였습니다" if abs(move) < 0.5
+             else f"{abs(move):.1f}% {'올랐습니다' if move > 0 else '내렸습니다'}")
     parts = [
-        f"비슷했던 과거 {count}건을 기준으로 {scenario.horizon_text} 뒤 중앙값은 "
-        f"{move:+.2f}%, 상승 쪽이 {prob:.0f}% 다."
+        f"지금과 비슷했던 과거 {count}건을 찾았고, 그 뒤 {scenario.horizon_text} 동안 "
+        f"가운데쯤이 {where}. 그중 {prob:.0f}%가 오른 자리였습니다."
     ]
     if scenario.event_kinds or scenario.event_tags:
         if matched:
-            parts.append(f"조건에 맞는 사건 {matched}건이 후보를 좁혔다.")
+            parts.append(f"사건 조건에 맞는 자리 {matched}건으로 후보를 좁혔습니다.")
         else:
-            parts.append("다만 조건에 맞는 사건이 과거에 없어 사건 조건은 적용되지 않았다.")
+            parts.append("다만 조건에 맞는 사건이 과거에 없어 사건 조건은 적용하지 못했습니다.")
     if car.get("available"):
-        sign = "위" if car["finalCarPct"] > 0 else "아래"
-        verdict = "통계적으로 유의하다" if car["significant"] else "통계적으로 유의하지 않다"
+        sign = "더 갔습니다" if car["finalCarPct"] > 0 else "덜 갔습니다"
+        # "유의하다/않다" 를 그대로 쓰지 않는다. 그 말이 뜻하는 것은 "우연으로 보기
+        # 어렵다" 이고, 아닐 때는 "우연일 수도 있다" 다.
+        verdict = ("우연으로 보기는 어려운 차이입니다" if car["significant"]
+                   else "다만 우연히 그렇게 보일 수도 있는 정도입니다")
         parts.append(
-            f"같은 종류의 사건 {car['count']}건에서는 이후 평균이 정상 수익률보다 "
-            f"{abs(car['finalCarPct']):.2f}% {sign}였고, 그 차이는 {verdict}(t={car['finalTStat']:+.2f})."
+            f"같은 종류의 사건 {car['count']}건에서는 그 뒤 평소보다 "
+            f"{abs(car['finalCarPct']):.2f}% {sign} — {verdict}(t={car['finalTStat']:+.2f})."
         )
     if not reliable:
-        parts.append("사례가 적거나 흩어져 있어 이 숫자는 참고 수준으로만 볼 것.")
+        parts.append("사례가 적거나 서로 흩어져 있어, 방향보다 폭을 보는 데만 쓰는 게 맞습니다.")
     return " ".join(parts)
 
 

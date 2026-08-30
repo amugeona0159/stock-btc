@@ -223,7 +223,8 @@ button:disabled { opacity: 0.4; cursor: default; }
 
 /* 사람 말로 쓴 설명. 이 화면에서 **먼저 읽히는 줄**이라 본문 크기로 두고,
    숫자보다 밝게 둔다 — 반대로 하면 결국 숫자부터 읽게 된다. */
-.plain { color: var(--text); font-size: 12px; line-height: 1.55; margin: 2px 0 0; }
+/* 아래 여백을 조금 준다. 없으면 다음 칸 제목이 문장에 붙어 한 덩어리로 읽힌다. */
+.plain { color: var(--text); font-size: 12px; line-height: 1.55; margin: 2px 0 5px; }
 
 /* 접어 둔 숫자(`components/Numbers.tsx`). 여는 글자는 눈에 안 띄어야 한다 —
    설명을 다 읽고 그래도 궁금할 때 찾는 자리지, 먼저 누르라고 있는 게 아니다. */

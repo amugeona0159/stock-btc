@@ -366,9 +366,16 @@ export function EvidenceLibrary({ entries }: { entries: Evidence[] }) {
   return (
     <section className="card">
       <h2>근거 등록부 ({entries.length})</h2>
-      <p className="formula" style={{ marginTop: 0 }}>
-        이 프로그램이 쓰는 방법론과 그 출처다. '논쟁 중' 표시는 실제로 반대 결론을 낸
-        연구가 있다는 뜻이다 — 감추지 않는다.
+      {/* 이 화면은 원래부터 **주장 → 효과 → 한계 → 출처** 로 말이 먼저다.
+          머리말만 사람에게 하는 말투로 맞춘다. */}
+      <p className="plain" style={{ marginTop: 0 }}>
+        이 프로그램이 기대고 있는 방법론과 그 출처입니다. 줄을 누르면 <b>무엇이
+        밝혀졌는지</b>와 <b>어디까지만 통하는지</b>가 같이 나옵니다.
+      </p>
+      <p className="plain">
+        앞의 표시가 그 방법이 얼마나 단단한지입니다. <b>논쟁 중</b>은 실제로 반대
+        결론을 낸 연구가 있다는 뜻입니다 — 감추지 않습니다. 기술적 분석의 예측력은
+        원래 논쟁적이라, 다 강하다고 적으면 이 목록이 장식이 됩니다.
       </p>
       {fields.map((field) => (
         <div key={field}>
