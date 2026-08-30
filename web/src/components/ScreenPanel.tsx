@@ -390,13 +390,17 @@ function RecordCard({ groups, days }: { groups: RecommendGroup[]; days: number }
             const r = g.record;
             return (
               <div className="row" key={g.key}>
-                <span>{g.label}</span>
+                {/* 이름 칸이 줄어들면 두 글자 라벨이 세로로 쪼개진다("코/인").
+                    `.tabs` 에서 이미 한 번 겪은 함정이라 여기서도 못 줄이게 못 박는다. */}
+                <span style={{ whiteSpace: "nowrap", flex: "none" }}>{g.label}</span>
                 {r && r.n > 0 ? (
-                  <b style={{ color: (r.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+                  <b style={{ textAlign: "right",
+                              color: (r.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
                     {signed(r.edgePct)}%p
-                    <span style={{ color: "var(--text-dim)" }}>
-                      {" "}· 밴드 {pct(r.bandHit, 1)} · {r.n}판
-                      {!r.enough && " (30일은 있어야 성적이다)"}
+                    <span style={{ display: "block", color: "var(--text-dim)",
+                                   fontSize: 11 }}>
+                      밴드 {pct(r.bandHit, 1)} · {r.n}판
+                      {!r.enough && " · 30일은 있어야"}
                     </span>
                   </b>
                 ) : (
@@ -425,8 +429,8 @@ function RecordCard({ groups, days }: { groups: RecommendGroup[]; days: number }
               const read = held ?? b;
               return (
                 <div className="row" key={g.key}>
-                  <span>
-                    {g.label}
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ whiteSpace: "nowrap" }}>{g.label}</span>
                     <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
                       {b.from} ~ {b.to}
                       {held ? ` · 안 본 구간 ${held.n}판` : ` · ${b.n}판`}
