@@ -728,31 +728,31 @@
 - 고쳤으면 `.venv/Scripts/python -m pytest server/tests/test_positions.py -q` 와
   `cd web; $env:SHOT_ONLY="hold"; npm run shot` → `screenshots/chart-hold.png`.
 
-## 배포와 토스
-- 공개 주소에 올리므로 **`MARKET_LENS_TOKEN` 이 없으면 안 된다.** 없으면 라우트
-  스물다섯 개가 전부 열린다. 로컬에서는 미설정이 기본이라 개발이 안 불편하다.
-- **토스는 한 번에 한 쪽만 쓴다.** 클라이언트당 토큰이 하나라, 배포판과 집 PC 가 같은
-  자격증명을 같이 쓰면 서로 401 을 주고받으며 **양쪽 다 국내주식이 빈다.**
-  지금 쓰는 쪽은 **집 PC** 다(`scripts/recommend.cmd` 가 `toss_kr`·`toss_us` 를 넘긴다).
-  국내주식 추천을 낼 수 있는 데가 여기뿐이기 때문이다 — Actions 는 IP 허용목록에
-  막혀 못 돌고, 그래서 여기서 빼면 화면의 국내주식 묶음이 영영 빈다.
-  **배포판에서 토스를 켜려면 이쪽을 먼저 꺼야 한다.**
+## 배포하지 않는다 — 이 PC 한 대로 돈다
+
+한동안 Fly.io 배포가 준비돼 있었다(`fly.toml`·`Dockerfile`·`deploy.yml`). **지웠다.**
+`FLY_API_TOKEN` 이 없어 실제로 한 번도 배포된 적이 없었고, 안 쓰기로 했기 때문이다.
+되살릴 일이 생기면 git 에서 꺼내면 되지만, **반쯤 되살리지는 말 것** — 그 셋이 다
+맞아야 화면이 기록을 읽는다(이미지가 `learning/` 을 담고, 배포 트리거가 `learning/**`
+을 보고, 컨텍스트에서 무거운 것을 빼야 한다). 하나만 빠지면 화면이 "아직 없다"고만
+말하고 왜 없는지는 어디에도 안 나온다. 실제로 그 상태였다.
+
+- **토스는 이 PC 가 쓴다.** 클라이언트당 토큰이 하나라 두 곳이 같이 쓰면 서로 401 을
+  주고받으며 양쪽 다 국내주식이 빈다. 지금은 쓰는 데가 여기뿐이라 문제가 없다
+  (`scripts/recommend.cmd` 가 `toss_kr`·`toss_us` 를 넘긴다). Actions 는 IP 허용목록에
+  막혀 못 돈다 — 그래서 국내주식 추천은 이 PC 에서만 나온다.
   (한동안 이 자리에 "그래서 `recommend.cmd` 에서 뺐다"고 적혀 있었는데 그 파일은
   만들어질 때부터 토스를 넘기고 있었다. **하려던 것을 한 것처럼 적으면 안 된다** —
   문서가 코드보다 오래 살아서, 읽는 사람이 확인 없이 믿는다.)
-- **배포판은 이미지에 든 `learning/` 을 읽는다.** `api/learning.py`·`api/recommend.py`
-  는 저장소 뿌리 기준으로 읽지 `MARKET_LENS_LEARNING` 을 안 본다(그건 스크립트용이고
-  서버는 학습을 안 돌린다). 그래서 Dockerfile 이 `learning/` 을 넣고 `deploy.yml` 이
-  `learning/**` 을 지켜본다 — 둘 중 하나만 빠져도 배포판에서 추천·챔피언·성적이
-  통째로 비는데, 화면은 "아직 없다"고만 말해서 원인이 안 보인다.
-- **`.dockerignore` 를 지우지 말 것.** `flyctl deploy --remote-only` 는 컨텍스트를
-  통째로 올린다 — 빼 두지 않으면 `.venv`·모델·개인 기록(`alerts/`)까지 매번 올라간다.
-- **배포는 `FLY_API_TOKEN` 시크릿이 있어야 실제로 돈다.** 없으면 아무것도 안 하고
-  초록불로 끝나므로, 실행 요약에 "배포 안 함"을 적어 눈에 띄게 해 뒀다.
-  토큰은 사람이 넣어야 한다.
-- 토스가 붙으려면 **Fly 고정 IPv4 를 토스 콘솔 허용목록에 등록**해야 한다
-  (`fly ips allocate-v4`). 이건 계정 설정이라 사람이 해야 한다.
-- `auto_stop_machines = false`. 인스턴스가 자면 **감시 루프가 멈춰 알림이 안 나간다.**
+- **`MARKET_LENS_TOKEN` 은 안 켜도 된다.** 미설정이 기본이고, 그때는 잠그지 않는다.
+  이 서버를 집 밖(공개 주소·LAN·터널)으로 내보내는 날이 오면 **그때 반드시 켠다** —
+  없으면 라우트 스물다섯 개가 전부 열리고, 학습을 돌리는 `POST /api/train` 과 토스
+  자격증명으로 부르는 국내주식이 같이 열린다.
+- **폰 앱(PWA)과 웹푸시는 사실상 잠들었다.** iOS 웹푸시는 HTTPS 보안 컨텍스트와
+  홈 화면 추가가 둘 다 필요한데, `localhost` 밖에서 그걸 만들 자리가 없어졌다.
+  **코드는 지우지 않았다** — 감시 루프(`MARKET_LENS_WATCH=1`)는 이 PC 에서 그대로
+  돌고 알림함·기록은 화면에서 읽힌다. 폰으로 받고 싶어지면 배포를 되살리는 게
+  제일 짧은 길이다.
 
 ## 종목 이름은 한글로, 표는 한 벌
 - `AAPL`·`005930`·`SOLUSDT` 는 사람이 읽는 이름이 아니다. 추천은 이 도구에서 제일
@@ -852,7 +852,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 549개
+.venv/Scripts/python -m pytest server/tests -q      # 546개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/backfill.py --summary            # 되돌려 본 추천 성적
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정

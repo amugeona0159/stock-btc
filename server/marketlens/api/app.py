@@ -38,7 +38,7 @@ WEB_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"
 # 봉이 닫히는 순간에는 무조건 계산하고, 그 사이에는 이 간격으로만.
 LIVE_RECOMPUTE_SECONDS = 1.5
 
-# 폰에서 쓰려면 배포 주소에서도 붙어야 한다. `MARKET_LENS_ORIGINS` 로 더한다
+# 다른 주소(LAN·터널)에서 열 일이 생기면 `MARKET_LENS_ORIGINS` 로 더한다
 # (쉼표 구분). 없으면 개발용 두 개만 — **`*` 를 기본값으로 두지 않는다.**
 ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 ORIGINS += [o.strip() for o in (os.environ.get("MARKET_LENS_ORIGINS") or "").split(",")
