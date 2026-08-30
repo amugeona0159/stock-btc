@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 
 import { learn } from "../api";
 import type { GateStatus, Learned, LearningState, TrainReport } from "../types";
+import { bandWords, directionWords } from "../say";
+import { Numbers } from "./Numbers";
 
 const HORIZONS = [
   { label: "5봉", value: 5 },
@@ -94,63 +96,70 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
       {learned?.available && (
         <section className="card">
           <h2>학습 예측</h2>
-          <div className="rows">
-            {/* **폭이 먼저다.** 채점해 보면 밴드는 82% 로 맞고 방향은 55% 다.
-                방향을 위에 두면 이 화면이 실제보다 잘하는 것처럼 읽힌다. */}
-            {band !== null && (
+          {/* **폭이 먼저다.** 채점해 보면 밴드는 잘 맞고 방향은 반반에 가깝다.
+              방향을 위에 두면 이 화면이 실제보다 잘하는 것처럼 읽힌다. */}
+          {band !== null && (
+            <p className="plain" style={{ marginTop: 0 }}>
+              배운 대로라면 {learned.horizon}봉 뒤에 <b>지금 값에서 ±{band.toFixed(1)}%</b>
+              {" "}안에 있을 가능성이 큽니다.
+              {coverage !== undefined && bandWords(coverage) && (
+                <>
+                  {" "}이 모델은 지금까지 {bandWords(coverage)}
+                  {coverage >= 0.75
+                    ? " — 목표만큼 맞고 있습니다."
+                    : " — 목표보다 덜 맞고 있어 그만큼 덜 믿을 값입니다."}
+                </>
+              )}
+            </p>
+          )}
+          {/* 방향은 이 도구가 약한 쪽이다. **말로 한 줄만 내고 숫자는 접는다** —
+              표로 늘어놓으면 폭과 같은 무게로 읽힌다. */}
+          <p className="plain">
+            {directionWords(learned.probUp)}.
+            {learned.abstain
+              ? " 그래서 방향은 말하지 않습니다."
+              : learned.directionBeatsBaseline === false
+                ? " 다만 이 모델의 방향은 기준선을 못 넘어 참고만 할 값입니다."
+                : ""}
+          </p>
+          <Numbers>
+            <div className="rows">
               <div className="row">
-                <span>{learned.horizon}봉 뒤 변동 폭 (80%)</span>
-                <b style={{ fontSize: 15 }}>±{band.toFixed(2)}%</b>
+                <span>현재 변동성 (ATR)</span>
+                <b>{learned.atrPct}%</b>
               </div>
-            )}
-            {coverage !== undefined && (
               <div className="row">
-                <span>이 모델의 밴드 실제 적중</span>
-                <b style={{ color: coverage >= 0.75 ? "var(--up)" : "var(--warn)" }}>
-                  {pct(coverage, 1)}
-                  <span style={{ color: "var(--text-dim)" }}> · 목표 80%</span>
+                <span>쓰고 있는 것</span>
+                <b style={{ color: learned.source === "blend" ? "var(--up)" : "var(--warn)" }}>
+                  {learned.sourceLabel}
                 </b>
               </div>
-            )}
-            <div className="row">
-              <span>현재 변동성 (ATR)</span>
-              <b>{learned.atrPct}%</b>
-            </div>
-            <div className="row">
-              <span>쓰고 있는 것</span>
-              <b style={{ color: learned.source === "blend" ? "var(--up)" : "var(--warn)" }}>
-                {learned.sourceLabel}
-              </b>
-            </div>
-          </div>
-
-          <div className="group-label">방향 (참고 · 55%)</div>
-          <div className="rows" style={{ color: "var(--text-dim)" }}>
-            <div className="row">
-              <span>{learned.horizon}봉 뒤 중앙</span>
-              <b>
-                {learned.expectedMovePct !== undefined && learned.expectedMovePct !== null
-                  ? `${learned.expectedMovePct >= 0 ? "+" : ""}${learned.expectedMovePct.toFixed(2)}%`
-                  : "—"}
-              </b>
-            </div>
-            <div className="row">
-              <span>상승 비중</span>
-              <b>{pct(learned.probUp, 0)}</b>
-            </div>
-            {learned.direction !== undefined && !learned.abstain && (
               <div className="row">
-                <span>방향 분류</span>
+                <span>{learned.horizon}봉 뒤 중앙</span>
                 <b>
-                  {learned.direction === 1 ? "상승" : learned.direction === -1 ? "하락" : "중립"}{" "}
-                  {pct(learned.directionConfidence, 0)}
-                  {learned.directionBeatsBaseline === false && (
-                    <span style={{ color: "var(--down)" }}> · 기준선 이하</span>
-                  )}
+                  {learned.expectedMovePct !== undefined && learned.expectedMovePct !== null
+                    ? `${learned.expectedMovePct >= 0 ? "+" : ""}${learned.expectedMovePct.toFixed(2)}%`
+                    : "—"}
                 </b>
               </div>
-            )}
-          </div>
+              <div className="row">
+                <span>상승 비중</span>
+                <b>{pct(learned.probUp, 0)}</b>
+              </div>
+              {learned.direction !== undefined && !learned.abstain && (
+                <div className="row">
+                  <span>방향 분류</span>
+                  <b>
+                    {learned.direction === 1 ? "상승" : learned.direction === -1 ? "하락" : "중립"}{" "}
+                    {pct(learned.directionConfidence, 0)}
+                    {learned.directionBeatsBaseline === false && (
+                      <span style={{ color: "var(--down)" }}> · 기준선 이하</span>
+                    )}
+                  </b>
+                </div>
+              )}
+            </div>
+          </Numbers>
           {learned.abstain && (
             <p className="note warn">
               <b>방향은 말하지 않는다.</b> {learned.abstainReason}
@@ -185,46 +194,64 @@ function AutoLearnCard() {
   return (
     <section className="card">
       <h2>매일 도는 자동 학습</h2>
-      <p className="formula" style={{ marginTop: 0 }}>
-        매일 한 번, 챔피언을 새 데이터로 다시 굽고 설정을 <b>하나만</b> 흔든 도전자와
-        겨룬다. 도전자가 {signed(state.promoteMargin ?? 0.002)} 이상 이길 때만 갈아끼운다 —
-        마진이 없으면 잡음으로 매일 모델이 바뀐다.
+      {/* **말이 먼저.** 이 카드는 원래 skill 숫자 표였는데, 그 값이 무슨 뜻인지
+          아는 사람에게만 읽히는 화면이었다. 무슨 일이 있었는지를 문장으로 먼저 낸다. */}
+      <p className="plain" style={{ marginTop: 0 }}>
+        매일 한 번, 지금 쓰는 모델을 새 자료로 다시 굽고 설정을 <b>하나만</b> 바꾼
+        모델과 겨룹니다. 뚜렷하게 이겼을 때만 갈아끼웁니다 — 아니면 잡음만으로 매일
+        모델이 바뀝니다.
       </p>
-      <div className="rows">
-        <div className="row">
-          <span>마지막 실행</span>
-          <b>{state.updated?.slice(0, 16).replace("T", " ") ?? "—"}</b>
-        </div>
-        <div className="row">
-          <span>추적 대상</span>
-          <b>
-            {state.tracked}개{" "}
-            <span style={{ color: "var(--text-dim)" }}>· 기준선 넘음 {state.learned}개</span>
-          </b>
-        </div>
-        <div className="row">
-          <span>누적 시험 / 승격</span>
-          <b>
-            {state.trials}번 <span style={{ color: "var(--text-dim)" }}>/ {state.promotions}번</span>
-          </b>
-        </div>
-      </div>
-
-      <div className="group-label">지금의 챔피언</div>
-      <div className="rows">
-        {top.map((item) => (
-          <div className="row" key={item.target}>
-            <span>
-              {short(item.target)}
-              <span style={{ color: "var(--text-dim)" }}> 지평 {item.config.horizon}</span>
-            </span>
-            <b style={{ color: item.learned ? "var(--up)" : "var(--text-dim)" }}>
-              {signed(item.skill ?? undefined, 4)}
-              <span style={{ color: "var(--text-dim)" }}> · {item.trials}회</span>
+      <p className="plain">
+        지켜보는 {state.tracked}자리 가운데 <b>{state.learned}자리</b>에서 배운 것이
+        쓸모가 있었습니다.
+        {/* 남는 자리가 없을 때 "나머지는" 이라고 쓰면 없는 것을 있다고 말하게 된다. */}
+        {state.tracked > state.learned
+          ? <> 나머지는 <b>배운 걸 쓰지 않고</b> 기본값으로 답합니다 — 못 이긴 모델을
+              쓰면 더 나쁜 답이 나오기 때문입니다.</>
+          : <> 못 이긴 자리가 생기면 그 자리는 배운 걸 쓰지 않고 기본값으로 답합니다.</>}
+        {state.updated && <> 마지막으로 돈 것은 {state.updated.slice(0, 10)} 입니다.</>}
+      </p>
+      <Numbers>
+        <div className="rows">
+          <div className="row">
+            <span>마지막 실행</span>
+            <b>{state.updated?.slice(0, 16).replace("T", " ") ?? "—"}</b>
+          </div>
+          <div className="row">
+            <span>추적 대상</span>
+            <b>
+              {state.tracked}개{" "}
+              <span style={{ color: "var(--text-dim)" }}>· 기준선 넘음 {state.learned}개</span>
             </b>
           </div>
-        ))}
-      </div>
+          <div className="row">
+            <span>누적 시험 / 승격</span>
+            <b>
+              {state.trials}번{" "}
+              <span style={{ color: "var(--text-dim)" }}>/ {state.promotions}번</span>
+            </b>
+          </div>
+          <div className="row">
+            <span>승격 마진</span>
+            <b>{signed(state.promoteMargin ?? 0.002)}</b>
+          </div>
+        </div>
+        <div className="group-label">지금의 챔피언</div>
+        <div className="rows">
+          {top.map((item) => (
+            <div className="row" key={item.target}>
+              <span>
+                {short(item.target)}
+                <span style={{ color: "var(--text-dim)" }}> 지평 {item.config.horizon}</span>
+              </span>
+              <b style={{ color: item.learned ? "var(--up)" : "var(--text-dim)" }}>
+                {signed(item.skill ?? undefined, 4)}
+                <span style={{ color: "var(--text-dim)" }}> · {item.trials}회</span>
+              </b>
+            </div>
+          ))}
+        </div>
+      </Numbers>
 
       {state.recent.length > 0 && (
         <>

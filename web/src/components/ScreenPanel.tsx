@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { positions, recommend, screen } from "../api";
+import {
+  avoidWords, bandWords, edgeWords, fewHandsWords, groupWords, moveWords, trustWords,
+} from "../say";
+import { Numbers } from "./Numbers";
 import type {
   RecommendGroup,
   RecommendItem,
@@ -45,18 +49,28 @@ function won(value: number | null | undefined): string {
   return `₩${value.toLocaleString("ko-KR", { maximumFractionDigits: digits })}`;
 }
 
+/** 그 시장의 돈으로 적은 값. 코인은 업비트 원화 실거래가, 국내주식은 원, 미국주식은 달러.
+ *  **환율로 환산하지 않는다** — 곱해서 나온 값에는 살 수도 팔 수도 없다. */
+function price(item: RecommendItem, money?: "kr" | "us" | "coin"): string {
+  if (money === "coin") return item.krw ? won(item.krw.last) : "";
+  if (item.last === null || item.last === undefined || !Number.isFinite(item.last)) return "";
+  if (money === "kr") return won(item.last);
+  return `$${item.last.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
 function pct(value: number | null | undefined, digits = 1): string {
   return value === null || value === undefined || !Number.isFinite(value)
     ? "—"
     : `${(value * 100).toFixed(digits)}%`;
 }
 
-// 확신도는 `move_atr` 3분위다. **줄마다 긴 문장을 반복하지 않는다** — 짧은 라벨에
-// 숫자만 붙이고, 그 숫자가 무슨 뜻인지는 카드 아래에 한 번만 적는다.
+// 확신도는 `move_atr` 3분위다 — 모델이 "얼마나 크게 움직인다" 고 했는지의 3등분.
+// **숫자를 여기 박지 않는다.** 실측값(그 구간의 방향 적중)은 학습을 다시 돌리면
+// 바뀌는데 화면만 옛말을 하게 된다. 뜻은 `say.moveWords` 가 문장으로 말한다.
 const CONFIDENCE: Record<string, string> = {
-  high: "확신 높음 · 64.7%",
-  mid: "보통",
-  low: "확신 낮음 · 47.5%",
+  high: "크게 움직인다고 봤다",
+  mid: "평소만큼",
+  low: "거의 안 움직인다고 봤다",
 };
 
 interface Props {
@@ -124,20 +138,19 @@ export function ScreenPanel({ provider, onPick, names }: Props) {
       ))}
 
       {/* 긴 설명은 **묶음마다 되풀이하지 않는다.** 세 번 적으면 목록보다 문장이
-          길어져 정작 순위가 안 읽힌다. 셋 밑에 한 번만 둔다. */}
+          길어져 정작 순위가 안 읽힌다. 셋 밑에 한 번만 둔다.
+          `사지 말 것` 설명은 그 목록 바로 위로 옮겼다 — 설명이 목록에서 멀면
+          그 목록을 잘못 읽은 뒤에야 읽게 된다. */}
       {groups?.some((g) => g.available) && (
         <section className="card">
-          <p className="note" style={{ marginTop: 0 }}>
-            <b>사지 말 것</b>은 기대가 제일 낮은 셋이다. 공매도 하라는 말이 아니고,
-            값이 양수여도 <b>그 묶음 안에서 꼴찌</b>라는 뜻이다.
+          <p className="plain" style={{ marginTop: 0 }}>
+            <b>순위는 그 묶음 안에서만</b> 매겨집니다. 코인의 1위와 국내주식의 1위를
+            견주는 것은 뜻이 없습니다 — 움직이는 크기가 자릿수로 다릅니다.
           </p>
-          <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
-            <b>확신</b>은 모델이 얼마나 크게 움직인다고 했는지다. 27,664판을 갈라 보니
-            크게 본 구간에서는 방향을 <b>64.7%</b> 맞혔고, 거의 안 움직인다고 한 구간에서는{" "}
-            <b>47.5%</b> — 동전던지기보다 못했다. 순위를 이걸로 다시 세우지는 않는다.
-            <br />
-            <b>묶음끼리 견주지 말 것.</b> 순위는 그 묶음의 후보 안에서만 매겨진다 —
-            코인 +2% 와 국내주식 +0.5% 는 변동성이 달라 같은 자로 잰 값이 아니다.
+          <p className="plain">
+            <b>"크게 움직인다" 는 "오른다" 가 아닙니다.</b> 크게 움직인다고 본 종목에서는
+            방향도 제법 맞혔지만, 거의 안 움직인다고 본 종목에서는 동전던지기보다
+            못했습니다. 그래도 순위를 그걸로 다시 세우지는 않습니다.
           </p>
         </section>
       )}
@@ -168,6 +181,15 @@ function GroupCard({ group, days, onPick }: {
     );
   }
   const market = group.provider ?? "";
+  // 1위와 꼴찌의 기대 차이. **"1위" 가 얼마나 뜻이 있는지가 여기 달렸다** — 열 종목이
+  // 0.5%p 안에 붙어 있으면 순위는 줄 세우기지 고른 것이 아니다.
+  const values = [...group.buy, ...group.avoid]
+    .map((r) => r.expected)
+    .filter((v): v is number => v !== null && v !== undefined && Number.isFinite(v));
+  const spread = values.length > 1 ? Math.max(...values) - Math.min(...values) : null;
+  // **값을 그 시장의 돈으로 적는다.** 얼마짜리인지는 % 를 몰라도 바로 읽히는
+  // 유일한 숫자라 접지 않는다. 코인만 업비트 원화 실거래가를 따로 들고 온다.
+  const money = group.key;
   return (
     <section className="card">
       <div className="row" style={{ marginBottom: 6 }}>
@@ -205,17 +227,24 @@ function GroupCard({ group, days, onPick }: {
         </p>
       )}
 
+      {/* **묶음 공통 이야기는 여기 한 번만.** 줄마다 되풀이하면 여섯 줄이 똑같아져
+          정작 줄마다 다른 것(얼마나 움직일까)이 안 읽힌다. */}
+      <p className="plain" style={{ marginBottom: 8 }}>
+        {groupWords(spread, [...group.buy, ...group.avoid].map((r) => r.probUp))}
+      </p>
+
       <div className="rows">
         {group.buy.map((item, i) => (
-          <Row key={item.symbol} item={item} rank={i + 1} days={days}
+          <Row key={item.symbol} item={item} rank={i + 1} days={days} money={money}
                provider={market} onPick={() => onPick(market, item.symbol)} />
         ))}
       </div>
 
       <div className="group-label">사지 말 것</div>
+      <p className="plain" style={{ marginTop: 0, marginBottom: 6 }}>{avoidWords}</p>
       <div className="rows">
         {group.avoid.map((item) => (
-          <Row key={item.symbol} item={item} down
+          <Row key={item.symbol} item={item} down days={days} money={money}
                onPick={() => onPick(market, item.symbol)} />
         ))}
       </div>
@@ -223,12 +252,20 @@ function GroupCard({ group, days, onPick }: {
   );
 }
 
+/**
+ * 추천 한 줄. **말이 먼저, 숫자는 접어 둔다.**
+ *
+ * 예전에는 `+0.17% · −3.7%~+4.3% · 오를 확률 52%` 만 있었는데, 분위수를 공부하지
+ * 않은 사람에게 그건 좋다는 뜻인지 나쁘다는 뜻인지 알 수 없는 줄이다. 문장은
+ * `say.ts` 한 곳에서 만든다 — 화면마다 적으면 같은 상황이 다르게 읽힌다.
+ */
 function Row({
   item,
   rank,
   down,
   days,
   provider,
+  money,
   onPick,
 }: {
   item: RecommendItem;
@@ -236,6 +273,8 @@ function Row({
   down?: boolean;
   days?: number;
   provider?: string;
+  /** 어느 묶음인가. 값을 그 시장의 돈으로 적는 데만 쓴다. */
+  money?: "kr" | "us" | "coin";
   onPick: () => void;
 }) {
   const good = (item.expected ?? 0) >= 0 && !down;
@@ -259,34 +298,41 @@ function Row({
             item.ticker ?? item.symbol
           )}
         </button>
-        <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-          {/* 원화 실거래가(업비트) + 확신도. **가운뎃점으로 끊는다** — 붙여 두면
-              "₩144,400 확신 높음" 이 한 덩어리로 읽히고 줄이 바뀔 때 라벨 가운데가
-              잘린다. 피하라 목록에는 확신도를 안 적는다(거기서는 읽을 이유가 없다). */}
-          {[
-            item.krw ? won(item.krw.last) : null,
-            item.confidence && !down
-              ? CONFIDENCE[item.confidence] ?? item.confidence
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </span>
-      </span>
-      <b style={{ textAlign: "right", flex: "none" }}>
-        <span style={{ color: good ? "var(--up)" : "var(--down)" }}>
-          {signed(item.expected)}%
-        </span>
-        {item.band && (
+        {/* 값은 접지 않는다. 얼마짜리인지는 % 를 몰라도 바로 읽히는 유일한 숫자다. */}
+        {price(item, money) && (
           <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-            {signed(item.band[0], 1)}% ~ {signed(item.band[1], 1)}%
-            {/* `probUp` 은 그 지평 모델의 값이라 지평마다 다르다. 그대로 적는다. */}
-            {item.probUp !== null && item.probUp !== undefined && (
-              <> · 오를 확률 {pct(item.probUp, 0)}</>
-            )}
+            {price(item, money)}
           </span>
         )}
-      </b>
+        {/* **줄에는 그 종목만의 것.** 묶음 공통(순위 차이·방향)은 카드 위에 한 번 있다. */}
+        <p className="plain">{moveWords(item.confidence)}.</p>
+        <Numbers>
+          <div className="row">
+            <span>기대</span>
+            <b style={{ color: good ? "var(--up)" : "var(--down)" }}>
+              {signed(item.expected)}%
+            </b>
+          </div>
+          {item.band && (
+            <div className="row">
+              <span>{days ?? 1}일 뒤 범위 (80%)</span>
+              <b>{signed(item.band[0], 1)}% ~ {signed(item.band[1], 1)}%</b>
+            </div>
+          )}
+          {item.probUp !== null && item.probUp !== undefined && (
+            <div className="row">
+              <span>오를 확률</span>
+              <b>{pct(item.probUp, 0)}</b>
+            </div>
+          )}
+          {item.confidence && (
+            <div className="row">
+              <span>확신</span>
+              <b>{CONFIDENCE[item.confidence] ?? item.confidence}</b>
+            </div>
+          )}
+        </Numbers>
+      </span>
       {!down && provider && (
         <button className="chip" style={{ flex: "none", alignSelf: "flex-start" }}
                 onClick={() => setBuying((v) => !v)}>
@@ -383,107 +429,101 @@ function RecordCard({ groups, days }: { groups: RecommendGroup[]; days: number }
     <section className="card">
       <h2>이 추천이 과거에 맞았나</h2>
 
-      <div className="group-label">실전 — 아침에 뽑아 그대로 채점한 것</div>
+      <div className="group-label">아침에 뽑아 그대로 채점한 것</div>
       {live.length ? (
-        <div className="rows">
+        groups.map((g) => {
+          const r = g.record;
+          if (!r || r.n === 0) return null;
+          return (
+            <p className="plain" key={g.key} style={{ marginTop: 6 }}>
+              <b>{g.label}</b> — {edgeWords(r.edgePct)}.
+              {bandWords(r.bandHit) && <> {bandWords(r.bandHit)}.</>}
+            </p>
+          );
+        })
+      ) : (
+        <p className="plain" style={{ marginTop: 6 }}>
+          아직 채점할 판이 없습니다. 추천을 낸 뒤 {days}일이 지나야 첫 줄이 쌓입니다 —
+          그때부터 이 칸이 이 기능의 진짜 답입니다.
+        </p>
+      )}
+      {live.length > 0 && fewHandsWords(groups.map((g) => g.record?.n)) && (
+        <p className="formula" style={{ marginTop: 6, marginBottom: 0 }}>
+          {fewHandsWords(groups.map((g) => g.record?.n))}
+        </p>
+      )}
+      {live.length > 0 && (
+        <Numbers>
           {groups.map((g) => {
             const r = g.record;
+            if (!r || r.n === 0) return null;
             return (
               <div className="row" key={g.key}>
-                {/* 이름 칸이 줄어들면 두 글자 라벨이 세로로 쪼개진다("코/인").
-                    `.tabs` 에서 이미 한 번 겪은 함정이라 여기서도 못 줄이게 못 박는다. */}
-                <span style={{ whiteSpace: "nowrap", flex: "none" }}>{g.label}</span>
-                {r && r.n > 0 ? (
-                  <b style={{ textAlign: "right",
-                              color: (r.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
-                    {signed(r.edgePct)}%p
-                    <span style={{ display: "block", color: "var(--text-dim)",
-                                   fontSize: 11 }}>
-                      밴드 {pct(r.bandHit, 1)} · {r.n}판
-                      {!r.enough && " · 30일은 있어야"}
-                    </span>
-                  </b>
-                ) : (
-                  <b style={{ color: "var(--text-dim)" }}>아직 없음</b>
-                )}
+                <span style={{ whiteSpace: "nowrap" }}>{g.label}</span>
+                <b style={{ color: (r.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
+                  {signed(r.edgePct)}%p · 밴드 {pct(r.bandHit, 1)} · {r.n}판
+                </b>
               </div>
             );
           })}
-        </div>
-      ) : (
-        <p className="note" style={{ marginTop: 0 }}>
-          아직 채점할 판이 없다. 추천을 낸 뒤 {days}일이 지나야 첫 줄이 쌓인다 —
-          그때부터 이 표가 이 기능의 진짜 답이다.
-        </p>
+        </Numbers>
       )}
 
       {back.length > 0 && (
         <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
           <div className="group-label" style={{ marginTop: 0 }}>
-            되돌려 본 성적 — 실전이 아니다
+            과거로 되돌려 재 본 것 (실전 아님)
           </div>
-          <div className="rows">
+          {back.map((g) => {
+            const b = g.backfill!;
+            const read = b.holdout?.n ? b.holdout : b;
+            return (
+              <p className="plain" key={g.key} style={{ marginTop: 6 }}>
+                <b>{g.label}</b> — {edgeWords(read.edgePct)}.
+                {bandWords(read.bandHit) && <> {bandWords(read.bandHit)}.</>}
+              </p>
+            );
+          })}
+          {fewHandsWords(back.map((g) => (g.backfill?.holdout?.n ?? g.backfill?.n))) && (
+            <p className="formula" style={{ marginTop: 6, marginBottom: 0 }}>
+              {fewHandsWords(back.map((g) => (g.backfill?.holdout?.n ?? g.backfill?.n)))}
+            </p>
+          )}
+          <Numbers>
             {back.map((g) => {
               const b = g.backfill!;
               const held = b.holdout?.n ? b.holdout : null;
               const read = held ?? b;
               return (
                 <div className="row" key={g.key}>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ whiteSpace: "nowrap" }}>{g.label}</span>
-                    <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-                      {b.from} ~ {b.to}
-                      {held ? ` · 안 본 구간 ${held.n}판` : ` · ${b.n}판`}
-                    </span>
-                  </span>
+                  <span style={{ whiteSpace: "nowrap" }}>{g.label}</span>
                   <b style={{ color: (read.edgePct ?? 0) > 0 ? "var(--up)" : "var(--down)" }}>
-                    {signed(read.edgePct)}%p
-                    <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-                      밴드 {pct(read.bandHit, 1)} · 이긴 비율 {pct(read.winRate, 0)}
-                    </span>
+                    {signed(read.edgePct)}%p · 밴드 {pct(read.bandHit, 1)}
+                    {" "}· {read.n}판{held ? " (안 본 구간)" : ""}
                   </b>
                 </div>
               );
             })}
-          </div>
+          </Numbers>
           <p className="formula" style={{ marginTop: 8, marginBottom: 0 }}>
-            <b>이건 실전 성적이 아니다.</b> 과거 아침에 서서 같은 추천을 뽑고 지평이
-            지난 뒤 실제와 맞춘 것이다 — 그날의 시세·사건·관심도만 보고 뽑았지만,
-            실전과 달리 어느 날들을 볼지 고를 수 있고 몇 번이든 다시 돌릴 수 있다.
-            {back.some((g) => g.backfill?.holdout?.n) && (
-              <>
-                {" "}그래서 위 숫자는 <b>규칙 튜닝에 쓰지 않은 마지막 구간</b>에서 잰
-                것만 읽는다. 튜닝에 쓴 구간의 성적은 자기 답을 보고 만든 값이다.
-              </>
-            )}
-            {back.some((g) => g.backfill?.staleRows) && (
-              <>
-                {" "}설정이 바뀐 판은 안 셌다 — 옛 모델과 새 모델 성적을 한 숫자에
-                섞을 수 없어서다.
-              </>
-            )}
+            <b>이건 실전 성적이 아닙니다.</b> 과거 아침에 서서 같은 추천을 뽑고 지평이
+            지난 뒤 실제와 맞춘 것입니다 — 그날의 자료만 보고 뽑았지만, 실전과 달리
+            어느 날들을 볼지 고를 수 있고 몇 번이든 다시 돌릴 수 있습니다. 그래서 위
+            문장은 <b>규칙을 만질 때 안 본 구간</b>에서 잰 것만 읽습니다.
           </p>
         </div>
       )}
 
-      <p className="formula" style={{ marginTop: 10 }}>
-        <b>기준선은 그 묶음 후보 전체의 평균이다.</b> 0 과 견주면 고르는 실력이 아니라
-        시장을 재게 된다 — 시장이 다 오른 날 추천도 올랐다는 건 아무 말도 아니다.
-        <b> 묶음끼리 견주는 것도 안 된다</b> — 코인과 국내주식은 변동성이 자릿수로
-        다르다.
-        <br />
-        <b>기대</b>는 예측 분포의 <b>중앙값</b>이지 평균이 아니다. 수수료·슬리피지는
-        빼지 않았다.
-        {measured?.directionHit !== undefined && (
+      <p className="formula" style={{ marginTop: 10, marginBottom: 0 }}>
+        견주는 상대는 <b>그 묶음 후보 전체를 그냥 다 산 경우</b>입니다. 그냥 "올랐나" 로
+        보면 고르는 실력이 아니라 시장을 재게 됩니다 — 시장이 다 오른 날 추천도 올랐다는
+        건 아무 말도 아닙니다. <b>묶음끼리 견주는 것도 안 됩니다</b>: 코인과 국내주식은
+        움직이는 크기가 자릿수로 다릅니다.
+        {trustWords(measured) && (
           <>
             <br />
-            <b>아래 숫자는 이 추천의 성적이 아니다.</b> 추천 밑에 깔린 예측 모델을
-            {" "}{measured.n?.toLocaleString("ko-KR")}판 채점한 결과다 — 방향{" "}
-            <b>{pct(measured.directionHit, 1)}</b>, 80% 밴드{" "}
-            <b>{pct(measured.bandHit, 1)}</b>. 추천 자체의 성적은 위 칸에 쌓인다.
-            <br />
-            <b>이 도구가 잘하는 건 폭이지 방향이 아니다</b> — 추천은 그 약한 쪽을 쓰는
-            화면이라 숫자를 그대로 읽을 것.
+            <b>{trustWords(measured)}</b> 이 성적은 추천 자체가 아니라 그 밑에 깔린
+            예측 모델을 잰 것입니다.
           </>
         )}
       </p>

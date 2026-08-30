@@ -8,6 +8,8 @@ import type {
   Signal,
   Situation,
 } from "../types";
+import { directionWords, verdictWords } from "../say";
+import { Numbers } from "./Numbers";
 
 function price(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "—";
@@ -40,8 +42,13 @@ export function SignalCard({ signal, timeframe, basis }: {
       </h2>
       <div className="verdict" data-dir={signal.direction}>
         <strong>{signal.label}</strong>
-        <span>신뢰도 {percent(signal.confidence, 0)}</span>
       </div>
+      {/* **신뢰도 % 를 그대로 내보내지 않는다.** `signals/engine.py` 의 주석대로
+          관망일 때의 신뢰도는 "관망이라는 판단"의 신뢰도가 아니라 **쏠림의 크기**다.
+          그래서 `관망 · 신뢰도 5%` 는 "규칙들이 거의 완전히 상쇄됐다" 는 뜻인데
+          숫자로만 내놓으면 "관망을 5%만 확신한다" 로 정반대로 읽힌다. 실제로 그렇게
+          읽혔다. 말로 옮기고 숫자는 아래 접어 둔다. */}
+      <p className="plain">{verdictWords(signal.direction, signal.confidence)}.</p>
       {mismatched && (
         <p className="mismatch">
           이건 <b>{timeframe} 봉</b>을 보고 한 판단이다. 아침 추천은 <b>{basis} 봉</b>으로
@@ -52,6 +59,17 @@ export function SignalCard({ signal, timeframe, basis }: {
       <div className="meter">
         <i style={{ width: `${Math.round(signal.confidence * 100)}%` }} />
       </div>
+      <Numbers label="숫자 보기 (쏠림의 크기)">
+        <div className="row">
+          <span>규칙 쏠림</span>
+          <b>{percent(signal.confidence, 0)}</b>
+        </div>
+        <p style={{ margin: "4px 0 0" }}>
+          매수·매도로 넘어가는 문턱은 이 눈금의 24% 다. 그 아래면 관망이고,
+          <b> 낮을수록 "약한 관망" 이 아니라 "신호가 없다"</b> 에 가깝다.
+        </p>
+      </Numbers>
+      <div className="group-label">그렇게 본 까닭</div>
       <ul className="reasons">
         {signal.reasons.slice(0, 8).map((reason) => (
           <li key={reason.key} data-dir={reason.direction}>
@@ -61,9 +79,10 @@ export function SignalCard({ signal, timeframe, basis }: {
         ))}
       </ul>
       <p className="formula" style={{ marginTop: 10, marginBottom: 0 }}>
-        이건 <b>방향 투표</b>다. 27,664판을 채점해 보니 방향은 55.0% 로 동전던지기를
-        조금 넘는 정도였다 — 근거 문장을 읽는 용도지 이대로 따르라는 뜻이 아니다.
-        <b>위 칸의 변동 폭이 이 화면에서 믿을 만한 쪽이다.</b>
+        이건 <b>어느 쪽인가</b>에 대한 규칙들의 투표다. 그런데 이 도구가 방향을 맞히는
+        비율은 동전던지기를 조금 넘는 정도다 — 위 문장들을 <b>왜 그렇게 봤는지 읽는
+        용도</b>지 이대로 따르라는 뜻이 아니다.
+        <b> 이 화면에서 믿을 만한 쪽은 위 칸의 '얼마나 움직일까' 다.</b>
       </p>
     </section>
   );
@@ -83,70 +102,67 @@ export function ForecastCard({ forecast }: { forecast: Forecast | null }) {
       {!stat.available ? (
         <p className="formula">{stat.reason}</p>
       ) : (
-        <div className="rows">
-          {/* **폭을 맨 위에 둔다.** 이 도구가 실제로 맞히는 건 여기다 —
-              밴드 적중 82.2%. 중심(방향)은 55% 라 아래 참고 칸으로 내렸다. */}
+        <>
+          {/* **폭을 맨 위에, 말로.** 이 도구가 실제로 맞히는 건 여기다. 방향은
+              훨씬 덜 맞으므로 아래로 내리고 숫자와 함께 접는다. */}
           {band80 !== null && (
-            <div className="row">
-              <span>예상 변동 폭 (80%)</span>
-              <b style={{ fontSize: 15 }}>±{band80.toFixed(2)}%</b>
-            </div>
+            <p className="plain" style={{ marginTop: 0 }}>
+              앞으로 {forecast.horizon}봉 동안 <b>지금 값에서 ±{band80.toFixed(1)}%</b>
+              {" "}안에서 움직일 가능성이 큽니다. <b>이 도구가 실제로 맞히는 건 이
+              폭입니다</b> — 어느 쪽으로 갈지는 훨씬 덜 맞습니다.
+            </p>
           )}
-          {stat.bands &&
-            Object.entries(stat.bands).map(([level, band]) => (
-              <div className="row" key={level}>
-                <span>{level}% 구간</span>
+          <p className="plain">
+            {directionWords(monteCarlo.available ? monteCarlo.probUp : null)}.
+            {ml.available
+              ? " 학습 모델도 같이 봤습니다."
+              : " 이 종목·봉은 아직 학습을 안 했습니다."}
+          </p>
+          <Numbers>
+            <div className="rows">
+              {stat.bands &&
+                Object.entries(stat.bands).map(([level, band]) => (
+                  <div className="row" key={level}>
+                    <span>{level}% 구간</span>
+                    <b>{price(band.low)} ~ {price(band.high)}</b>
+                  </div>
+                ))}
+              {stat.atrBand && (
+                <div className="row">
+                  <span>ATR 도달범위</span>
+                  <b>{price(stat.atrBand.low)} ~ {price(stat.atrBand.high)}</b>
+                </div>
+              )}
+              <div className="row">
+                <span>중심 (방향)</span>
                 <b>
-                  {price(band.low)} ~ {price(band.high)}
+                  {price(stat.mid)} ({stat.expectedMovePct !== undefined
+                    ? `${stat.expectedMovePct >= 0 ? "+" : ""}${stat.expectedMovePct.toFixed(2)}%`
+                    : "—"})
                 </b>
               </div>
-            ))}
-          {stat.atrBand && (
-            <div className="row">
-              <span>ATR 도달범위</span>
-              <b>
-                {price(stat.atrBand.low)} ~ {price(stat.atrBand.high)}
-              </b>
-            </div>
-          )}
-        </div>
-      )}
-      {stat.available && (
-        <>
-          <div className="group-label">방향 (참고)</div>
-          <div className="rows" style={{ color: "var(--text-dim)" }}>
-            <div className="row">
-              <span>중심</span>
-              <b>
-                {price(stat.mid)} ({stat.expectedMovePct !== undefined
-                  ? `${stat.expectedMovePct >= 0 ? "+" : ""}${stat.expectedMovePct.toFixed(2)}%`
-                  : "—"})
-              </b>
-            </div>
-            {monteCarlo.available && (
+              {monteCarlo.available && (
+                <div className="row">
+                  <span>상승 확률 (부트스트랩)</span>
+                  <b>{percent(monteCarlo.probUp, 1)}</b>
+                </div>
+              )}
               <div className="row">
-                <span>상승 확률 (부트스트랩)</span>
-                <b>{percent(monteCarlo.probUp, 1)}</b>
+                <span>학습 모델</span>
+                <b>
+                  {ml.available
+                    ? `${ml.direction === 1 ? "상승" : ml.direction === -1 ? "하락" : "중립"} ${percent(ml.confidence, 0)}`
+                    : "미학습"}
+                </b>
               </div>
-            )}
-            <div className="row">
-              <span>학습 모델</span>
-              <b>
-                {ml.available
-                  ? `${ml.direction === 1 ? "상승" : ml.direction === -1 ? "하락" : "중립"} ${percent(ml.confidence, 0)}`
-                  : "미학습"}
-              </b>
             </div>
-          </div>
+            <p style={{ margin: "6px 0 0" }}>
+              구간은 로그수익률 표준편차를 √N 으로 늘린 것이다. 변동성이 뭉치는 실제
+              시장에서는 낙관적인 하한이라 ATR 범위와 같이 본다.
+            </p>
+          </Numbers>
         </>
       )}
-      <p className="formula" style={{ marginTop: 10, marginBottom: 0 }}>
-        <b>폭이 이 도구가 맞히는 것이다.</b> 27,664판을 채점해 보니 80% 밴드는 82.2% 로
-        들어맞았고 방향은 55.0% 였다 — 동전던지기보다 조금 나은 정도라 방향은 참고로만 둔다.
-        <br />
-        구간은 로그수익률 표준편차를 √N 으로 늘린 것이다. 변동성이 뭉치는 실제 시장에서는
-        낙관적인 하한이라 ATR 범위와 같이 본다.
-      </p>
     </section>
   );
 }

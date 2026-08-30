@@ -21,10 +21,10 @@ const SHOTS = [
   { name: "research", width: 1600, height: 950, indicators: [], tab: "근거" },
   // 판단 탭도 폭이 먼저 오는지. 순서는 그림으로만 확인된다.
   { name: "verdict", width: 1600, height: 950, indicators: [], tab: "판단",
-    timeframe: "1d", waitFor: "text=예상 변동 폭" },
+    timeframe: "1d", waitFor: "text=종합 판단" },
   // 학습 성적표는 "이 도구가 자기 한계를 말하는가" 를 보는 화면이다.
   { name: "learn", width: 1600, height: 950, indicators: [], tab: "학습",
-    timeframe: "1d", waitFor: "text=봉 뒤 변동 폭" },
+    timeframe: "1d", waitFor: "text=학습 예측" },
   // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
