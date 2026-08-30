@@ -12,9 +12,15 @@
 숫자를 믿게 된다. 자르는 곳이 넷이다 — 시세·사건·유사구간 후보·학습 표.
 `tests/test_asof.py` 가 "origin 뒤 데이터를 바꿔도 그 시점 예측이 안 변한다"를 지킨다.
 
+**학습은 동료 종목까지 모아서 한다**(`--peers`, 기본 12). 한 종목만 쓰면 표본이 몇천
+행이라 실력을 실제보다 낮게 재게 된다 — `scripts/sweep.py` 가 잰 게 정확히 그거였다.
+동료도 origin 마다 같이 잘린다. 하나라도 안 자르면 그 종목의 미래가 학습 표로 새서
+이 파일이 재는 것이 아무 뜻도 없어진다.
+
 돌리는 법:
     .venv/Scripts/python scripts/asof.py --tf 1d --horizon 10
     .venv/Scripts/python scripts/asof.py --tf 1h --horizon 24 --origins 40
+    .venv/Scripts/python scripts/asof.py --tf 1d --peers 0    # 예전처럼 한 종목만
 """
 from __future__ import annotations
 
@@ -22,7 +28,7 @@ import argparse
 import asyncio
 import sys
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -58,7 +64,12 @@ class Slice:
 
 
 def cut(full: Slice, origin_ts: int) -> Slice:
-    """origin 이후를 전부 잘라 낸다. 네 갈래 모두."""
+    """origin 이후를 전부 잘라 낸다. 네 갈래 모두.
+
+    `scripts/backfill.py` 에도 같은 일을 하는 `cut` 이 있다. 그쪽은 `SymbolData`
+    (시세에 미확정봉이 섞인 `df`)를 받고 여기는 `Slice`(확정봉만)를 받아서 하나로
+    합치지 않았다 — **둘 다 맞아야 하므로 한쪽을 고치면 다른 쪽도 본다.**
+    """
     mask = full.closed["ts"].to_numpy() <= origin_ts
     closed = full.closed[mask].reset_index(drop=True)
     return Slice(

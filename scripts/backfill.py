@@ -105,6 +105,9 @@ def cut(data: SymbolData, origin_ts: int) -> SymbolData:
     관심도 축은 `_symbol_data` 가 `closed_only(df)` 에 맞춰 만든 것이라 **확정봉과
     행이 일대일**이다. 그래서 ts 가 아니라 **남은 확정봉 수**로 자른다 — ts 로 자르려
     들면 관심도에 ts 열이 없어 조용히 안 잘린다.
+
+    `scripts/asof.py` 에도 같은 일을 하는 `cut` 이 있다. 그쪽은 확정봉만 든 `Slice`
+    를 받아서 하나로 합치지 않았다 — **둘 다 맞아야 하므로 한쪽을 고치면 다른 쪽도 본다.**
     """
     keep = data.df["ts"].to_numpy() <= origin_ts
     df = data.df[keep].reset_index(drop=True)

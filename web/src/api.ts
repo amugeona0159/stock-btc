@@ -232,13 +232,12 @@ export const learn = {
 };
 
 export const recommend = {
-  /** 오늘 아침의 매수 추천. 서버는 얼린 파일을 읽을 뿐이라 같은 날 답이 안 바뀐다. */
-  today: (provider: string, days: number) =>
-    get<import("./types").Recommend>(
-      `/api/recommend?provider=${encodeURIComponent(provider)}&days=${days}`),
-
   /** 국내주식·해외주식·코인 셋을 한 번에. **화면이 시장을 고르지 않게 하려는 것이다** —
-   *  차트가 BTC 에 서 있다고 코인 추천만 보이면 안 된다. */
+   *  차트가 BTC 에 서 있다고 코인 추천만 보이면 안 된다.
+   *
+   *  시장 하나만 묻는 `GET /api/recommend` 도 서버에 남아 있다(알림의
+   *  `from-recommendation` 이 같은 함수를 쓴다). 화면에서는 안 부른다 —
+   *  부르는 데가 없는 클라이언트 함수를 남겨 두면 다음 사람이 그게 쓰이는 길인 줄 안다. */
   groups: (days: number) =>
     get<{ days: number; groups: import("./types").RecommendGroup[] }>(
       `/api/recommend/groups?days=${days}`),

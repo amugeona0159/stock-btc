@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from ..core.candle import closed_only
-from ..signals.engine import evaluate, prepared_signal_strategy
+from ..signals.engine import prepared_signal_strategy
 from .metrics import summarize
 
 # 기본 비용. 암호화폐 현물 기준으로 잡았다 — 시장이 다르면 넘겨서 바꾼다.

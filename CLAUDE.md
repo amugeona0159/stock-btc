@@ -855,6 +855,7 @@
 .venv/Scripts/python -m pytest server/tests -q      # 546개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/backfill.py --summary            # 되돌려 본 추천 성적
+.venv/Scripts/python scripts/backfill.py --test               # 그 차이가 잡음과 갈리는지
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정
 cd web; npx tsc -b
 cd web; npm run shot     # uvicorn(8000) + vite(5173) 가 떠 있어야 한다
