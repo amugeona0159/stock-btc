@@ -33,22 +33,29 @@ export function outOfTen(ratio: number | null | undefined): string | null {
  * `confidence` 는 그날 그 시장 안에서 `move_atr` 을 3분위로 가른 라벨이다 —
  * 화면에서 지어낸 문턱이 아니라 서버가 잰 것이다.
  */
-export function moveWords(confidence?: string | null): string {
-  if (confidence === "high") return "평소보다 크게 움직일 것 같습니다";
-  if (confidence === "low") return "거의 안 움직일 것 같습니다";
-  return "평소만큼 움직일 것 같습니다";
+export function moveWords(confidence?: string | null, band?: [number, number] | null): string {
+  const word = confidence === "high" ? "평소보다 크게"
+    : confidence === "low" ? "거의 안"
+    : "평소만큼";
+  // **얼마나인지 같이 적는다.** "크게" 만으로는 3% 인지 30% 인지 알 수 없다.
+  // 밴드 반폭이 "대개 이만큼" 이다.
+  const half = band && band.length === 2 ? (band[1] - band[0]) / 2 : null;
+  const size = half !== null && Number.isFinite(half) ? ` (대개 ±${half.toFixed(1)}%)` : "";
+  return `${word} 움직일 것 같습니다${size}`;
 }
 
-/** 어느 쪽으로. **이 도구가 약한 쪽**이라 늘 뒤에 오고 단정하지 않는다. */
+/** 어느 쪽으로. **이 도구가 약한 쪽**이라 늘 뒤에 오고 단정하지 않는다.
+ *  확률도 같이 적는다 — "기울었다" 만으로는 얼마나 기울었는지 알 수 없다. */
 export function directionWords(probUp?: number | null): string {
   if (probUp === null || probUp === undefined || !Number.isFinite(probUp)) {
     return "어느 쪽인지는 말하지 않았습니다";
   }
-  if (probUp >= 0.58) return "오르는 쪽으로 기울었습니다";
-  if (probUp >= 0.53) return "오르는 쪽으로 조금 기울었습니다";
-  if (probUp <= 0.42) return "내리는 쪽으로 기울었습니다";
-  if (probUp <= 0.47) return "내리는 쪽으로 조금 기울었습니다";
-  return "오를지 내릴지는 반반에 가깝습니다";
+  const size = ` (오를 확률 ${Math.round(probUp * 100)}%)`;
+  if (probUp >= 0.58) return `오르는 쪽으로 기울었습니다${size}`;
+  if (probUp >= 0.53) return `오르는 쪽으로 조금 기울었습니다${size}`;
+  if (probUp <= 0.42) return `내리는 쪽으로 기울었습니다${size}`;
+  if (probUp <= 0.47) return `내리는 쪽으로 조금 기울었습니다${size}`;
+  return `오를지 내릴지는 반반에 가깝습니다${size}`;
 }
 
 /**
@@ -115,15 +122,78 @@ export function bandWords(hit?: number | null): string | null {
  * 정반대로 읽힌다. 실제로 그렇게 읽혔다.
  */
 export function verdictWords(direction: number, confidence: number): string {
+  // 쏠림의 크기를 같이 적는다. 다만 **말이 먼저** 와야 한다 — 숫자만 있으면
+  // `관망 · 5%` 가 "관망을 5%만 확신한다" 로 정반대로 읽힌다.
+  const size = ` (쏠림 ${Math.round(confidence * 100)}%, 문턱 24%)`;
   if (direction === 0) {
-    return confidence < 0.2
+    return (confidence < 0.2
       ? "규칙들이 서로 엇갈려 어느 쪽도 아니라고 봤습니다"
-      : "한쪽으로 기울긴 했지만 판단을 내릴 만큼은 아니었습니다";
+      : "한쪽으로 기울긴 했지만 판단을 내릴 만큼은 아니었습니다") + size;
   }
   const side = direction > 0 ? "사는" : "파는";
-  if (confidence >= 0.7) return `규칙 대부분이 ${side} 쪽을 가리켰습니다`;
-  if (confidence >= 0.4) return `규칙 다수가 ${side} 쪽을 가리켰습니다`;
-  return `${side} 쪽이 조금 우세했지만 아슬아슬했습니다`;
+  const strength = confidence >= 0.7 ? `규칙 대부분이 ${side} 쪽을 가리켰습니다`
+    : confidence >= 0.4 ? `규칙 다수가 ${side} 쪽을 가리켰습니다`
+    : `${side} 쪽이 조금 우세했지만 아슬아슬했습니다`;
+  return strength + size;
+}
+
+/** 아침 추천이 이 종목을 지평별로 어디에 뒀나. `GET /api/recommend/symbol` 이 준다. */
+export interface SymbolPlan {
+  available: boolean;
+  date?: string;
+  name?: string | null;
+  days?: Record<string, {
+    expected: number | null; band: [number, number] | null;
+    probUp: number | null; confidence: string | null;
+    side: "buy" | "avoid" | "mid";
+  }>;
+}
+
+const SIDE: Record<string, string> = { buy: "살 만한 셋", avoid: "사지 말 것 셋", mid: "중간" };
+
+/**
+ * **"언제" 에 답한다.** 추천과 판단이 어긋나 보이는 가장 흔한 이유가 지평이다.
+ *
+ * 아침 추천은 일봉으로 1·2·3일을 **각각** 봤고 그 답이 서로 다를 수 있다 —
+ * 실제로 삼성바이오로직스가 하루 뒤에는 `사라`, 이틀 뒤에는 `사지 말 것` 이었다.
+ * 그걸 안 보여 주면 "추천은 사라는데 판단은 팔라네" 로만 읽힌다.
+ *
+ * **여기서 사라고 하지 않는다.** 며칠 뒤를 어떻게 봤는지를 적을 뿐이다 — 방향
+ * 적중이 반반을 겨우 넘는 모델로 시점을 찍어 주면 그 사실을 숨기는 화면이 된다.
+ */
+export function whenWords(plan?: SymbolPlan | null): string[] {
+  if (!plan?.available || !plan.days) return [];
+  const rows = Object.entries(plan.days)
+    .map(([key, v]) => ({ day: Number(key), ...v }))
+    .filter((r) => Number.isFinite(r.day))
+    .sort((a, b) => a.day - b.day);
+  if (rows.length === 0) return [];
+
+  const out = [
+    `아침 추천은 이 종목을 ${rows.map((r) => `${r.day}일 뒤 ${SIDE[r.side] ?? "중간"}`).join(", ")}에 뒀습니다.`,
+  ];
+
+  const sides = new Set(rows.map((r) => r.side));
+  const buys = rows.filter((r) => r.side === "buy");
+
+  if (buys.length > 0 && sides.size > 1) {
+    // **`살 만한 셋` 에 든 날만 그렇게 부른다.** 셋 다 아닌데 "제일 좋게 봤다" 고
+    // 쓰면 없던 매수 신호가 생긴다.
+    out.push(
+      `**며칠을 보느냐에 따라 답이 다릅니다.** ${buys.map((r) => `${r.day}일 뒤`).join("·")}로 볼 때만 ` +
+      "살 만한 쪽에 들었습니다 — 어느 쪽을 따를지는 얼마나 들고 있을 생각인지에 달렸습니다.",
+    );
+  } else if (sides.size > 1) {
+    out.push(
+      "**며칠을 보느냐에 따라 답이 다릅니다.** 다만 어느 지평으로도 살 만한 셋에는 " +
+      "들지 않았습니다.",
+    );
+  } else if (rows.every((r) => r.side === "buy")) {
+    out.push("1·2·3일 어느 쪽으로 봐도 살 만한 쪽이었습니다.");
+  } else if (rows.every((r) => r.side === "avoid")) {
+    out.push("1·2·3일 어느 쪽으로 봐도 그 묶음에서 기대가 낮은 쪽이었습니다.");
+  }
+  return out;
 }
 
 /**

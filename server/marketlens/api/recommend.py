@@ -277,6 +277,47 @@ def groups(days: int) -> dict:
     return {"days": days, "groups": out}
 
 
+def for_symbol(provider: str, symbol: str) -> dict:
+    """이 종목을 **1·2·3일 각각** 어떻게 봤나.
+
+    화면의 「판단」은 지금 선 봉 하나를 보고 답한다. 그런데 아침 추천은 일봉으로
+    1~3일을 본 것이라, 둘이 어긋나 보일 때가 있다 — "추천은 사라는데 판단은 팔라네".
+    **둘 다 맞고 질문이 다른 것**이고, 그 차이를 사람이 읽으려면 지평별로 어떻게
+    달랐는지가 필요하다. 그게 얼린 파일 안에 이미 있으니 꺼내 주기만 하면 된다.
+
+    **여기서 계산하지 않는다.** `today()` 와 같은 파일을 읽을 뿐이라 같은 날 답이
+    안 바뀐다.
+    """
+    body = _merged().get(provider)
+    if not body:
+        return {"available": False}
+    row = next((r for r in body.get("candidates", [])
+                if str(r.get("symbol")) == symbol), None)
+    if not row:
+        return {"available": False}
+
+    ranks = {}
+    for key, day in (body.get("byDay") or {}).items():
+        buy, avoid = day.get("buy") or [], day.get("avoid") or []
+        ranks[key] = ("buy" if symbol in buy else "avoid" if symbol in avoid else "mid")
+
+    days = {}
+    for key, found in (row.get("byDay") or {}).items():
+        days[key] = {
+            "expected": found.get("expected"), "band": found.get("band"),
+            "probUp": found.get("probUp"), "confidence": found.get("confidence"),
+            # 그날 그 지평에서 사라/사지 말 것 어디에 있었나. 순위는 묶음 안에서만
+            # 뜻이 있으므로 기대값보다 이쪽이 읽기 쉽다.
+            "side": ranks.get(key, "mid"),
+        }
+    return {
+        "available": bool(days), "provider": provider, "symbol": symbol,
+        "date": body.get("date"), "basedOn": body.get("basedOn"),
+        "name": names.of(symbol), "ticker": names.ticker(symbol),
+        "days": days,
+    }
+
+
 def status() -> dict:
     """어느 시장의 추천이 언제 것으로 있는지."""
     return {name: {"date": body.get("date"), "days": sorted(

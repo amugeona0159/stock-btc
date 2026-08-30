@@ -564,3 +564,62 @@ def test_buy_and_avoid_are_the_same_size():
 
     for provider in universe.providers():
         assert len(universe.buyable(provider)) > script.BUY + script.AVOID, provider
+
+
+# --- 언제 사는 게 좋은가 (지평별로 어떻게 봤나) -------------------------
+
+def test_a_symbol_can_be_read_horizon_by_horizon(tmp_path, monkeypatch):
+    """**"추천은 사라는데 판단은 팔라네" 의 답이 여기 있다.**
+
+    아침 추천은 1·2·3일을 각각 봤고 그 답이 서로 다를 수 있다 — 실제로
+    삼성바이오로직스가 하루 뒤에는 `사라`, 이틀 뒤에는 `사지 말 것` 이었다.
+    화면이 그걸 못 보여주면 두 화면이 싸우는 것처럼만 읽힌다.
+    """
+    from marketlens.api import recommend as layer
+
+    body = {
+        "provider": "p", "lastTs": 1, "basedOn": "2026-08-29",
+        "candidates": [{"symbol": "AAA", "last": 100.0, "byDay": {
+            "1": {"expected": 1.0, "band": [-2.0, 4.0], "probUp": 0.6,
+                  "confidence": "high"},
+            "2": {"expected": -0.5, "band": [-3.0, 2.0], "probUp": 0.45,
+                  "confidence": "low"},
+        }}],
+        "byDay": {"1": {"buy": ["AAA"], "avoid": ["ZZZ"]},
+                  "2": {"buy": ["ZZZ"], "avoid": ["AAA"]}},
+    }
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"p": body})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    found = layer.for_symbol("p", "AAA")
+    assert found["available"] is True
+    assert found["days"]["1"]["side"] == "buy"
+    assert found["days"]["2"]["side"] == "avoid"     # 같은 종목, 다른 지평, 다른 답
+    assert found["days"]["1"]["expected"] == 1.0
+
+
+def test_a_symbol_that_was_never_a_candidate_says_so(tmp_path, monkeypatch):
+    """후보가 아니었으면 지어내지 않는다. 빈 화면이 그럴듯한 문장보다 낫다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"p": _body("AAA")})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    assert layer.for_symbol("p", "ZZZ") == {"available": False}
+    assert layer.for_symbol("없는시장", "AAA") == {"available": False}
+
+
+def test_the_side_says_where_it_sat_not_how_much(tmp_path, monkeypatch):
+    """**"몇 위" 가 아니라 "어느 셋" 이다.** 순위는 그 묶음 안에서만 뜻이 있고,
+    기대값 차이가 0.03%p 여도 1위는 1위라 숫자로 주면 과하게 읽힌다."""
+    from marketlens.api import recommend as layer
+
+    folder = tmp_path / "repo" / "recommend"
+    _write(folder, "2026-08-29", {"p": _body("AAA")})
+    monkeypatch.setattr(layer, "_dirs", lambda: [folder])
+
+    found = layer.for_symbol("p", "AAA")
+    assert set(found["days"]["1"]) >= {"expected", "band", "probUp", "confidence", "side"}
+    assert found["days"]["1"]["side"] in {"buy", "avoid", "mid"}

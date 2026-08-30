@@ -134,6 +134,13 @@ export const positions = {
 export const api = {
   providers: () => get<{ providers: ProviderInfo[] }>("/api/providers"),
 
+  /** 아침 추천이 이 종목을 1·2·3일 각각 어디에 뒀나. 「판단」이 "언제" 에 답하는 데 쓴다.
+   *  `recommend.symbol` 과 같은 것을 가리킨다 — `App` 이 `api` 만 들고 있어 여기 둔다. */
+  recommendSymbol: (provider: string, symbol: string) =>
+    get<import("./say").SymbolPlan>(
+      `/api/recommend/symbol?provider=${encodeURIComponent(provider)}`
+      + `&symbol=${encodeURIComponent(symbol)}`),
+
   /**
    * 종목 기호 → 한글 이름. 부팅할 때 한 번만 받는다.
    *
@@ -241,6 +248,13 @@ export const recommend = {
   groups: (days: number) =>
     get<{ days: number; groups: import("./types").RecommendGroup[] }>(
       `/api/recommend/groups?days=${days}`),
+
+  /** 이 종목을 1·2·3일 각각 어떻게 봤나. 「판단」이 추천과 어긋나 보일 때 그게
+   *  **지평이 다른 두 질문**이라는 걸 읽을 수 있게 하는 자료다. */
+  symbol: (provider: string, symbol: string) =>
+    get<import("./say").SymbolPlan>(
+      `/api/recommend/symbol?provider=${encodeURIComponent(provider)}`
+      + `&symbol=${encodeURIComponent(symbol)}`),
 };
 
 export const screen = {

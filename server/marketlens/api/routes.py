@@ -561,6 +561,13 @@ def recommend_groups(days: int = Query(1, ge=1, le=3)) -> dict:
     return recommend_layer.groups(days)
 
 
+@router.get("/recommend/symbol")
+def recommend_symbol(provider: str, symbol: str) -> dict:
+    """이 종목을 1·2·3일 각각 어떻게 봤나. 「판단」이 추천과 어긋나 보일 때,
+    그게 **지평이 다른 두 질문**이라는 걸 사람이 읽을 수 있게 하는 자료다."""
+    return recommend_layer.for_symbol(provider, symbol)
+
+
 @router.get("/recommend/status")
 def recommend_status() -> dict:
     """어느 시장의 추천이 언제 것으로 있는지."""

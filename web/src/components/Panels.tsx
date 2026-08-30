@@ -8,7 +8,8 @@ import type {
   Signal,
   Situation,
 } from "../types";
-import { directionWords, verdictWords } from "../say";
+import { directionWords, verdictWords, whenWords } from "../say";
+import type { SymbolPlan } from "../say";
 import { Numbers } from "./Numbers";
 
 function price(value: number | undefined): string {
@@ -22,18 +23,21 @@ function percent(value: number | undefined, digits = 1): string {
   return value === undefined || !Number.isFinite(value) ? "—" : `${(value * 100).toFixed(digits)}%`;
 }
 
-export function SignalCard({ signal, timeframe, basis }: {
+export function SignalCard({ signal, timeframe, basis, plan }: {
   signal: Signal | null;
   /** 이 판단이 선 봉. 안 적으면 어느 질문에 대한 답인지 알 수 없다. */
   timeframe?: string;
   /** 아침 추천이 선 봉. 이것과 다르면 둘은 다른 이야기를 하고 있는 것이다. */
   basis?: string;
+  /** 아침 추천이 이 종목을 1·2·3일 각각 어디에 뒀나. **"언제" 에 답하는 자료다.** */
+  plan?: SymbolPlan | null;
 }) {
   if (!signal) return null;
   // **봉이 다르면 판단도 다르다.** SOLUSDT 가 같은 날 1시간봉에서 '매도'(신뢰 0.26),
   // 일봉에서 '매수'(신뢰 0.92) 였다. 추천은 일봉으로 계산한 것이라 1시간봉을 보면
   // "추천은 사라는데 판단은 팔라네" 로 읽힌다. 둘 다 맞고 질문이 다른 것이다.
   const mismatched = Boolean(timeframe && basis && timeframe !== basis);
+  const when = whenWords(plan);
   return (
     <section className="card">
       <h2>
@@ -49,6 +53,31 @@ export function SignalCard({ signal, timeframe, basis }: {
           숫자로만 내놓으면 "관망을 5%만 확신한다" 로 정반대로 읽힌다. 실제로 그렇게
           읽혔다. 말로 옮기고 숫자는 아래 접어 둔다. */}
       <p className="plain">{verdictWords(signal.direction, signal.confidence)}.</p>
+      {/* 눈금은 그 문장 **바로 밑**이다. 사이에 다른 칸이 끼면 무엇의 눈금인지 흐려진다. */}
+      <div className="meter">
+        <i style={{ width: `${Math.round(signal.confidence * 100)}%` }} />
+      </div>
+
+      {/* **"언제" 에 답한다.** 추천과 판단이 어긋나 보이는 가장 흔한 이유가 지평이고,
+          아침 추천은 1·2·3일을 **각각** 봐서 그 답이 서로 다를 수 있다. 안 보여 주면
+          "추천은 사라는데 판단은 팔라네" 로만 읽힌다. */}
+      {when.length > 0 && (
+        <div className="when">
+          <div className="group-label" style={{ marginTop: 0 }}>며칠을 보느냐에 따라</div>
+          {when.map((line, i) => (
+            <p className="plain" key={i} style={{ marginTop: i === 0 ? 0 : 4 }}>
+              {line.split("**").map((part, j) =>
+                j % 2 === 1 ? <b key={j}>{part}</b> : part)}
+            </p>
+          ))}
+          <p className="formula" style={{ marginTop: 6, marginBottom: 0 }}>
+            추천은 <b>일봉으로 며칠 뒤</b>를 본 것이고, 위 판단은 <b>{timeframe ?? "지금 봉"}</b>
+            {" "}하나를 본 것입니다. 어긋나 보여도 둘 중 하나가 틀린 게 아니라
+            <b> 다른 질문의 답</b>입니다.
+          </p>
+        </div>
+      )}
+
       {mismatched && (
         <p className="mismatch">
           이건 <b>{timeframe} 봉</b>을 보고 한 판단이다. 아침 추천은 <b>{basis} 봉</b>으로
@@ -56,9 +85,6 @@ export function SignalCard({ signal, timeframe, basis }: {
           틀린 게 아니다. 추천과 맞춰 보려면 위에서 <b>{basis}</b> 를 고를 것.
         </p>
       )}
-      <div className="meter">
-        <i style={{ width: `${Math.round(signal.confidence * 100)}%` }} />
-      </div>
       <Numbers label="숫자 보기 (쏠림의 크기)">
         <div className="row">
           <span>규칙 쏠림</span>

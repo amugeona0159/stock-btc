@@ -305,7 +305,7 @@ function Row({
           </span>
         )}
         {/* **줄에는 그 종목만의 것.** 묶음 공통(순위 차이·방향)은 카드 위에 한 번 있다. */}
-        <p className="plain">{moveWords(item.confidence)}.</p>
+        <p className="plain">{moveWords(item.confidence, item.band)}.</p>
         <Numbers>
           <div className="row">
             <span>기대</span>

@@ -19,6 +19,7 @@ import { AlertsPanel } from "./components/AlertsPanel";
 import { PositionsPanel } from "./components/PositionsPanel";
 import { RECOMMEND_TIMEFRAME, ScreenPanel } from "./components/ScreenPanel";
 import { SymbolPicker } from "./components/SymbolPicker";
+import type { SymbolPlan } from "./say";
 import { useLive } from "./useLive";
 import type {
   AskResult,
@@ -69,6 +70,9 @@ export default function App() {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
   // 종목 기호 → 한글 이름. 부팅에 한 번 받아 두고 화면 곳곳에서 찾아 쓴다.
   const [symbolNames, setSymbolNames] = useState<SymbolNames>({});
+  /** 아침 추천이 이 종목을 1·2·3일 각각 어디에 뒀나. 「판단」이 "언제" 에 답하는 데 쓴다.
+   *  얼린 파일 한 줄을 읽는 것뿐이라 실패해도 화면이 막힐 이유가 없다. */
+  const [plan, setPlan] = useState<SymbolPlan | null>(null);
 
   const [provider, setProvider] = useState("binance");
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -146,6 +150,18 @@ export default function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, symbol, timeframe, lastClosedTs]);
+
+  // 아침 추천이 이 종목을 1·2·3일 각각 어디에 뒀나. 「판단」이 "언제" 에 답하는 데 쓴다.
+  // **봉은 deps 에 안 넣는다** — 추천은 늘 일봉 기준이라 봉을 바꿔도 같은 답이고,
+  // 넣으면 봉을 누를 때마다 헛 호출이 난다.
+  useEffect(() => {
+    let cancelled = false;
+    setPlan(null);
+    api.recommendSymbol(provider, symbol)
+      .then((res) => { if (!cancelled) setPlan(res); })
+      .catch(() => { if (!cancelled) setPlan(null); });
+    return () => { cancelled = true; };
+  }, [provider, symbol]);
 
   // 사건은 종목·봉이 바뀔 때만. 실시간마다 다시 긁으면 외부 API 한도를 먼저 태운다.
   useEffect(() => {
@@ -429,7 +445,7 @@ export default function App() {
                 밴드 82.2%, 방향 55.0%. */}
             <ForecastCard forecast={forecast} />
             <SignalCard signal={live.signal} timeframe={timeframe}
-                        basis={RECOMMEND_TIMEFRAME} />
+                        basis={RECOMMEND_TIMEFRAME} plan={plan} />
             <PatternCard patterns={patterns} />
           </>
         )}
