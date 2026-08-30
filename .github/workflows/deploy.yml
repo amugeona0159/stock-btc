@@ -40,9 +40,24 @@ jobs:
             # **초록불로 조용히 끝내지 않는다.** 토큰이 없으면 아무것도 안 배포하는데
             # 실행은 성공으로 남아, 몇 달째 배포가 안 되고 있어도 눈에 안 띈다.
             # 실제로 그랬다 — 실행 요약에 적어 최소한 보이게 한다.
-            echo "FLY_API_TOKEN 이 없다 — 배포를 건너뛴다"
-            echo "### 배포 안 함" >> "$GITHUB_STEP_SUMMARY"
-            echo "FLY_API_TOKEN 시크릿이 없어 아무것도 배포하지 않았다." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::FLY_API_TOKEN 이 없어 아무것도 배포하지 않았다"
+            {
+              echo "### 배포 안 함"
+              echo
+              echo "\`FLY_API_TOKEN\` 시크릿이 없어 이 실행은 아무것도 배포하지 않았다."
+              echo "초록불이지만 배포판은 그대로다 — 몇 달째 안 되고 있어도 눈에 안 띄어서"
+              echo "여기에 적어 둔다."
+              echo
+              echo "고치는 법 (토큰이 사람 손에서 바로 시크릿으로 들어간다):"
+              echo
+              echo '```'
+              echo "fly tokens create deploy -x 8760h | gh secret set FLY_API_TOKEN"
+              echo '```'
+              echo
+              echo "flyctl 이 없으면 먼저 \`iwr https://fly.io/install.ps1 -useb | iex\` 로 받고"
+              echo "\`fly auth login\` 을 한다. 앱이 아직 없으면 \`fly.toml\` 머리말의 순서를"
+              echo "따른다 — 고정 IPv4 를 받아 토스 콘솔 허용목록에 넣는 단계가 거기 있다."
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "ready=no" >> "$GITHUB_OUTPUT"
           else
             echo "ready=yes" >> "$GITHUB_OUTPUT"

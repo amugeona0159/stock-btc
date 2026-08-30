@@ -344,10 +344,35 @@
 - 화면의 실측 숫자(방향 55.0% · 밴드 82.2%)를 **TSX 에 박지 말 것.**
   `api/recommend.py: measured()` 가 `study/state.json` 에서 읽어 넘긴다 — 그래야
   학습 실행과 절대 어긋나지 않는다.
-- **`.cmd` 는 CRLF 로 저장한다.** LF 면 cmd.exe 가 줄을 못 끊어 한글 REM 주석이 명령으로
-  해석된다. 작업 스케줄러는 그걸 `Last Result: 1` 한 줄로만 알려 주고 **로그 파일조차 안
-  만든다** — 아침에 추천이 안 나오는데 이유를 볼 데가 없다. `test_scripts.py` 가 막는다.
-  (Windows 의 Python `write_text` 는 자동으로 CRLF 로 쓴다. bash heredoc 은 LF 라 걸린다.)
+- **`.cmd` 는 CRLF 로, 그리고 ASCII 로만 쓴다.** 이 파일들은 1980년대 파서가 애매한
+  코드페이지로 읽는다. LF 면 줄을 못 끊고, 한글이 들어가면 cmd.exe 가 OEM(949)으로
+  읽어 통째로 깨진 뒤 **깨진 조각을 명령으로 실행하려 든다.** 두 번 났다:
+
+      '07:30' is not recognized as an internal or external command
+      '???글을' is not recognized as an internal or external command
+
+  `chcp 65001` 로 덮어 봤지만 그래도 샜다. 파서를 이기려 하지 말고 헷갈릴 거리를
+  없앤다 — **`.cmd` 는 실행 순서만 담고, 이유는 여기 CLAUDE.md 에 적는다.**
+  `test_scripts.py` 가 CRLF·ASCII 둘 다 막는다.
+  (Windows 의 Python `write_text` 는 자동으로 CRLF 로 쓴다. bash heredoc 과 Write
+  도구는 LF 라 걸린다 — 쓴 뒤 `read_text` → `write_text` 로 한 번 되돌리면 된다.)
+- **`.cmd` 가 부르는 파이썬은 `-u` 로 돌리고, 스크립트는 stdout 을 UTF-8 로 맞춘다.**
+  버퍼가 켜져 있으면 도중에 끊긴 실행이 로그를 **한 줄도** 안 남긴다(06:00 학습이
+  3분 돌다 재부팅에 끊겼는데 그 3분이 통째로 없었다). 그리고 리다이렉트된 stdout 은
+  기본이 cp949 라, 그 밖의 글자(`—`) 하나에 `UnicodeEncodeError` 로 죽는데 `@echo off`
+  라 그 사실이 조용히 묻힌다. `daily.log` 가 여태 cp949 로 쌓이고 있었다.
+- **시작·끝·종료코드를 로그에 적고, 다음 실행이 지난 실행을 확인한다**(`runcheck.py`).
+  스케줄러의 진단 기록(`TaskScheduler/Operational`)은 **관리자 권한이 있어야 켜지고**
+  기본이 꺼져 있다. 그래서 로그 자체가 답하게 만든다 — **마지막 START 뒤에 END 가
+  없으면 그 실행은 죽은 것이다.** `runcheck` 는 자기 START 를 찍기 **전에** 돌아야 한다.
+- ⚠ **아직 안 풀린 것: 스케줄러가 `recommend.py` 를 1초 안에 죽인다**(결과
+  `0xC000013A` = 강제 종료). 같은 `.cmd` 를 셸에서 `cmd /c` 로 돌리면 13초에 정상
+  종료하고, 같은 작업이 부르는 `runcheck.py` 는 스케줄러에서도 잘 돈다. 설정
+  (`StopOnIdleEnd`·배터리·트리거 제한)과 동작을 `cmd.exe /c` 로 바꾸는 것까지 다 해
+  봤지만 그대로다. 이벤트 로그에도 아무것도 안 남는다. **이유를 보려면 관리자
+  PowerShell 에서 한 줄이 필요하다:**
+  `wevtutil sl Microsoft-Windows-TaskScheduler/Operational /e:true`
+  그때까지의 완충으로 재시도(3회·10분)를 걸어 뒀고, 실패하면 위 표시로 드러난다.
 - 07:30 은 **06:00 학습과 따로 등록한다**(`market-lens-recommend`). 거기 붙이면 실제
   실행이 08시 언저리에서 매일 흔들린다. 겹치지 않게 `daily.cmd` 의 study 예산을
   1시간으로 줄여 뒀다.
@@ -820,7 +845,7 @@
 안 되는 명령이었다.
 
 ```bash
-.venv/Scripts/python -m pytest server/tests -q      # 534개
+.venv/Scripts/python -m pytest server/tests -q      # 549개
 .venv/Scripts/python scripts/daily.py --budget 2 --dry-run   # 승격 없이 한 바퀴
 .venv/Scripts/python scripts/backfill.py --summary            # 되돌려 본 추천 성적
 .venv/Scripts/python scripts/screen.py --dry-run             # 추천 팩터 측정

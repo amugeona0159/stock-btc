@@ -39,6 +39,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "server"))
+# **로그를 UTF-8 로 쓴다.** 작업 스케줄러가 리다이렉트하면 stdout 은 기본이 시스템
+# 코드페이지(cp949)라, `logs/daily.log` 가 나머지 로그와 다른 인코딩으로 쌓인다.
+# 더 나쁜 건 cp949 밖의 글자(`—` 같은 것) 하나에 `UnicodeEncodeError` 로 죽는데
+# `.cmd` 가 `@echo off` 라 그 사실이 조용히 묻힌다는 것이다.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv                                    # noqa: E402
 

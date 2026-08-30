@@ -45,6 +45,7 @@ CLAUDE.md 의 규칙 그대로 — 모델 승격 판정은 워크포워드(`scri
     .venv/Scripts/python scripts/backfill.py --provider binance --origins 12
     .venv/Scripts/python scripts/backfill.py --provider binance --origins 60
     .venv/Scripts/python scripts/backfill.py --summary
+    .venv/Scripts/python scripts/backfill.py --test
     .venv/Scripts/python scripts/backfill.py --provider binance --restale
 """
 from __future__ import annotations
@@ -272,6 +273,111 @@ def summary(rows: list[dict]) -> None:
           "\n  holdout 은 규칙 튜닝에 안 쓴 마지막 구간이다. 성적은 그쪽을 읽는다.")
 
 
+# --- 잡음과 가르기 -------------------------------------------------------
+
+def _block_means(values: np.ndarray, block: int, rounds: int, seed: int) -> np.ndarray:
+    """**덩어리째** 다시 뽑은 표본의 평균 `rounds` 개.
+
+    한 판씩 뽑으면 적중이 시간에 뭉쳐 다니는 성질이 사라져 귀무 세계가 실제보다
+    깨끗해지고, 문턱이 너무 낮게 잡힌다. 이 저장소는 그걸로 한 번 답이 뒤집힌 적이
+    있다(`scripts/metalabel.py`: 한 줄씩 섞으면 p=0, 덩어리째 섞으면 p=0.38).
+    """
+    rng = np.random.default_rng(seed)
+    n = len(values)
+    take = int(np.ceil(n / block))
+    starts = rng.integers(0, n, size=(rounds, take))
+    idx = (starts[:, :, None] + np.arange(block)[None, None, :]) % n
+    return values[idx.reshape(rounds, -1)[:, :n]].mean(axis=1)
+
+
+def verdict(edges: list[float], full: list[float], rounds: int = 2000,
+            seed: int = 20260830) -> dict:
+    """이 차이가 0 과 구별되나.
+
+    귀무는 "고르는 실력이 없다" = 차이 계열의 평균이 0 이다. 계열을 **평균만 빼서**
+    0 으로 옮긴 뒤 덩어리째 다시 뽑아, 관측한 평균 이상이 얼마나 자주 나오는지 센다.
+
+    **덩어리 길이는 손으로 고르지 않는다.** `overfit.pick_block` 이 Politis & White
+    의 최적 길이로 정한다. 다만 그건 계열이 길어야 잴 수 있으므로 **전체 계열에서
+    재서 holdout 에도 그대로 쓴다** — 12판으로 자기상관을 재면 그 값이 곧 잡음이다.
+    """
+    from marketlens.forecast import overfit
+
+    values = np.asarray(edges, dtype="float64")
+    values = values[np.isfinite(values)]
+    if values.size < 4:
+        return {"n": int(values.size), "mean": None}
+
+    whole = np.asarray(full, dtype="float64")
+    whole = whole[np.isfinite(whole)]
+    # 흔들림이 없는 계열에서는 최적 블록 계산이 0 으로 나눈다. 그런 계열은 어떻게
+    # 다시 뽑아도 평균이 같으므로 덩어리 길이가 답을 바꾸지 않는다 — 1 로 둔다.
+    # **여기서 임의의 숫자를 넣으면 안 된다.** p 가 그 숫자 위에 서게 된다.
+    block = 1 if whole.size < 8 or float(np.std(whole)) < 1e-12 else overfit.pick_block(whole)
+    block = int(min(max(1, block), max(1, values.size // 4)))
+    observed = float(values.mean())
+    null = _block_means(values - observed, block, rounds, seed)
+    spread = _block_means(values, block, rounds, seed + 1)
+    return {
+        "n": int(values.size), "block": int(block),
+        "mean": round(observed, 4),
+        # 한쪽 검정. "이만큼 좋은 게 우연히 나올 확률" 이다.
+        "p": round(float(overfit.p_value(observed, null)), 4),
+        "lo": round(float(np.percentile(spread, 2.5)), 4),
+        "hi": round(float(np.percentile(spread, 97.5)), 4),
+    }
+
+
+def test(rows: list[dict]) -> None:
+    """**표를 읽기 전에 이걸 본다.** 열다섯 칸 중 하나가 양수인 건 열다섯 번 재면
+    으레 나오는 일이다. 부호가 아니라 p 와 구간을 봐야 한다."""
+    if not rows:
+        print("아직 백필한 게 없다")
+        return
+    print(f"\n{'시장':10s} {'지평':>5s} {'구간':>8s} {'판':>4s} {'차이':>9s} "
+          f"{'95% 구간':>18s} {'p':>7s} {'덩어리':>6s}")
+    cells: list[tuple[str, dict]] = []
+    for provider in sorted({r["provider"] for r in rows}):
+        for days in rec.DAYS:
+            part = sorted((r for r in rows if r["provider"] == provider
+                           and r["days"] == days), key=lambda r: r["origin"])
+            if len(part) < 8:
+                continue
+            whole = [r["edgePct"] for r in part]
+            for label, want in (("전체", None), ("holdout", True)):
+                use = whole if want is None else [
+                    r["edgePct"] for r in part if r.get("holdout")]
+                got = verdict(use, whole)
+                if got.get("mean") is None:
+                    continue
+                cells.append((f"{provider} {days}일 {label}", got))
+                mark = "" if got["p"] > 0.05 else "  ←"
+                print(f"{provider:10s} {days:4d}일 {label:>8s} {got['n']:4d} "
+                      f"{got['mean']:+8.3f}%p  [{got['lo']:+6.2f}, {got['hi']:+6.2f}]"
+                      f" {got['p']:7.3f} {got['block']:6d}{mark}")
+
+    # **몇 칸을 봤는지 같이 낸다.** 이게 없으면 서른 칸 중 하나가 0.05 아래인 것을
+    # 발견으로 읽게 되는데, 귀무에서도 제일 작은 p 는 대략 1/(칸+1) 근처에 온다.
+    # 이 저장소는 "시험 횟수를 기록에 남긴다"를 두 곳에서 이미 지키고 있다.
+    if cells:
+        name, best = min(cells, key=lambda c: c[1]["p"])
+        floor = 1 / (len(cells) + 1)
+        print(f"\n  칸 {len(cells)}개를 봤다. 귀무에서도 제일 작은 p 는 대략 "
+              f"{floor:.3f} 근처에 온다.")
+        print(f"  제일 좋은 칸: {name} · p={best['p']:.3f} "
+              f"· 95% 구간 [{best['lo']:+.2f}, {best['hi']:+.2f}]")
+        if best["p"] >= floor:
+            print("  → **우연이 으레 내놓는 정도다.** 발견으로 읽지 말 것.")
+        else:
+            print("  → 우연치고는 작다. 다만 구간이 0 을 품으면 여전히 아무 말도 아니다.")
+
+    print("\n  p 는 '고르는 실력이 없다'는 가정에서 이만큼 좋은 평균이 우연히 나올 확률이다."
+          "\n  결과를 **덩어리째** 다시 뽑아 잰다 — 한 판씩 뽑으면 적중이 시간에 뭉쳐"
+          "\n  다니는 성질이 사라져 귀무 세계가 실제보다 깨끗해지고 문턱이 낮게 잡힌다."
+          "\n  덩어리 길이는 Politis & White 최적값이다(손으로 고르지 않는다)."
+          "\n  95% 구간이 0 을 품으면 부호는 아무 말도 아니다.")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--provider", action="append")
@@ -279,13 +385,19 @@ async def main() -> None:
     parser.add_argument("--every", type=int, default=RETRAIN_EVERY,
                         help="몇 origin 마다 다시 구울지")
     parser.add_argument("--summary", action="store_true", help="쌓인 것만 읽어 낸다")
+    parser.add_argument("--test", action="store_true",
+                        help="차이가 0 과 구별되는지 덩어리 부트스트랩으로 잰다")
     parser.add_argument("--restale", action="store_true",
                         help="지금 설정과 다른 설정으로 잰 줄을 버리고 다시 돌린다")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
+    if args.test:
+        test(read())
+        return
     if args.summary:
         summary(read())
+        test(read())
         return
 
     providers = args.provider or ["binance"]

@@ -243,3 +243,72 @@ def test_promotion_never_reads_the_backfill():
     구간이 되어 외부 표본이 아니게 된다."""
     daily = (ROOT / "scripts" / "daily.py").read_text(encoding="utf-8")
     assert "backfill" not in daily
+
+
+# --- 잡음과 가르기 -------------------------------------------------------
+
+def test_a_noise_series_is_not_called_a_finding():
+    """**제일 중요한 판.** 실력이 없는 계열에 작은 p 를 붙이면 이 검정이 오히려
+    거짓을 만들어 낸다. 평균 0짜리 잡음은 p 가 0.05 언저리로 내려가면 안 된다."""
+    rng = np.random.default_rng(20260830)
+    noise = list(rng.normal(0, 1.0, 200))
+    got = script.verdict(noise, noise, rounds=400)
+    assert got["p"] > 0.2, f"잡음에 p={got['p']} — 검정이 거짓을 만든다"
+    assert got["lo"] < 0 < got["hi"], "구간이 0 을 안 품는다"
+
+
+def test_a_real_edge_is_found():
+    """반대쪽도 지킨다. 모든 판이 +2%p 면 그건 우연이 아니다 — 여기가 안 걸리면
+    검정이 아무것도 못 잡는 장식이 된다."""
+    rng = np.random.default_rng(11)
+    strong = list(2.0 + rng.normal(0, 0.5, 60))
+    got = script.verdict(strong, strong, rounds=400)
+    assert got["p"] < 0.05
+    assert got["lo"] > 0
+    # 흔들림이 없는 계열도 터지지 않아야 한다 — 최적 블록 계산이 0 으로 나눈다.
+    flat = script.verdict([2.0] * 60, [2.0] * 60, rounds=100)
+    assert flat["block"] == 1 and flat["mean"] == 2.0
+
+
+def test_the_block_length_is_measured_not_chosen():
+    """손으로 고른 덩어리 길이 위에 p 가 서면 그 p 는 그 임의의 숫자 것이다.
+    `overfit.pick_block` 이 Politis & White 최적값으로 정한다."""
+    source = (ROOT / "scripts" / "backfill.py").read_text(encoding="utf-8")
+    assert "overfit.pick_block" in source
+    # 상수로 박아 둔 덩어리 길이가 없어야 한다.
+    assert "block = 200" not in source and "BLOCK =" not in source
+
+
+def test_the_block_length_comes_from_the_long_series():
+    """holdout 12판으로 자기상관을 재면 그 값이 곧 잡음이다. 전체 계열에서 재서
+    짧은 구간에도 그대로 쓴다."""
+    rng = np.random.default_rng(7)
+    whole = list(rng.normal(0, 1, 200))
+    short = whole[-12:]
+    got = script.verdict(short, whole, rounds=200)
+    assert got["n"] == 12
+    # 12판짜리에서 잰 것보다 크거나 같아야 한다(짧은 계열은 상한 n//4=3 에 걸린다).
+    assert 1 <= got["block"] <= 3
+
+
+def test_too_few_hands_get_no_verdict():
+    """네 판으로는 아무 말도 못 한다. 억지로 숫자를 내면 그게 거짓이다."""
+    assert script.verdict([1.0, 2.0], [1.0, 2.0])["mean"] is None
+
+
+def test_the_number_of_cells_looked_at_is_reported(capsys):
+    """**서른 칸 중 하나가 0.05 아래인 것은 발견이 아니다.** 귀무에서도 제일 작은
+    p 는 대략 1/(칸+1) 근처에 온다. 그 사실을 같이 안 내면 오독이 난다 —
+    이 저장소는 이미 두 곳에서 시험 횟수를 기록에 남긴다."""
+    rng = np.random.default_rng(3)
+    rows = []
+    for provider in ("a", "b"):
+        for days in (1, 2, 3):
+            for i in range(40):
+                rows.append({"provider": provider, "days": days, "origin": i,
+                             "edgePct": float(rng.normal(0, 1)),
+                             "holdout": i >= 32})
+    script.test(rows)
+    out = capsys.readouterr().out
+    assert "칸 12개를 봤다" in out
+    assert "제일 좋은 칸" in out
