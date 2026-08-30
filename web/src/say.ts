@@ -212,3 +212,69 @@ export function trustWords(measured?: { directionHit?: number; bandHit?: number 
     : "반반에 가깝고";
   return `이 도구는 "얼마나 움직일까" 를 ${band} 맞힙니다. "오를까 내릴까" 는 ${direction}, 그래서 폭을 먼저 읽는 게 맞습니다.`;
 }
+
+// --- 보유 · 알림 · 기록 ---------------------------------------------------
+
+/**
+ * 들고 있는 판 하나를 한 문장으로.
+ *
+ * **손익 숫자는 접지 않는다.** 거기선 숫자가 곧 답이다 — "얼마 벌었나" 를 말로
+ * 바꾸면 오히려 못 읽는다. 말이 필요한 건 **"그래서 지금 어디쯤인가"** 쪽이라,
+ * 손절선·목표까지 얼마나 남았는지를 문장으로 붙인다.
+ */
+export function roomWords(price: number | null, entry: number,
+                          stop: number, targets: { price: number; settledAt?: string | null }[]): string | null {
+  if (price === null || !Number.isFinite(price) || price <= 0) return null;
+  // 어미를 떼고 모았다가 마지막에 한 번만 붙인다. 통째로 이어 붙이면
+  // "…밑돌고 있습니다, 다음 목표까지…" 처럼 문장이 두 번 끝난다.
+  const clauses: string[] = [];
+  if (stop > 0) {
+    const away = (price / stop - 1) * 100;
+    clauses.push(away >= 0
+      ? `손절선까지 ${away.toFixed(1)}% 남았`
+      : `손절선을 ${Math.abs(away).toFixed(1)}% 밑돌고 있`);
+  }
+  const next = targets.find((tg) => !tg.settledAt && tg.price > price);
+  if (next) clauses.push(`다음 목표까지 ${((next.price / price - 1) * 100).toFixed(1)}% 남았`);
+  else if (targets.length && targets.every((tg) => tg.settledAt)) clauses.push("목표는 다 정리했");
+  if (clauses.length === 0) return null;
+  const side = price >= entry ? "진입가보다 위" : "진입가보다 아래";
+  return `${side}에 있고, ${clauses.join("고, ")}습니다.`;
+}
+
+/** 장부의 성적. **추천의 성적이 아니라 내가 실제로 사고판 결과다.** */
+export function ledgerWords(n: number, wins: number): string {
+  if (n === 0) return "아직 닫은 판이 없습니다. 판을 닫아야 첫 줄이 쌓입니다.";
+  const rest = n - wins;
+  if (wins === n) return `닫은 ${n}판이 모두 이겼습니다.`;
+  if (wins === 0) return `닫은 ${n}판이 모두 졌습니다.`;
+  return `닫은 ${n}판 가운데 ${wins}판이 이기고 ${rest}판이 졌습니다.`;
+}
+
+/**
+ * 알림 규칙의 밴드 줄. **이 값이 어디서 나왔는지**를 말한다.
+ *
+ * `3일 안에 −5.5% ~ +5.6% 안에 있을 확률 80%` 만 적혀 있으면, 그게 이 알림값과
+ * 무슨 상관인지 알 수가 없다. 알림값은 그 밴드 끝에서 잡은 것이다.
+ */
+export function ruleBandWords(days: number, band: [number, number]): string {
+  const half = ((band[1] - band[0]) / 2).toFixed(1);
+  return `이 값은 ${days}일 예측 폭(대개 ±${half}%)의 끝에서 잡은 것입니다`;
+}
+
+/**
+ * 알림이 나간 뒤 값이 어디로 갔나 — 한 마디.
+ *
+ * **점수를 매기지 않는다.** `buy_below` 는 뒤가 오르면 반갑고 `target_above` 는
+ * 이미 닿아서 나간 알림이라, 한 잣대로 더하면 없는 성적이 생긴다(`followup.py`).
+ * 그래서 "잘했다/못했다" 가 아니라 **움직인 방향**만 적는다.
+ */
+export function afterWords(points: number[]): string | null {
+  const seen = points.filter((v) => Number.isFinite(v));
+  if (seen.length === 0) return null;
+  const last = seen[seen.length - 1];
+  if (Math.abs(last) < 1) return "그 뒤로는 거의 제자리였습니다";
+  const rising = seen.length > 1 && seen[seen.length - 1] > seen[0];
+  if (last > 0) return rising ? "그 뒤로 계속 올랐습니다" : "그 뒤로 올랐다가 힘이 빠졌습니다";
+  return rising ? "내렸다가 돌아오는 중입니다" : "그 뒤로 계속 내렸습니다";
+}

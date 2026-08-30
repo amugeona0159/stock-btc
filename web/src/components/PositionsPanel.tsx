@@ -13,6 +13,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { positions as api } from "../api";
+import { ledgerWords, roomWords } from "../say";
+import { Numbers } from "./Numbers";
 import type { Position, PositionAdvice, PositionsView } from "../types";
 
 const SIGN: Record<string, string> = { KRW: "₩", USD: "$" };
@@ -137,40 +139,42 @@ function Record({ view }: { view: PositionsView | null }) {
   const record = view?.record;
   if (!record || record.n === 0) {
     return (
-      <p className="note" style={{ marginTop: 10 }}>
-        닫은 판이 없어 성적이 없다. <b>판을 닫아야 첫 줄이 쌓인다</b> — 여기 숫자는
-        이 장부의 성적이지 추천의 성적이 아니다.
+      <p className="plain" style={{ marginTop: 10 }}>
+        아직 닫은 판이 없어 성적이 없습니다. <b>판을 닫아야 첫 줄이 쌓입니다</b> —
+        여기 숫자는 이 장부의 성적이지 추천의 성적이 아닙니다.
       </p>
     );
   }
   return (
-    <div className="rows" style={{ marginTop: 10 }}>
-      <div className="row">
-        <span>닫은 판</span>
-        {/* 승률에는 부호를 안 붙인다. `+50%` 로 적으면 손익처럼 읽힌다. */}
-        <b>
-          {record.n}판 · 이긴 판 {record.wins ?? 0}{" "}
-          ({((record.winRate ?? 0) * 100).toFixed(0)}%)
-        </b>
+    <>
+      {/* 말이 먼저. 승률에는 부호를 안 붙인다 — `+50%` 로 적으면 손익처럼 읽힌다. */}
+      <p className="plain" style={{ marginTop: 10 }}>
+        {ledgerWords(record.n, record.wins ?? 0)}
+        {" ("}이긴 비율 {((record.winRate ?? 0) * 100).toFixed(0)}%{")"}
+      </p>
+      {/* **번 돈은 접지 않는다.** 여기선 숫자가 곧 답이다. */}
+      <div className="rows" style={{ marginTop: 6 }}>
+        {Object.entries(record.byCurrency).map(([currency, body]) => (
+          <div className="row" key={currency}>
+            <span>{currency} {body.n}판</span>
+            <b style={{ color: tone(body.realized) }}>
+              {signed(body.realized, currency)}
+              {body.avgPct !== null && ` · 판당 ${pct(body.avgPct)}`}
+            </b>
+          </div>
+        ))}
       </div>
-      {Object.entries(record.byCurrency).map(([currency, body]) => (
-        <div className="row" key={currency}>
-          <span>{currency} {body.n}판</span>
-          <b style={{ color: tone(body.realized) }}>
-            {signed(body.realized, currency)}
-            {body.avgPct !== null && ` · 판당 ${pct(body.avgPct)}`}
+      <Numbers>
+        <div className="row">
+          <span>어떻게 닫혔나</span>
+          <b>
+            {Object.entries(record.reasons)
+              .map(([key, n]) => `${REASON[key] ?? key} ${n}`)
+              .join(" · ")}
           </b>
         </div>
-      ))}
-      <div className="row">
-        <span>어떻게 닫혔나</span>
-        <b>
-          {Object.entries(record.reasons)
-            .map(([key, n]) => `${REASON[key] ?? key} ${n}`)
-            .join(" · ")}
-        </b>
-      </div>
-    </div>
+      </Numbers>
+    </>
   );
 }
 
@@ -278,36 +282,47 @@ function PositionCard({ item, onChange, onPick }: {
         </div>
       ))}
 
+      {/* **합계가 답이다.** 여기선 숫자를 접지 않고 제일 크게 둔다 — "얼마 벌었나" 를
+          말로 바꾸면 오히려 못 읽는다. 말이 필요한 건 "그래서 지금 어디쯤인가" 다. */}
       <div className="rows" style={{ marginTop: 8 }}>
         <div className="row">
-          <span>진입</span>
-          <b>{money(item.entry, item.currency)} × {item.shares.toLocaleString("ko-KR")}주</b>
-        </div>
-        <div className="row">
-          <span>지금</span>
-          <b>{item.price === null ? "시세 못 받음" : money(item.price, item.currency)}</b>
-        </div>
-        <div className="row">
-          <span>평가손익</span>
-          <b style={{ color: tone(item.unrealized) }}>
-            {signed(item.unrealized, item.currency)}
-          </b>
-        </div>
-        {item.realized !== 0 && (
-          <div className="row">
-            <span>실현손익</span>
-            <b style={{ color: tone(item.realized) }}>
-              {signed(item.realized, item.currency)}
-            </b>
-          </div>
-        )}
-        <div className="row">
-          <span>합계</span>
-          <b style={{ color: tone(total) }}>
+          <span>지금까지</span>
+          <b style={{ color: tone(total), fontSize: 15 }}>
             {signed(total, item.currency)} {totalPct !== null && `(${pct(totalPct)})`}
           </b>
         </div>
       </div>
+      {roomWords(item.price, item.entry, item.stop, item.targets) && (
+        <p className="plain">
+          {roomWords(item.price, item.entry, item.stop, item.targets)}
+        </p>
+      )}
+      <Numbers>
+        <div className="rows">
+          <div className="row">
+            <span>진입</span>
+            <b>{money(item.entry, item.currency)} × {item.shares.toLocaleString("ko-KR")}주</b>
+          </div>
+          <div className="row">
+            <span>지금</span>
+            <b>{item.price === null ? "시세 못 받음" : money(item.price, item.currency)}</b>
+          </div>
+          <div className="row">
+            <span>평가손익</span>
+            <b style={{ color: tone(item.unrealized) }}>
+              {signed(item.unrealized, item.currency)}
+            </b>
+          </div>
+          {item.realized !== 0 && (
+            <div className="row">
+              <span>실현손익</span>
+              <b style={{ color: tone(item.realized) }}>
+                {signed(item.realized, item.currency)}
+              </b>
+            </div>
+          )}
+        </div>
+      </Numbers>
 
       {item.status === "open" && (
         <div className="rows" style={{ marginTop: 8 }}>

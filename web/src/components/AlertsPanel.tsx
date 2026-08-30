@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { alerts } from "../api";
+import { ruleBandWords } from "../say";
 import { installed, isIos, register, subscribe } from "../push";
 import type { AlertFired, AlertRule, AlertsView } from "../types";
 
@@ -128,8 +129,8 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
               아직 온 알림이 없다. 아래에서 규칙을 걸면 그 값에 닿을 때 온다.
             </p>
           )}
-          {fired.map((item) => (
-            <FiredRow key={item.id} item={item} onChange={load} onPick={onPick} />
+          {fired.map((item, index) => (
+            <FiredRow key={`${item.id}-${index}`} item={item} onChange={load} onPick={onPick} />
           ))}
         </div>
       </section>
@@ -257,10 +258,11 @@ function RuleRow({ rule, onChange, onPick }: {
           {done && " · 울렸음"}
           {!rule.active && " · 꺼짐"}
         </span>
+        {/* **이 값이 어디서 나왔는지**를 말한다. `3일 안에 −5.5% ~ +5.6% 안에 있을
+            확률 80%` 만 적혀 있으면 그게 이 알림값과 무슨 상관인지 알 수가 없다. */}
         {rule.band && rule.days && (
           <span style={{ display: "block", color: "var(--text-dim)", fontSize: 11 }}>
-            {rule.days}일 안에 {rule.band[0].toFixed(1)}% ~ {rule.band[1].toFixed(1)}%
-            {" "}안에 있을 확률 80%
+            {ruleBandWords(rule.days, rule.band)}
           </span>
         )}
       </span>

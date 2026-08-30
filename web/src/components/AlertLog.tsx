@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { alerts } from "../api";
+import { afterWords } from "../say";
 import type { AlertFired, AlertLogView, AlertOutcomes } from "../types";
 import { KIND } from "./AlertsPanel";
 
@@ -54,6 +55,20 @@ function num(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return "—";
   const digits = value >= 1000 ? 0 : value >= 1 ? 2 : 4;
   return value.toLocaleString("ko-KR", { maximumFractionDigits: digits });
+}
+
+/** 알림 뒤의 변화율을 시간순으로. **`최근` 도 마지막 점으로 넣는다** — 방금 나간
+ *  알림은 +1일도 아직 없어서 그것만 있을 때가 많다. */
+function trail(outcome: { after: Record<string, { changePct: number }>;
+                          latest?: { changePct: number } | null },
+               horizons: number[]): number[] {
+  const points = horizons
+    .map((h) => outcome.after[String(h)]?.changePct)
+    .filter((v): v is number => typeof v === "number");
+  if (outcome.latest && typeof outcome.latest.changePct === "number") {
+    points.push(outcome.latest.changePct);
+  }
+  return points;
 }
 
 function pct(value: number): string {
@@ -261,8 +276,10 @@ export function AlertLog({ onPick }: Props) {
             <span className="scope">{group.items.length}건</span>
           </h2>
           <div className="rows" style={{ marginTop: 6 }}>
-            {group.items.map((item) => (
-              <LogRow key={item.id} item={item}
+            {/* 시험 알림처럼 **같은 초에 둘이 나가면 id 가 겹친다.** 겹친 키는 React 가
+                하나만 그리고 나머지를 조용히 버리므로, 자리를 같이 넣어 갈라 준다. */}
+            {group.items.map((item, index) => (
+              <LogRow key={`${item.id}-${index}`} item={item}
                       outcome={outcomes?.outcomes[item.id] ?? null}
                       horizons={horizons} onPick={onPick} />
             ))}
@@ -296,6 +313,14 @@ function LogRow({ item, outcome, horizons, onPick }: {
           {item.archived && " · 보관"}
           {!item.read && " · 안 읽음"}
         </span>
+        {/* **점수를 매기지 않는다.** `buy_below` 는 뒤가 오르면 반갑고 `target_above` 는
+            이미 닿아서 나간 알림이라, 한 잣대로 더하면 없는 성적이 생긴다. 그래서
+            "잘했다/못했다" 가 아니라 **움직인 방향**만 한 마디로 적는다. */}
+        {outcome && afterWords(trail(outcome, horizons)) && (
+          <span className="log-line" style={{ color: "var(--text)" }}>
+            {afterWords(trail(outcome, horizons))}
+          </span>
+        )}
         {outcome && (
           <span className="log-line">
             {horizons.map((h) => {

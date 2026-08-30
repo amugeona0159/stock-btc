@@ -42,6 +42,10 @@ const SHOTS = [
   // 보유는 "닿았다 — 팔았나?" 가 맨 위에 서는지, 손익이 원화로 읽히는지를 본다.
   { name: "hold", width: 1600, height: 950, indicators: [], tab: "보유",
     waitFor: "text=평가손익" },
+  // 알림은 폰에서 제일 자주 여는 화면이다. 규칙 줄이 "이 값이 어디서 나왔는지" 를
+  // 말하는지, 명령형이 새어 들어가지 않았는지는 그림으로만 확인된다.
+  { name: "alerts", width: 1600, height: 950, indicators: [], tab: "알림",
+    waitFor: "text=규칙" },
   // 기록은 날짜별로 묶여 하루치가 한 눈에 내려가는지를 본다. 시각이 왼쪽에 자로
   // 서 있는지, 뒷값 부호가 읽히는지는 그림으로만 확인된다.
   { name: "log", width: 1600, height: 950, indicators: [], tab: "기록",
