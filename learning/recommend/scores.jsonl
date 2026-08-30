@@ -1,0 +1,1 @@
+{"date": "2026-08-30", "provider": "upbit", "days": 1, "basedOn": "2026-08-28", "scoredAt": "2026-08-30T00:29:24+00:00", "model": "recommend-upbit-1d-1", "buyPct": 0.9038, "avoidPct": 0.094, "universePct": 0.568, "edgePct": 0.3358, "bandHit": 1.0, "n": 10}
