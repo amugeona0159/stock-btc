@@ -18,7 +18,9 @@ const SHOTS = [
   // 질문 → 예측 경로가 차트에 실제로 그려지는지. 이건 그림으로만 확인된다.
   { name: "predict", width: 1600, height: 950, indicators: [], solo: true,
     ask: "급락 나온 뒤 3일 동안 어떻게 움직였어?" },
-  { name: "research", width: 1600, height: 950, indicators: [], tab: "근거" },
+  // 근거 탭은 사건과 등록부를 안쪽 탭으로 나눠 놓았다. 열었을 때 사건이 먼저 오는지.
+  { name: "research", width: 1600, height: 950, indicators: [], tab: "근거",
+    waitFor: "text=차트가 보여주는 구간에서" },
   // 판단 탭도 폭이 먼저 오는지. 순서는 그림으로만 확인된다.
   { name: "verdict", width: 1600, height: 950, indicators: [], tab: "판단",
     timeframe: "1d", waitFor: "text=종합 판단" },
@@ -28,10 +30,14 @@ const SHOTS = [
   // 추천 목록은 "순위를 오를 순서로 읽게 만드는가" 를 보는 화면이다. 문구가
   // 순위 바로 위에 붙어 있는지는 그림으로만 확인된다.
   { name: "screen", width: 1600, height: 950, indicators: [], tab: "추천",
-    timeframe: "1d", waitFor: "text=코인 · 사라" },
+    timeframe: "1d", waitFor: "text=· 사라" },
+  // **묶음 탭이 실제로 갈아 끼우는지.** 셋을 한 번에 쏟지 않고 이름만 남긴 화면이라,
+  // 눌러서 코인이 나오는지가 이 기능의 전부다.
+  { name: "screen-coin", width: 1600, height: 950, indicators: [], tab: "추천",
+    timeframe: "1d", click: "코인", waitFor: "text=코인 · 사라" },
   // 추천 줄의 「샀다」를 눌러 진입가·주수 칸이 열리는지. 여기서 장부로 넘어간다.
   { name: "screen-buy", width: 1600, height: 950, indicators: [], tab: "추천",
-    timeframe: "1d", waitFor: "text=코인 · 사라", click: "샀다" },
+    timeframe: "1d", waitFor: "text=· 사라", click: "샀다" },
   // 성적 칸은 오른쪽 띠 맨 아래라 안 내리면 안 찍힌다. **실전과 되돌려 본 것이
   // 한 숫자로 읽히지 않는지**가 이 그림의 전부다 — 합쳐 보이면 그 순간 거짓말이 된다.
   { name: "screen-record", width: 1600, height: 950, indicators: [], tab: "추천",
@@ -45,7 +51,7 @@ const SHOTS = [
   // 알림은 폰에서 제일 자주 여는 화면이다. 규칙 줄이 "이 값이 어디서 나왔는지" 를
   // 말하는지, 명령형이 새어 들어가지 않았는지는 그림으로만 확인된다.
   { name: "alerts", width: 1600, height: 950, indicators: [], tab: "알림",
-    waitFor: "text=규칙" },
+    click: "규칙", waitFor: "text=한 규칙은 한 번만 울린다" },
   // 기록은 날짜별로 묶여 하루치가 한 눈에 내려가는지를 본다. 시각이 왼쪽에 자로
   // 서 있는지, 뒷값 부호가 읽히는지는 그림으로만 확인된다.
   { name: "log", width: 1600, height: 950, indicators: [], tab: "기록",
@@ -105,8 +111,12 @@ for (const shot of SHOTS.filter((s) => !ONLY || s.name === ONLY)) {
   }
 
   if (shot.click) {
-    // 눌러야 값이 오는 화면이 있다(기록의 뒷값). 안 누르면 빈 자리만 찍힌다.
-    await page.locator(".chip", { hasText: shot.click }).first().click();
+    // 눌러야 값이 오는 화면이 있다(기록의 뒷값), 눌러야 열리는 안쪽 탭도 있다.
+    // 안 누르면 빈 자리만 찍어 놓고 "안 나온다"고 오해하게 된다.
+    for (const label of [].concat(shot.click)) {
+      await page.locator(".chip", { hasText: label }).first().click();
+      await page.waitForTimeout(400);
+    }
   }
 
   if (shot.waitFor) {

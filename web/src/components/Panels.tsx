@@ -11,6 +11,7 @@ import type {
 import { directionWords, verdictWords, whenWords } from "../say";
 import type { SymbolPlan } from "../say";
 import { Numbers } from "./Numbers";
+import { CardTabs, useCardTab } from "./Tabs";
 
 function price(value: number | undefined): string {
   if (value === undefined || !Number.isFinite(value)) return "—";
@@ -427,5 +428,44 @@ export function EvidenceLibrary({ entries }: { entries: Evidence[] }) {
         </div>
       ))}
     </section>
+  );
+}
+
+/**
+ * 근거 탭 — 사건 목록과 근거 등록부.
+ *
+ * 둘 다 스무 줄씩이라 세로로 쌓으면 등록부는 화면 두 번 아래고, 그건 **안 읽는다**는
+ * 뜻이다. 이름은 둘 다 두고 하나씩 연다.
+ *
+ * 두 목록을 여기서 묶는 이유: 탭 상태는 화면의 것이지 `App` 의 것이 아니다.
+ * `App` 이 들고 있으면 화면 하나 고칠 때마다 `App` 을 건드리게 된다.
+ */
+export function ResearchTabs({ events, sources, entries }: {
+  events: EventMark[];
+  sources: Record<string, { count: number; ok: boolean; error: string }>;
+  entries: Evidence[];
+}) {
+  const [seeing, setSeeing] = useCardTab(["events", "library"]);
+  return (
+    <>
+      <section className="card">
+        <h2>근거</h2>
+        <p className="formula" style={{ marginTop: 0 }}>
+          차트가 보여주는 구간에서 잡힌 <b>사건</b>과, 이 도구가 기대고 있는 <b>방법론</b>.
+        </p>
+        <CardTabs
+          label="사건과 근거 등록부 중 무엇을 볼지"
+          items={[
+            { key: "events", label: `사건 ${events.length}` },
+            { key: "library", label: `근거 등록부 ${entries.length}` },
+          ]}
+          active={seeing}
+          onPick={setSeeing}
+        />
+      </section>
+
+      {seeing === "events" && <EventsCard events={events} sources={sources} />}
+      {seeing === "library" && <EvidenceLibrary entries={entries} />}
+    </>
   );
 }

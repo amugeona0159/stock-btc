@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import { positions as api } from "../api";
 import { ledgerWords, roomWords } from "../say";
 import { Numbers } from "./Numbers";
+import { CardTabs } from "./Tabs";
 import type { Position, PositionAdvice, PositionsView } from "../types";
 
 const SIGN: Record<string, string> = { KRW: "₩", USD: "$" };
@@ -102,16 +103,17 @@ export function PositionsPanel({ provider, symbol, onPick }: Props) {
 
         {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
 
-        <div className="chips">
-          <button className="chip" data-active={!showClosed}
-                  onClick={() => setShowClosed(false)}>
-            들고 있는 것 {open.length}
-          </button>
-          <button className="chip" data-active={showClosed}
-                  onClick={() => setShowClosed(true)}>
-            닫은 판 {closed.length}
-          </button>
-        </div>
+        {/* 다른 화면의 안쪽 탭과 **같은 것**이다. 모양을 따로 만들면 한 화면에
+            비슷하지만 다른 것이 둘 생긴다. */}
+        <CardTabs
+          label="들고 있는 것과 닫은 판 중 무엇을 볼지"
+          items={[
+            { key: "open", label: `들고 있는 것 ${open.length}` },
+            { key: "closed", label: `닫은 판 ${closed.length}` },
+          ]}
+          active={showClosed ? "closed" : "open"}
+          onPick={(key) => setShowClosed(key === "closed")}
+        />
 
         <Record view={view} />
       </section>

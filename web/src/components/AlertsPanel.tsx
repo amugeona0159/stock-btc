@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { alerts } from "../api";
 import { ruleBandWords } from "../say";
 import { installed, isIos, register, subscribe } from "../push";
+import { CardTabs, useCardTab } from "./Tabs";
 import type { AlertFired, AlertRule, AlertsView } from "../types";
 
 /** 종류 이름표. **기록 화면도 이걸 쓴다** — 두 벌이 되면 같은 알림이 화면마다 달리 읽힌다. */
@@ -73,6 +74,10 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
   const fired = (view?.fired ?? []).filter((f) => showArchived || !f.archived);
   const unread = (view?.fired ?? []).filter((f) => !f.read && !f.archived).length;
 
+  // **두 목록이 세로로 쌓여 있었다.** 알림함이 길면 규칙은 화면 아래 어딘가고,
+  // 규칙을 고치려면 매번 온 알림을 지나쳐 내려가야 한다 — 둘은 서로 다른 일이다.
+  const [side, setSide] = useCardTab(["box", "rules"]);
+
   return (
     <>
       {/* --- 홈 화면 추가 안내: iOS 는 이걸 해야만 푸시가 온다 --- */}
@@ -87,19 +92,17 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
         </section>
       )}
 
+      {/* 켜고 끄는 것과 시험은 **어느 칸에 있든 닿아야 한다.** 알림함 안에 두면
+          규칙을 보는 중에는 알림을 켤 수가 없다. */}
       <section className="card">
         <h2>
-          알림함
+          알림
           {unread > 0 && <span className="scope">안 읽음 {unread}</span>}
         </h2>
-
-        {error && <p className="error" style={{ marginTop: 0 }}>{error}</p>}
-        {view?.quiet && (
-          <p className="note" style={{ marginTop: 0 }}>
-            지금은 조용한 시간이다(23~07시). 손절 말고는 모아 뒀다 아침에 한 번 보낸다.
-          </p>
-        )}
-
+        <p className="formula" style={{ marginTop: 0 }}>
+          온 알림과 걸어 둔 규칙. <b>"사세요" 라고 쓰지 않는다</b> — 이 도구가 아는 것은
+          "설정한 값에 닿았다" 까지고, 방향 적중은 55% 다.
+        </p>
         <div className="chips">
           <button className="chip" onClick={turnOnPush}
                   disabled={!view?.push.available}>
@@ -111,10 +114,6 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
               : `보낼 곳이 없다 (구독 ${r.subscriptions}개, 서버 푸시 ${r.push ? "켜짐" : "꺼짐"})`))}>
             시험 알림
           </button>
-          <button className="chip" data-active={showArchived}
-                  onClick={() => setShowArchived((v) => !v)}>
-            보관함
-          </button>
         </div>
         {pushNote && <p className="note" style={{ marginTop: 8 }}>{pushNote}</p>}
         {view && !view.push.available && (
@@ -122,6 +121,40 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
             서버에 푸시 키(VAPID)가 없어 알림이 안 나간다. 기록은 여기 그대로 쌓인다.
           </p>
         )}
+        {error && <p className="error" style={{ marginTop: 8 }}>{error}</p>}
+
+        <div className="group-label">무엇을 볼지</div>
+        <CardTabs
+          label="알림함과 규칙 중 무엇을 볼지"
+          items={[
+            { key: "box", label: `알림함 ${fired.length}` },
+            { key: "rules", label: `규칙 ${(view?.rules ?? []).length}` },
+          ]}
+          active={side}
+          onPick={setSide}
+        />
+      </section>
+
+      {side === "box" && (
+      <section className="card">
+        <h2>
+          알림함
+          {unread > 0 && <span className="scope">안 읽음 {unread}</span>}
+        </h2>
+        {view?.quiet && (
+          <p className="note" style={{ marginTop: 0 }}>
+            지금은 조용한 시간이다(23~07시). 손절 말고는 모아 뒀다 아침에 한 번 보낸다.
+          </p>
+        )}
+
+        {/* 보관함은 **이 목록의 것**이라 여기 남는다. 켜고 끄는 것과 달리 다른
+            칸에서는 뜻이 없다. */}
+        <div className="chips">
+          <button className="chip" data-active={showArchived}
+                  onClick={() => setShowArchived((v) => !v)}>
+            보관함
+          </button>
+        </div>
 
         <div className="rows" style={{ marginTop: 10 }}>
           {fired.length === 0 && (
@@ -134,9 +167,12 @@ export function AlertsPanel({ provider, symbol, onPick }: Props) {
           ))}
         </div>
       </section>
+      )}
 
-      <RulesCard view={view} provider={provider} symbol={symbol}
-                 onChange={load} onPick={onPick} />
+      {side === "rules" && (
+        <RulesCard view={view} provider={provider} symbol={symbol}
+                   onChange={load} onPick={onPick} />
+      )}
     </>
   );
 }

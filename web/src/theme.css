@@ -134,7 +134,12 @@ button:disabled { opacity: 0.4; cursor: default; }
 /* 실시간이 원래 없는 경우는 고장이 아니다. 빨강이 아니라 중립색으로. */
 .dot[data-state="static"] { background: var(--warn); }
 
-.charts { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+/* **`min-width: 0` 이 있어야 한다.** 격자 칸도 flex 자식처럼 기본이 `min-width: auto`
+   라, 안에 든 캔버스의 고유 폭(lightweight-charts 가 `width` 속성으로 박는다)만큼
+   칸이 늘어난다. 그러면 폰에서 차트가 아니라 **페이지가** 밀린다 — 실제로 보유 탭이
+   390px 화면에서 87px 밀려 있었다. 차트 폭은 그때그때 다르므로 어느 탭에서만
+   나타나기도 한다. */
+.charts { display: flex; flex-direction: column; gap: 6px; min-height: 0; min-width: 0; }
 .pane { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .pane.main { flex: 1; min-height: 260px; }
 .pane.sub { height: 118px; flex: none; }
@@ -143,7 +148,10 @@ button:disabled { opacity: 0.4; cursor: default; }
   color: var(--text-dim); font-size: 11px; pointer-events: none;
 }
 
-.side { display: flex; flex-direction: column; gap: var(--gutter); min-height: 0; overflow-y: auto; }
+.side {
+  display: flex; flex-direction: column; gap: var(--gutter);
+  min-height: 0; min-width: 0; overflow-y: auto;
+}
 
 .card {
   background: var(--panel);
@@ -285,6 +293,12 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 .chip:hover { color: var(--text); border-color: var(--accent); }
 .chip[data-active="true"] { border-color: var(--accent); color: var(--accent); }
+
+/* 안쪽 탭에서 지금은 볼 게 없는 칸(못 돈 시장 등). **지우지 않고 흐리게 둔다** —
+   목록에서 빼면 "국내주식은 살 게 없다" 로 읽힌다. 눌러서 사유를 볼 수 있어야 하므로
+   `disabled` 도 아니다. */
+.chip[data-muted="true"] { opacity: 0.5; }
+.chip[data-muted="true"][data-active="true"] { opacity: 1; }
 
 .answer { margin: 0 0 10px; line-height: 1.6; }
 

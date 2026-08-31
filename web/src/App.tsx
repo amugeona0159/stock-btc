@@ -5,12 +5,11 @@ import { AskPanel } from "./components/AskPanel";
 import { ChartStack } from "./components/Chart";
 import { LearnPanel } from "./components/LearnPanel";
 import {
-  EventsCard,
-  EvidenceLibrary,
   ForecastCard,
   FormulaCard,
   IndicatorPicker,
   PatternCard,
+  ResearchTabs,
   SignalCard,
   SituationCard,
 } from "./components/Panels";
@@ -463,10 +462,7 @@ export default function App() {
         )}
 
         {tab === "research" && (
-          <>
-            <EventsCard events={events} sources={eventSources} />
-            <EvidenceLibrary entries={evidence} />
-          </>
+          <ResearchTabs events={events} sources={eventSources} entries={evidence} />
         )}
       </aside>
     </div>

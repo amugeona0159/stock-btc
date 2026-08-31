@@ -4,6 +4,7 @@ import { learn } from "../api";
 import type { GateStatus, Learned, LearningState, TrainReport } from "../types";
 import { bandWords, directionWords } from "../say";
 import { Numbers } from "./Numbers";
+import { CardTabs, useCardTab } from "./Tabs";
 
 const HORIZONS = [
   { label: "5봉", value: 5 },
@@ -37,6 +38,16 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
   const [horizon, setHorizon] = useState(10);
   const report = learned?.report;
 
+  // **여기서 한 번에 받아 둔다.** 예전에는 카드가 각자 받아 갔는데, 그러면 그 카드가
+  // 빈지를 밖에서 알 수 없다 — 눌러도 아무것도 안 나오는 탭이 생긴다는 뜻이다.
+  // 둘 다 기록 파일 하나를 읽는 것뿐이라 실패해도 화면이 막힐 이유가 없다.
+  const [auto, setAuto] = useState<LearningState | null>(null);
+  const [gate, setGate] = useState<GateStatus | null>(null);
+  useEffect(() => {
+    learn.state().then(setAuto).catch(() => setAuto(null));
+    learn.gate().then(setGate).catch(() => setGate(null));
+  }, []);
+
   // 지평에서의 80% 밴드 반폭을 현재가 대비 %로. "이만큼 움직인다"를 한 숫자로.
   const low = learned?.bands?.p10?.at(-1)?.value;
   const high = learned?.bands?.p90?.at(-1)?.value;
@@ -46,6 +57,17 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
       : null;
   // 이 모델의 밴드가 검증에서 실제로 몇 %를 담았나. 목표는 80%.
   const coverage = report?.coverage?.[`${report?.horizon}:80`];
+
+  // 카드 넷이 세로로 쌓여 있었다 — 320px 짜리 띠에서 성적표는 스크롤 네 번 아래다.
+  // **첫 칸은 「학습 예측」이다**: 이 화면에서 지금 답을 하는 것은 그것뿐이고
+  // 나머지 셋은 "그 답을 얼마나 믿을 만한가" 쪽이다.
+  const cards = [
+    ...(learned ? [{ key: "forecast", label: "학습 예측" }] : []),
+    ...(auto?.available ? [{ key: "auto", label: "자동 학습" }] : []),
+    ...(report ? [{ key: "report", label: "성적표" }] : []),
+    ...(gate?.available && gate.holdout ? [{ key: "gate", label: "기권 규칙" }] : []),
+  ];
+  const [showing, setShowing] = useCardTab(cards.map((c) => c.key));
 
   return (
     <>
@@ -84,16 +106,20 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
           </p>
         )}
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
+
+        {cards.length > 1 && <div className="group-label">무엇을 볼지</div>}
+        <CardTabs label="학습 화면에서 무엇을 볼지" items={cards}
+                  active={showing} onPick={setShowing} />
       </section>
 
-      {learned && !learned.available && (
+      {showing === "forecast" && learned && !learned.available && (
         <section className="card">
           <h2>학습 예측</h2>
           <p className="formula" style={{ marginBottom: 0 }}>{learned.reason}</p>
         </section>
       )}
 
-      {learned?.available && (
+      {showing === "forecast" && learned?.available && (
         <section className="card">
           <h2>학습 예측</h2>
           {/* **폭이 먼저다.** 채점해 보면 밴드는 잘 맞고 방향은 반반에 가깝다.
@@ -169,23 +195,16 @@ export function LearnPanel({ learned, busy, error, note, skipped, onTrain }: Pro
         </section>
       )}
 
-      <GateCard />
+      {showing === "gate" && <GateCard state={gate} />}
 
-      <AutoLearnCard />
+      {showing === "auto" && <AutoLearnCard state={auto} />}
 
-      {report && <ReportCard report={report} />}
+      {showing === "report" && report && <ReportCard report={report} />}
     </>
   );
 }
 
-function AutoLearnCard() {
-  const [state, setState] = useState<LearningState | null>(null);
-
-  useEffect(() => {
-    // 기록 파일 하나를 읽는 것뿐이라 실패해도 화면이 막힐 이유가 없다.
-    learn.state().then(setState).catch(() => setState(null));
-  }, []);
-
+function AutoLearnCard({ state }: { state: LearningState | null }) {
   if (!state?.available) return null;
   const top = state.champions.slice(0, 6);
   // 옆 띠는 좁다. 프로바이더 이름은 여섯 줄 내내 같으니 떼고 종목·봉만 남긴다.
@@ -360,13 +379,7 @@ function ReportCard({ report }: { report: TrainReport }) {
   );
 }
 
-function GateCard() {
-  const [state, setState] = useState<GateStatus | null>(null);
-
-  useEffect(() => {
-    learn.gate().then(setState).catch(() => setState(null));
-  }, []);
-
+function GateCard({ state }: { state: GateStatus | null }) {
   if (!state?.available || !state.holdout) return null;
   const { withoutRule, withRule, n, coverage } = state.holdout;
 

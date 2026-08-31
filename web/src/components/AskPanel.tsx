@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { AskResult, EventStudy, Evidence, Projection, ScenarioForm } from "../types";
 import { analogWords, coverageWords, eventStudyWords } from "../say";
 import { Numbers } from "./Numbers";
+import { CardTabs, useCardTab } from "./Tabs";
 
 const PRESETS: Array<{ label: string; hours: number }> = [
   { label: "1일", hours: 24 },
@@ -95,6 +96,19 @@ export function AskPanel({ result, busy, error, onAsk, onClear }: Props) {
 
   const patch = (next: Partial<ScenarioForm>) =>
     setForm((current) => (current ? { ...current, ...next } : current));
+
+  // 「답」 밑에 붙는 넷은 **비어 있을 수 있다**(사례가 없거나, 사건이 안 잡혔거나,
+  // 근거가 안 걸렸거나). 비는 것에 칸을 만들면 눌러도 아무것도 안 나오는 탭이 된다.
+  const more = [
+    { key: "projection", label: "예측" },
+    ...(result?.projection.available && result.projection.paths.length > 0
+      ? [{ key: "cases", label: "본 과거" }] : []),
+    ...(result?.eventStudy.available ? [{ key: "events", label: "사건 이후" }] : []),
+    ...(result?.citations?.length ? [{ key: "citations", label: "근거" }] : []),
+  ];
+  // 첫 칸은 「예측」이다 — 「답」이 "그래서 어떻게 갔나" 를 말했으니 바로 다음에 올 것은
+  // **"그 답을 얼마나 믿을 만한가"** 다.
+  const [seeing, setSeeing] = useCardTab(more.map((m) => m.key));
 
   return (
     <>
@@ -270,12 +284,18 @@ export function AskPanel({ result, busy, error, onAsk, onClear }: Props) {
                 </button>
               </div>
             )}
+            {/* **답 하나에 카드 다섯이 딸려 있었다.** 320px 짜리 띠에서 그건
+                스크롤 다섯 번이라, 근거까지 내려가 본 적이 없는 화면이 된다.
+                이름은 다 두고 하나씩 연다. */}
+            <div className="group-label">더 볼 것</div>
+            <CardTabs label="답 밑에서 무엇을 볼지" items={more}
+                      active={seeing} onPick={setSeeing} />
           </section>
 
-          <ProjectionCard projection={result.projection} />
-          <CasesCard projection={result.projection} />
-          <EventStudyCard study={result.eventStudy} />
-          <CitationsCard citations={result.citations} />
+          {seeing === "projection" && <ProjectionCard projection={result.projection} />}
+          {seeing === "cases" && <CasesCard projection={result.projection} />}
+          {seeing === "events" && <EventStudyCard study={result.eventStudy} />}
+          {seeing === "citations" && <CitationsCard citations={result.citations} />}
         </>
       )}
     </>

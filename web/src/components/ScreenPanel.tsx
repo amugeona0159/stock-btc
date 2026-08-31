@@ -5,6 +5,7 @@ import {
   avoidWords, bandWords, edgeWords, fewHandsWords, groupWords, moveWords, trustWords,
 } from "../say";
 import { Numbers } from "./Numbers";
+import { CardTabs, useCardTab } from "./Tabs";
 import type {
   RecommendGroup,
   RecommendItem,
@@ -85,9 +86,14 @@ interface Props {
  * 기본이 BTCUSDT 라 열면 늘 코인 추천만 나왔다 — 국내주식과 해외주식은 시장을 바꿔야
  * 볼 수 있었고, 그러려면 그런 게 있다는 걸 먼저 알아야 했다.
  *
- * 지금은 국내주식·해외주식·코인 셋을 한 번에 낸다. 묶음마다 **사라 셋 · 사지 말 것
- * 셋**이라 아홉씩 열여덟 줄이고, 각 묶음이 자기 날짜를 들고 온다 — PC 가 꺼져 있어
- * 국내주식이 며칠 전 것이면 그 날짜가 그대로 보인다.
+ * 그래서 국내주식·해외주식·코인 **이름은 늘 셋 다** 보이고, 목록만 고른 하나를 낸다
+ * (`CardTabs`). 셋을 다 펼치면 묶음마다 사라 셋 · 사지 말 것 셋이라 열여덟 줄이고,
+ * 320px 짜리 띠에서 셋째 묶음은 스크롤을 한참 내려야 나왔다 — 그건 시장을 바꿔야
+ * 보이던 옛 화면과 크게 다르지 않다. **고르게 하지 않는다는 것은 있다는 걸 알게
+ * 한다는 뜻이지, 한꺼번에 쏟아 놓는다는 뜻이 아니다.**
+ *
+ * 각 묶음은 자기 날짜를 들고 온다 — PC 가 꺼져 있어 국내주식이 며칠 전 것이면 그
+ * 날짜가 그대로 보인다. 못 돈 묶음도 칸을 지키고, 누르면 왜 없는지가 나온다.
  */
 export function ScreenPanel({ provider, onPick, names }: Props) {
   const [days, setDays] = useState(1);
@@ -105,6 +111,13 @@ export function ScreenPanel({ provider, onPick, names }: Props) {
       .finally(() => setBusy(false));
   }, [days]);
 
+  // **있는 묶음을 먼저 연다.** 못 돈 시장이 첫 칸이면 추천 탭을 열자마자 사유 문장부터
+  // 보게 되는데, 그건 이 화면이 답해야 할 것("오늘 뭘 살까")이 아니다.
+  const keys = groups?.map((g) => g.key) ?? [];
+  const first = groups?.find((g) => g.available)?.key;
+  const [picked, setPicked] = useCardTab(keys, first);
+  const shown = groups?.find((g) => g.key === picked);
+
   return (
     <>
       <section className="card">
@@ -116,7 +129,25 @@ export function ScreenPanel({ provider, onPick, names }: Props) {
         <p className="note" style={{ marginTop: 0 }}>
           국내주식·해외주식·코인을 따로 낸다 · 아침에 한 번 뽑아 그날은 고정된다
         </p>
-        <div className="chips">
+
+        {/* **두 줄이 다른 것을 고른다.** 칩 두 줄을 이름 없이 붙여 두면 한 줄이 접힌
+            것처럼 읽혀, 지평을 고르려다 시장을 바꾸게 된다. */}
+        <div className="group-label">어느 것</div>
+        <CardTabs
+          label="어느 묶음을 볼지"
+          items={(groups ?? []).map((g) => ({
+            key: g.key,
+            label: g.label,
+            // 못 돈 시장은 흐리게. **지우지 않는다** — 없는 것을 안 보여주면
+            // "국내주식은 살 게 없다" 로 읽힌다.
+            muted: !g.available,
+          }))}
+          active={picked}
+          onPick={setPicked}
+        />
+
+        <div className="group-label">언제</div>
+        <div className="chips" style={{ marginTop: 0 }}>
           {DAYS.map((item) => (
             <button
               key={item.value}
@@ -133,9 +164,7 @@ export function ScreenPanel({ provider, onPick, names }: Props) {
         {error && <p className="error" style={{ marginTop: 10 }}>{error}</p>}
       </section>
 
-      {groups?.map((group) => (
-        <GroupCard key={group.key} group={group} days={days} onPick={onPick} />
-      ))}
+      {shown && <GroupCard key={shown.key} group={shown} days={days} onPick={onPick} />}
 
       {/* 긴 설명은 **묶음마다 되풀이하지 않는다.** 세 번 적으면 목록보다 문장이
           길어져 정작 순위가 안 읽힌다. 셋 밑에 한 번만 둔다.
