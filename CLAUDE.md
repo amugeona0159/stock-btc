@@ -365,14 +365,19 @@
   스케줄러의 진단 기록(`TaskScheduler/Operational`)은 **관리자 권한이 있어야 켜지고**
   기본이 꺼져 있다. 그래서 로그 자체가 답하게 만든다 — **마지막 START 뒤에 END 가
   없으면 그 실행은 죽은 것이다.** `runcheck` 는 자기 START 를 찍기 **전에** 돌아야 한다.
-- ⚠ **아직 안 풀린 것: 스케줄러가 `recommend.py` 를 1초 안에 죽인다**(결과
-  `0xC000013A` = 강제 종료). 같은 `.cmd` 를 셸에서 `cmd /c` 로 돌리면 13초에 정상
-  종료하고, 같은 작업이 부르는 `runcheck.py` 는 스케줄러에서도 잘 돈다. 설정
-  (`StopOnIdleEnd`·배터리·트리거 제한)과 동작을 `cmd.exe /c` 로 바꾸는 것까지 다 해
-  봤지만 그대로다. 이벤트 로그에도 아무것도 안 남는다. **이유를 보려면 관리자
-  PowerShell 에서 한 줄이 필요하다:**
-  `wevtutil sl Microsoft-Windows-TaskScheduler/Operational /e:true`
-  그때까지의 완충으로 재시도(3회·10분)를 걸어 뒀고, 실패하면 위 표시로 드러난다.
+- **작업이 부르는 것은 `.cmd` 가 아니라 `pythonw.exe scripts/runjob.py <그 .cmd>` 다.**
+  한동안 "스케줄러가 `recommend.py` 를 1초 안에 죽인다"(`0xC000013A`)로 남아 있던
+  것의 정체는 **콘솔 창이었다.** 프로세스에 콘솔 컨트롤 핸들러를 달아 찍어 보니
+  오는 것이 `CTRL_C`(스케줄러의 중지)가 아니라 **`CTRL_CLOSE`** — 누가 죽인 게
+  아니라 붙어 있던 **창이 사라진** 것이라, 로그에도 이벤트에도 아무것도 안 남는다.
+  25초 프로브로 재 본 것: `cmd.exe /c`·`python.exe` 는 1~6초에 죽고,
+  `pythonw.exe`(콘솔 없음)와 `pythonw` → `cmd.exe`(`CREATE_NO_WINDOW`)는 끝까지 돈다.
+  **닫힐 창이 없으면 닫히지도 않는다** — `chcp` 로 인코딩을 이기려다 실패했을 때와
+  같은 답이다. 순서는 그대로 `.cmd` 안에 있고 `runjob.py` 는 창만 없앤다.
+  (기계 쪽으로 고치는 길도 있다 — 기본 터미널을 Windows 터미널에서 콘솔 호스트로
+  되돌리는 것. 저장소 밖의 설정이라 여기서는 안 건드린다.)
+  ⚠ **`runjob.py` 에서 `print` 를 쓰지 말 것.** `pythonw` 는 stdout 이 `None` 이라
+  한 줄에 죽고 그 사실도 안 남는다. `test_scripts.py` 가 막는다.
 - 07:30 은 **06:00 학습과 따로 등록한다**(`market-lens-recommend`). 거기 붙이면 실제
   실행이 08시 언저리에서 매일 흔들린다. 겹치지 않게 `daily.cmd` 의 study 예산을
   1시간으로 줄여 뒀다.

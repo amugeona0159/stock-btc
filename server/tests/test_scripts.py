@@ -162,3 +162,42 @@ def test_batch_files_are_ascii_only(path: Path):
            if not line.isascii()]
     assert not bad, (f"{path.name}: ASCII 가 아닌 줄 {len(bad)}개 — "
                      f"첫 줄 {bad[0][0]}: {bad[0][1][:60]}")
+
+
+# --- 콘솔이 없어야 끝까지 돈다 --------------------------------------------
+
+LAUNCHER = SCRIPTS / "runjob.py"
+
+
+def test_the_launcher_exists():
+    """작업 스케줄러는 이것을 부른다. 없어지면 `.cmd` 가 다시 콘솔에 붙는다."""
+    assert LAUNCHER.is_file(), "scripts/runjob.py 가 없다"
+
+
+def test_the_launcher_opens_no_console():
+    """**콘솔 창이 있으면 그 창이 닫히면서 작업이 죽는다.**
+
+    스케줄러가 띄운 콘솔은 시작 1~6초 뒤 사라지고, 거기 붙어 있던 프로세스는
+    `CTRL_CLOSE` 를 받아 `0xC000013A` 로 끝난다. 콘솔 컨트롤 핸들러를 달아
+    직접 찍어 본 것이라 추측이 아니다. `pythonw` 는 자기 콘솔이 없지만 자식
+    `cmd.exe` 는 플래그가 없으면 창을 하나 만든다 — 그러면 원점이다.
+    """
+    body = LAUNCHER.read_text(encoding="utf-8")
+    assert "CREATE_NO_WINDOW = 0x08000000" in body, "콘솔 없이 띄우는 플래그가 없다"
+    assert "creationflags=CREATE_NO_WINDOW" in body, "플래그를 안 넘긴다"
+
+
+def test_the_launcher_never_prints():
+    """**`pythonw` 에는 stdout 이 없다.** `sys.stdout` 이 `None` 이라 한 줄만
+    찍어도 `AttributeError` 로 죽고, 그 사실조차 아무 데도 안 남는다."""
+    body = LAUNCHER.read_text(encoding="utf-8")
+    bad = [i for i, line in enumerate(body.splitlines(), 1)
+           if line.lstrip().startswith("print(")]
+    assert not bad, f"runjob.py {bad} 번 줄에 print — pythonw 에서는 죽는다"
+
+
+def test_the_launcher_leaves_a_note_when_it_cannot_start():
+    """부를 것을 못 찾으면 그것도 어딘가에 적혀야 한다. 스케줄러가 남기는 것은
+    결과 코드 하나뿐이라, 안 적으면 아침에 결과가 없는 이유를 볼 데가 없다."""
+    body = LAUNCHER.read_text(encoding="utf-8")
+    assert "logs" in body and "runjob.log" in body, "실패를 로그로 안 남긴다"
