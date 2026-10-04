@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-03T22:43:40+00:00",
+  "updated": "2026-10-04T22:48:50+00:00",
   "timeframe": "1d",
   "minIc": 0.01,
   "providers": {
@@ -1463,7 +1463,7 @@
     },
     "yahoo": {
       "timeframe": "1d",
-      "updated": "2026-10-03T22:43:40+00:00",
+      "updated": "2026-10-04T22:48:50+00:00",
       "horizons": {
         "1": {
           "move": [
@@ -1702,11 +1702,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                1.3612,
-                1.3601,
-                1.5144
+                1.361,
+                1.36,
+                1.5146
               ],
-              "topMinusBottomPct": 0.1531,
+              "topMinusBottomPct": 0.1536,
               "rows": 35256
             }
           },
@@ -2192,11 +2192,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                1.9969,
-                1.9482,
-                2.1371
+                1.997,
+                1.9488,
+                2.1366
               ],
-              "topMinusBottomPct": 0.1402,
+              "topMinusBottomPct": 0.1397,
               "rows": 35244
             }
           },
@@ -2682,11 +2682,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                2.4553,
-                2.4272,
-                2.6192
+                2.4554,
+                2.4273,
+                2.619
               ],
-              "topMinusBottomPct": 0.1639,
+              "topMinusBottomPct": 0.1636,
               "rows": 35232
             }
           },
