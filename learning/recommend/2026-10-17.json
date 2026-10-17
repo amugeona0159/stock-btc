@@ -1,0 +1,1358 @@
+{
+  "date": "2026-10-17",
+  "generatedAt": "2026-10-17T00:42:36+00:00",
+  "timeframe": "1d",
+  "days": [
+    1,
+    2,
+    3
+  ],
+  "providers": {
+    "upbit": {
+      "provider": "upbit",
+      "lastTs": 1792108800000,
+      "basedOn": "2026-10-16",
+      "staleBars": 0,
+      "candidates": [
+        {
+          "symbol": "KRW-AVAX",
+          "last": 13470.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.097,
+              "band": [
+                -3.631,
+                3.575
+              ],
+              "probUp": 0.515,
+              "atrPct": 6.734,
+              "moveAtr": 0.0144,
+              "last": 13470.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.052,
+              "band": [
+                -5.668,
+                5.768
+              ],
+              "probUp": 0.505,
+              "atrPct": 6.734,
+              "moveAtr": 0.0077,
+              "last": 13470.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.119,
+              "band": [
+                -8.294,
+                9.876
+              ],
+              "probUp": 0.493,
+              "atrPct": 6.734,
+              "moveAtr": -0.0177,
+              "last": 13470.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-AVAX",
+            "last": 13470.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-DOT",
+          "last": 1599.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.067,
+              "band": [
+                -3.793,
+                4.748
+              ],
+              "probUp": 0.51,
+              "atrPct": 7.1535,
+              "moveAtr": 0.0094,
+              "last": 1599.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.055,
+              "band": [
+                -5.839,
+                6.991
+              ],
+              "probUp": 0.505,
+              "atrPct": 7.1535,
+              "moveAtr": 0.0077,
+              "last": 1599.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.126,
+              "band": [
+                -8.787,
+                10.523
+              ],
+              "probUp": 0.493,
+              "atrPct": 7.1535,
+              "moveAtr": -0.0176,
+              "last": 1599.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-DOT",
+            "last": 1599.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-LINK",
+          "last": 16700.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.053,
+              "band": [
+                -3.002,
+                3.099
+              ],
+              "probUp": 0.51,
+              "atrPct": 5.6103,
+              "moveAtr": 0.0094,
+              "last": 16700.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.051,
+              "band": [
+                -5.148,
+                4.873
+              ],
+              "probUp": 0.506,
+              "atrPct": 5.6103,
+              "moveAtr": 0.0091,
+              "last": 16700.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.099,
+              "band": [
+                -6.959,
+                8.163
+              ],
+              "probUp": 0.493,
+              "atrPct": 5.6103,
+              "moveAtr": -0.0176,
+              "last": 16700.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-LINK",
+            "last": 16700.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-ADA",
+          "last": 305.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.043,
+              "band": [
+                -3.993,
+                3.852
+              ],
+              "probUp": 0.507,
+              "atrPct": 6.7362,
+              "moveAtr": 0.0064,
+              "last": 305.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.062,
+              "band": [
+                -6.576,
+                5.831
+              ],
+              "probUp": 0.505,
+              "atrPct": 6.7362,
+              "moveAtr": 0.0092,
+              "last": 305.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.119,
+              "band": [
+                -8.296,
+                9.879
+              ],
+              "probUp": 0.493,
+              "atrPct": 6.7362,
+              "moveAtr": -0.0177,
+              "last": 305.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-ADA",
+            "last": 305.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-BTC",
+          "last": 110276000.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.039,
+              "band": [
+                -1.284,
+                1.369
+              ],
+              "probUp": 0.518,
+              "atrPct": 2.2261,
+              "moveAtr": 0.0175,
+              "last": 110276000.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.029,
+              "band": [
+                -1.991,
+                2.141
+              ],
+              "probUp": 0.508,
+              "atrPct": 2.2261,
+              "moveAtr": 0.013,
+              "last": 110276000.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.039,
+              "band": [
+                -2.821,
+                3.162
+              ],
+              "probUp": 0.493,
+              "atrPct": 2.2261,
+              "moveAtr": -0.0175,
+              "last": 110276000.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-BTC",
+            "last": 110276000.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-ETH",
+          "last": 3277000.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.032,
+              "band": [
+                -1.844,
+                2.097
+              ],
+              "probUp": 0.51,
+              "atrPct": 3.4245,
+              "moveAtr": 0.0093,
+              "last": 3277000.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.044,
+              "band": [
+                -2.924,
+                3.27
+              ],
+              "probUp": 0.508,
+              "atrPct": 3.4245,
+              "moveAtr": 0.0128,
+              "last": 3277000.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.06,
+              "band": [
+                -4.307,
+                4.906
+              ],
+              "probUp": 0.493,
+              "atrPct": 3.4245,
+              "moveAtr": -0.0175,
+              "last": 3277000.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-ETH",
+            "last": 3277000.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-SOL",
+          "last": 141200.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.028,
+              "band": [
+                -2.296,
+                2.459
+              ],
+              "probUp": 0.507,
+              "atrPct": 4.2972,
+              "moveAtr": 0.0065,
+              "last": 141200.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.039,
+              "band": [
+                -3.865,
+                4.108
+              ],
+              "probUp": 0.505,
+              "atrPct": 4.2972,
+              "moveAtr": 0.0091,
+              "last": 141200.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.076,
+              "band": [
+                -5.375,
+                6.194
+              ],
+              "probUp": 0.493,
+              "atrPct": 4.2972,
+              "moveAtr": -0.0177,
+              "last": 141200.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-SOL",
+            "last": 141200.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-TRX",
+          "last": 454.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.027,
+              "band": [
+                -0.865,
+                1.074
+              ],
+              "probUp": 0.518,
+              "atrPct": 1.5736,
+              "moveAtr": 0.0172,
+              "last": 454.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.075,
+              "band": [
+                -1.31,
+                1.724
+              ],
+              "probUp": 0.528,
+              "atrPct": 1.5736,
+              "moveAtr": 0.0477,
+              "last": 454.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.028,
+              "band": [
+                -2.003,
+                2.225
+              ],
+              "probUp": 0.493,
+              "atrPct": 1.5736,
+              "moveAtr": -0.0178,
+              "last": 454.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-TRX",
+            "last": 454.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-DOGE",
+          "last": 110.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.022,
+              "band": [
+                -2.987,
+                3.223
+              ],
+              "probUp": 0.504,
+              "atrPct": 5.6107,
+              "moveAtr": 0.0039,
+              "last": 110.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.043,
+              "band": [
+                -4.715,
+                5.009
+              ],
+              "probUp": 0.505,
+              "atrPct": 5.6107,
+              "moveAtr": 0.0077,
+              "last": 110.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.099,
+              "band": [
+                -6.96,
+                8.163
+              ],
+              "probUp": 0.493,
+              "atrPct": 5.6107,
+              "moveAtr": -0.0176,
+              "last": 110.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-DOGE",
+            "last": 110.0,
+            "ts": 1792108800000
+          }
+        },
+        {
+          "symbol": "KRW-XRP",
+          "last": 1773.0,
+          "lastTs": 1792108800000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.02,
+              "band": [
+                -2.8,
+                2.68
+              ],
+              "probUp": 0.505,
+              "atrPct": 4.372,
+              "moveAtr": 0.0046,
+              "last": 1773.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 1.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.041,
+              "band": [
+                -4.319,
+                4.007
+              ],
+              "probUp": 0.505,
+              "atrPct": 4.372,
+              "moveAtr": 0.0094,
+              "last": 1773.0,
+              "lastTs": 1792108800000,
+              "source": "blend",
+              "weight": 0.95,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": -0.077,
+              "band": [
+                -5.466,
+                6.306
+              ],
+              "probUp": 0.493,
+              "atrPct": 4.372,
+              "moveAtr": -0.0176,
+              "last": 1773.0,
+              "lastTs": 1792108800000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          },
+          "krw": {
+            "symbol": "KRW-XRP",
+            "last": 1773.0,
+            "ts": 1792108800000
+          }
+        }
+      ],
+      "byDay": {
+        "1": {
+          "buy": [
+            "KRW-AVAX",
+            "KRW-DOT",
+            "KRW-LINK"
+          ],
+          "avoid": [
+            "KRW-TRX",
+            "KRW-DOGE",
+            "KRW-XRP"
+          ],
+          "degenerate": false,
+          "allNegative": false,
+          "learned": true,
+          "skill": 0.006,
+          "weight": 1.0,
+          "modelStale": false,
+          "model": "recommend-upbit-1d-1"
+        },
+        "2": {
+          "buy": [
+            "KRW-TRX",
+            "KRW-ADA",
+            "KRW-DOT"
+          ],
+          "avoid": [
+            "KRW-XRP",
+            "KRW-SOL",
+            "KRW-BTC"
+          ],
+          "degenerate": false,
+          "allNegative": false,
+          "learned": true,
+          "skill": 0.0035,
+          "weight": 0.95,
+          "modelStale": false,
+          "model": "recommend-upbit-1d-2"
+        },
+        "3": {
+          "buy": [
+            "KRW-TRX",
+            "KRW-BTC",
+            "KRW-ETH"
+          ],
+          "avoid": [
+            "KRW-ADA",
+            "KRW-AVAX",
+            "KRW-DOT"
+          ],
+          "degenerate": true,
+          "allNegative": true,
+          "learned": false,
+          "skill": 0.0011,
+          "weight": 0.6,
+          "modelStale": false,
+          "model": "recommend-upbit-1d-3"
+        }
+      },
+      "skipped": []
+    },
+    "yahoo": {
+      "provider": "yahoo",
+      "lastTs": 1792022400000,
+      "basedOn": "2026-10-15",
+      "staleBars": 0,
+      "candidates": [
+        {
+          "symbol": "META",
+          "last": 736.719970703125,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.16,
+              "band": [
+                -2.814,
+                3.101
+              ],
+              "probUp": 0.527,
+              "atrPct": 3.3237,
+              "moveAtr": 0.0481,
+              "last": 736.719970703125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.384,
+              "band": [
+                -4.046,
+                4.475
+              ],
+              "probUp": 0.542,
+              "atrPct": 3.3237,
+              "moveAtr": 0.1155,
+              "last": 736.719970703125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.56,
+              "band": [
+                -4.871,
+                5.572
+              ],
+              "probUp": 0.55,
+              "atrPct": 3.3237,
+              "moveAtr": 0.1685,
+              "last": 736.719970703125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            }
+          }
+        },
+        {
+          "symbol": "AVGO",
+          "last": 344.3299865722656,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.157,
+              "band": [
+                -2.766,
+                3.047
+              ],
+              "probUp": 0.527,
+              "atrPct": 3.2671,
+              "moveAtr": 0.0481,
+              "last": 344.3299865722656,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.377,
+              "band": [
+                -3.978,
+                4.397
+              ],
+              "probUp": 0.542,
+              "atrPct": 3.2671,
+              "moveAtr": 0.1154,
+              "last": 344.3299865722656,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.55,
+              "band": [
+                -4.79,
+                5.475
+              ],
+              "probUp": 0.55,
+              "atrPct": 3.2671,
+              "moveAtr": 0.1683,
+              "last": 344.3299865722656,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "TSLA",
+          "last": 362.44000244140625,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.148,
+              "band": [
+                -2.603,
+                2.862
+              ],
+              "probUp": 0.527,
+              "atrPct": 3.0711,
+              "moveAtr": 0.0482,
+              "last": 362.44000244140625,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.355,
+              "band": [
+                -3.744,
+                4.128
+              ],
+              "probUp": 0.542,
+              "atrPct": 3.0711,
+              "moveAtr": 0.1156,
+              "last": 362.44000244140625,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.517,
+              "band": [
+                -4.509,
+                5.138
+              ],
+              "probUp": 0.55,
+              "atrPct": 3.0711,
+              "moveAtr": 0.1683,
+              "last": 362.44000244140625,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "NVDA",
+          "last": 217.22999572753906,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.133,
+              "band": [
+                -2.35,
+                2.577
+              ],
+              "probUp": 0.527,
+              "atrPct": 2.769,
+              "moveAtr": 0.048,
+              "last": 217.22999572753906,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.32,
+              "band": [
+                -3.382,
+                3.715
+              ],
+              "probUp": 0.542,
+              "atrPct": 2.769,
+              "moveAtr": 0.1156,
+              "last": 217.22999572753906,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.466,
+              "band": [
+                -4.075,
+                4.621
+              ],
+              "probUp": 0.55,
+              "atrPct": 2.769,
+              "moveAtr": 0.1683,
+              "last": 217.22999572753906,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "GOOGL",
+          "last": 349.2200012207031,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.12,
+              "band": [
+                -2.116,
+                2.315
+              ],
+              "probUp": 0.527,
+              "atrPct": 2.4912,
+              "moveAtr": 0.0482,
+              "last": 349.2200012207031,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.288,
+              "band": [
+                -3.048,
+                3.336
+              ],
+              "probUp": 0.542,
+              "atrPct": 2.4912,
+              "moveAtr": 0.1156,
+              "last": 349.2200012207031,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "high"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.419,
+              "band": [
+                -3.673,
+                4.148
+              ],
+              "probUp": 0.55,
+              "atrPct": 2.4912,
+              "moveAtr": 0.1682,
+              "last": 349.2200012207031,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "AMZN",
+          "last": 254.75999450683594,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.111,
+              "band": [
+                -1.96,
+                2.141
+              ],
+              "probUp": 0.527,
+              "atrPct": 2.3055,
+              "moveAtr": 0.0481,
+              "last": 254.75999450683594,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.266,
+              "band": [
+                -2.824,
+                3.083
+              ],
+              "probUp": 0.542,
+              "atrPct": 2.3055,
+              "moveAtr": 0.1154,
+              "last": 254.75999450683594,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.388,
+              "band": [
+                -3.404,
+                3.833
+              ],
+              "probUp": 0.55,
+              "atrPct": 2.3055,
+              "moveAtr": 0.1683,
+              "last": 254.75999450683594,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "MSFT",
+          "last": 539.4400024414062,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.102,
+              "band": [
+                -1.805,
+                1.968
+              ],
+              "probUp": 0.527,
+              "atrPct": 2.1209,
+              "moveAtr": 0.0481,
+              "last": 539.4400024414062,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.245,
+              "band": [
+                -2.601,
+                2.833
+              ],
+              "probUp": 0.542,
+              "atrPct": 2.1209,
+              "moveAtr": 0.1155,
+              "last": 539.4400024414062,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.357,
+              "band": [
+                -3.136,
+                3.521
+              ],
+              "probUp": 0.55,
+              "atrPct": 2.1209,
+              "moveAtr": 0.1683,
+              "last": 539.4400024414062,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "XOM",
+          "last": 174.67999267578125,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.098,
+              "band": [
+                -1.741,
+                1.897
+              ],
+              "probUp": 0.527,
+              "atrPct": 2.045,
+              "moveAtr": 0.0479,
+              "last": 174.67999267578125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.236,
+              "band": [
+                -2.509,
+                2.73
+              ],
+              "probUp": 0.542,
+              "atrPct": 2.045,
+              "moveAtr": 0.1154,
+              "last": 174.67999267578125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.344,
+              "band": [
+                -3.025,
+                3.393
+              ],
+              "probUp": 0.55,
+              "atrPct": 2.045,
+              "moveAtr": 0.1682,
+              "last": 174.67999267578125,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "AAPL",
+          "last": 342.0,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.093,
+              "band": [
+                -1.655,
+                1.802
+              ],
+              "probUp": 0.527,
+              "atrPct": 1.9437,
+              "moveAtr": 0.0478,
+              "last": 342.0,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.224,
+              "band": [
+                -2.386,
+                2.593
+              ],
+              "probUp": 0.542,
+              "atrPct": 1.9437,
+              "moveAtr": 0.1152,
+              "last": 342.0,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.327,
+              "band": [
+                -2.878,
+                3.222
+              ],
+              "probUp": 0.55,
+              "atrPct": 1.9437,
+              "moveAtr": 0.1682,
+              "last": 342.0,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        },
+        {
+          "symbol": "JPM",
+          "last": 335.5299987792969,
+          "lastTs": 1792022400000,
+          "byDay": {
+            "1": {
+              "day": 1,
+              "expected": 0.091,
+              "band": [
+                -1.611,
+                1.753
+              ],
+              "probUp": 0.527,
+              "atrPct": 1.891,
+              "moveAtr": 0.0481,
+              "last": 335.5299987792969,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            },
+            "2": {
+              "day": 2,
+              "expected": 0.218,
+              "band": [
+                -2.322,
+                2.522
+              ],
+              "probUp": 0.542,
+              "atrPct": 1.891,
+              "moveAtr": 0.1153,
+              "last": 335.5299987792969,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "low"
+            },
+            "3": {
+              "day": 3,
+              "expected": 0.318,
+              "band": [
+                -2.801,
+                3.133
+              ],
+              "probUp": 0.55,
+              "atrPct": 1.891,
+              "moveAtr": 0.1682,
+              "last": 335.5299987792969,
+              "lastTs": 1792022400000,
+              "source": "volatility-baseline",
+              "weight": 0.0,
+              "abstain": false,
+              "confidence": "mid"
+            }
+          }
+        }
+      ],
+      "byDay": {
+        "1": {
+          "buy": [
+            "META",
+            "AVGO",
+            "TSLA"
+          ],
+          "avoid": [
+            "XOM",
+            "AAPL",
+            "JPM"
+          ],
+          "degenerate": true,
+          "allNegative": false,
+          "learned": false,
+          "skill": -0.0006,
+          "weight": 1.0,
+          "modelStale": false,
+          "model": "recommend-yahoo-1d-1"
+        },
+        "2": {
+          "buy": [
+            "META",
+            "AVGO",
+            "TSLA"
+          ],
+          "avoid": [
+            "XOM",
+            "AAPL",
+            "JPM"
+          ],
+          "degenerate": true,
+          "allNegative": false,
+          "learned": false,
+          "skill": 0.0002,
+          "weight": 0.8,
+          "modelStale": false,
+          "model": "recommend-yahoo-1d-2"
+        },
+        "3": {
+          "buy": [
+            "META",
+            "AVGO",
+            "TSLA"
+          ],
+          "avoid": [
+            "XOM",
+            "AAPL",
+            "JPM"
+          ],
+          "degenerate": true,
+          "allNegative": false,
+          "learned": false,
+          "skill": 0.0,
+          "weight": 0.7,
+          "modelStale": false,
+          "model": "recommend-yahoo-1d-3"
+        }
+      },
+      "skipped": []
+    }
+  }
+}
