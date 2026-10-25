@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-24T22:18:06+00:00",
+  "updated": "2026-10-25T22:20:13+00:00",
   "timeframe": "1d",
   "minIc": 0.01,
   "providers": {
@@ -1463,7 +1463,7 @@
     },
     "yahoo": {
       "timeframe": "1d",
-      "updated": "2026-10-24T22:18:06+00:00",
+      "updated": "2026-10-25T22:20:13+00:00",
       "horizons": {
         "1": {
           "move": [
@@ -2676,11 +2676,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                2.4549,
-                2.4232,
+                2.4551,
+                2.4231,
                 2.6222
               ],
-              "topMinusBottomPct": 0.1673,
+              "topMinusBottomPct": 0.1672,
               "rows": 35220
             }
           },
