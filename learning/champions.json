@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-27T23:32:11+00:00",
+  "updated": "2026-10-28T23:55:25+00:00",
   "promoteMargin": 0.002,
   "champions": {
     "binance:BTCUSDT:15m": {
@@ -207,9 +207,9 @@
         "folds": 4,
         "peer_count": 11
       },
-      "skill": 0.001,
+      "skill": 0.0016,
       "learned": false,
-      "rows": 40039,
+      "rows": 40322,
       "symbols": [
         "AAPL",
         "MSFT",
@@ -224,8 +224,8 @@
         "^GSPC",
         "^IXIC"
       ],
-      "updated": "2026-10-25T22:19:20+00:00",
-      "trials": 40,
+      "updated": "2026-10-28T23:54:25+00:00",
+      "trials": 42,
       "promotions": 0
     },
     "yahoo:MSFT:1d": {
@@ -236,7 +236,7 @@
         "folds": 4,
         "peer_count": 11
       },
-      "skill": 0.001,
+      "skill": 0.0008,
       "learned": false,
       "rows": 34695,
       "symbols": [
@@ -253,8 +253,8 @@
         "^GSPC",
         "^IXIC"
       ],
-      "updated": "2026-10-26T23:37:32+00:00",
-      "trials": 52,
+      "updated": "2026-10-28T23:55:25+00:00",
+      "trials": 54,
       "promotions": 0
     },
     "yahoo:NVDA:1d": {
