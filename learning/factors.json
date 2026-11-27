@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-26T02:42:03+00:00",
+  "updated": "2026-11-27T02:40:48+00:00",
   "timeframe": "1d",
   "minIc": 0.01,
   "providers": {
@@ -1463,7 +1463,7 @@
     },
     "yahoo": {
       "timeframe": "1d",
-      "updated": "2026-11-26T02:42:03+00:00",
+      "updated": "2026-11-27T02:40:48+00:00",
       "horizons": {
         "1": {
           "move": [
@@ -1702,11 +1702,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                1.3643,
-                1.364,
-                1.5324
+                1.3648,
+                1.3639,
+                1.5321
               ],
-              "topMinusBottomPct": 0.1681,
+              "topMinusBottomPct": 0.1673,
               "rows": 35268
             }
           },
@@ -2676,11 +2676,11 @@
             "relative": {
               "available": true,
               "buckets": [
-                2.4959,
-                2.4465,
-                2.616
+                2.4965,
+                2.4458,
+                2.6161
               ],
-              "topMinusBottomPct": 0.12,
+              "topMinusBottomPct": 0.1196,
               "rows": 35244
             }
           },
